@@ -193,9 +193,9 @@ function StatCard({ icon, label, value, trend, trendType }: {
             trendType === "up" ? "text-orange-300 bg-orange-500/10" :
                 "text-slate-400 bg-white/5";
     return (
-        <div className="bg-[#0f2233]/80 backdrop-blur-sm border border-white/5 rounded-xl p-4 flex flex-col gap-2 hover:border-teal-500/20 transition-all duration-200">
+        <div className="group bg-[#0f2233]/80 backdrop-blur-md border border-white/5 border-t-white/10 rounded-xl p-4 flex flex-col gap-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(20,184,166,0.15)] hover:border-teal-500/30">
             <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:text-teal-400 group-hover:bg-white/10">
                     {icon}
                 </div>
                 <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${trendStyles}`}>
@@ -203,7 +203,7 @@ function StatCard({ icon, label, value, trend, trendType }: {
                 </span>
             </div>
             <p className="text-xs text-slate-300 font-medium mt-0.5">{label}</p>
-            <p className="text-2xl font-bold text-slate-100 tracking-tight">{value}</p>
+            <p className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400 tracking-tight">{value}</p>
         </div>
     );
 }
@@ -265,6 +265,19 @@ export default function AdminDashboard() {
 
     return (
         <div className="flex h-screen overflow-hidden bg-[#0d1f2d] relative font-sans">
+            <style>{`
+                @keyframes slideUpFade {
+                    from { opacity: 0; transform: translateY(16px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                .animate-slide-up {
+                    opacity: 0;
+                    animation: slideUpFade 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+                .stagger-1 { animation-delay: 100ms; }
+                .stagger-2 { animation-delay: 200ms; }
+                .stagger-3 { animation-delay: 300ms; }
+            `}</style>
 
             {/* ── Background glows (from login page) ── */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#0a1a26] via-[#0d2233] to-[#0a2a2a] opacity-90 pointer-events-none" />
@@ -312,16 +325,20 @@ export default function AdminDashboard() {
                     </button>
 
                     {/* Search */}
-                    <div className="flex-1 max-w-md relative">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="flex-1 max-w-md relative group">
+                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-500/60 group-focus-within:text-teal-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input
                             value={searchValue}
                             onChange={(e) => setSearchValue(e.target.value)}
-                            placeholder="Search reports, users or locations..."
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
+                            placeholder="Search reports..."
+                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-14 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white/10 focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
                         />
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 opacity-60">
+                            <kbd className="px-1.5 py-0.5 text-[9px] font-mono text-slate-300 bg-white/10 border border-white/10 rounded shadow-sm">⌘</kbd>
+                            <kbd className="px-1.5 py-0.5 text-[9px] font-mono text-slate-300 bg-white/10 border border-white/10 rounded shadow-sm">K</kbd>
+                        </div>
                     </div>
 
                     {/* Right profile block */}
@@ -342,9 +359,9 @@ export default function AdminDashboard() {
                 <main className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5">
 
                     {/* Page heading */}
-                    <div className="flex items-start justify-between flex-wrap gap-3">
+                    <div className="flex items-start justify-between flex-wrap gap-3 animate-slide-up">
                         <div>
-                            <h1 className="text-lg font-bold text-slate-100 tracking-tight">Dashboard Overview</h1>
+                            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1">Dashboard Overview</h1>
                             <p className="text-xs text-slate-300 mt-0.5">Real-time emergency monitoring and response status.</p>
                         </div>
                         <div className="flex items-center gap-2 sm:gap-3">
@@ -365,7 +382,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* ── Stat Cards ── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up stagger-1">
                         <StatCard
                             icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                             label="Total Reports" value="1,284" trend="+10% from last month" trendType="up"
@@ -385,7 +402,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* ── Charts Row ── */}
-                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-xl p-5 hover:border-teal-500/10 transition-colors">
+                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-2">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-sm font-semibold text-slate-200">Incidents by Category</h2>
                             <button className="text-slate-400 hover:text-slate-400 transition-colors">
@@ -401,7 +418,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* ── Monthly Trend ── */}
-                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-xl p-5 hover:border-teal-500/10 transition-colors">
+                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
                         <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
                             <div>
                                 <h2 className="text-sm font-semibold text-slate-200">Monthly Trend</h2>
@@ -425,7 +442,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* ── Recent Reports ── */}
-                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-xl overflow-hidden hover:border-teal-500/10 transition-colors">
+                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl overflow-hidden hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
                         <div className="px-5 py-4 flex items-center justify-between border-b border-white/5">
                             <h2 className="text-sm font-semibold text-slate-200">Recent Reports</h2>
                             <button className="text-xs text-teal-400 font-semibold hover:text-teal-300 transition-colors">
@@ -459,8 +476,13 @@ export default function AdminDashboard() {
                                                 <td className="px-5 py-3.5 text-slate-400">{r.location}</td>
                                                 <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">{r.time}</td>
                                                 <td className="px-5 py-3.5">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${st.bg} ${st.color} border border-white/5`}>
-                                                        <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${st.bg} ${st.color} border border-white/5 transition-all outline outline-1 outline-transparent hover:outline-teal-500/30 cursor-default`}>
+                                                        <span className="relative flex w-1.5 h-1.5">
+                                                            {(r.status === "Investigating" || r.status === "Dispatched") && (
+                                                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${st.dot}`}></span>
+                                                            )}
+                                                            <span className={`relative inline-flex rounded-full w-1.5 h-1.5 ${st.dot}`} />
+                                                        </span>
                                                         {r.status}
                                                     </span>
                                                 </td>
