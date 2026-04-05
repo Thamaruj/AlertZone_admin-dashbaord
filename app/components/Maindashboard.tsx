@@ -285,18 +285,6 @@ export default function AdminDashboard() {
                     ))}
                 </nav>
 
-                {/* User */}
-                <div className="px-3 py-4 border-t border-white/5">
-                    <div className="flex items-center gap-3 px-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                            AM
-                        </div>
-                        <div className="min-w-0">
-                            <p className="text-slate-200 text-xs font-semibold truncate">Alex Morgan</p>
-                            <p className="text-slate-500 text-[10px] truncate">Super Admin</p>
-                        </div>
-                    </div>
-                </div>
             </aside>
 
             {/* ── Main ────────────────────────────────────────────────────────────── */}
