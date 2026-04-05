@@ -38,12 +38,12 @@ const MONTHLY_DATA = [
 ];
 
 const BAR_DATA = [
-    { label: "Hazard", value: 180, color: "#f43f5e" }, // Rose
-    { label: "Lighting", value: 250, color: "#eab308" }, // Yellow
-    { label: "Waste", value: 140, color: "#22c55e" }, // Green
-    { label: "Roads", value: 90, color: "#3b82f6" }, // Blue
-    { label: "Water", value: 210, color: "#0ea5e9" }, // Sky
-    { label: "Safety", value: 130, color: "#8b5cf6" }, // Violet
+    { label: "Hazard", value: 234, color: "#f43f5e", breakdown: { reported: 80, inProgress: 34, resolved: 120 } },
+    { label: "Lighting", value: 250, color: "#eab308", breakdown: { reported: 90, inProgress: 60, resolved: 100 } },
+    { label: "Waste", value: 140, color: "#22c55e", breakdown: { reported: 40, inProgress: 20, resolved: 80 } },
+    { label: "Roads", value: 190, color: "#3b82f6", breakdown: { reported: 60, inProgress: 50, resolved: 80 } },
+    { label: "Water", value: 210, color: "#0ea5e9", breakdown: { reported: 72, inProgress: 38, resolved: 100 } },
+    { label: "Safety", value: 260, color: "#8b5cf6", breakdown: { reported: 90, inProgress: 13, resolved: 157 } },
 ];
 
 // ─── Category / Status Meta ───────────────────────────────────────────────────
@@ -131,13 +131,13 @@ function BarChart() {
     return (
         <div className="flex items-end gap-3 px-1" style={{ height: 148 }}>
             {BAR_DATA.map((d) => (
-                <div key={d.label} className="flex flex-col items-center gap-1.5 flex-1 group">
+                <div key={d.label} className="flex flex-col items-center gap-1.5 flex-1 relative group">
                     <span className="text-[10px] font-bold text-slate-200 opacity-70 group-hover:opacity-100 transition-opacity duration-300 -mb-1">
                         {d.value}
                     </span>
-                    <div className="w-full flex items-end justify-center" style={{ height: 100 }}>
+                    <div className="w-full flex items-end justify-center relative" style={{ height: 100 }}>
                         <div
-                            className="w-full rounded-t-sm transition-all duration-700"
+                            className="w-full rounded-t-sm transition-all duration-700 cursor-pointer hover:brightness-125"
                             style={{
                                 height: `${(d.value / max) * 95}px`,
                                 backgroundColor: d.color,
@@ -145,6 +145,23 @@ function BarChart() {
                                 boxShadow: `0 -2px 8px ${d.color}44`,
                             }}
                         />
+                        
+                        {/* Custom Hover Tooltip */}
+                        <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl min-w-[130px] z-50 pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200">
+                            <span className="text-xs font-bold text-slate-100 mb-1 border-b border-white/5 pb-1 line-clamp-1 truncate" style={{ color: d.color }}>{d.label} Breakdown</span>
+                            <div className="flex justify-between items-center text-[10px] py-0.5">
+                                <span className="text-orange-400">Reported</span>
+                                <span className="font-mono text-slate-200">{d.breakdown.reported}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] py-0.5">
+                                <span className="text-cyan-400">In Progress</span>
+                                <span className="font-mono text-slate-200">{d.breakdown.inProgress}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] py-0.5">
+                                <span className="text-teal-400">Resolved</span>
+                                <span className="font-mono text-slate-200">{d.breakdown.resolved}</span>
+                            </div>
+                        </div>
                     </div>
                     <span className="text-[9px] text-slate-300 font-mono pt-0.5">{d.label}</span>
                 </div>
