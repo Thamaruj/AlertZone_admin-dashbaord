@@ -4,7 +4,11 @@ import { useState } from "react";
 import Image from "next/image";
 import logo1 from "../assets/logo1.png";
 
-export default function AdminLogin() {
+type AdminLoginProps = {
+  onLogin?: () => void;
+};
+
+export default function AdminLogin({ onLogin }: AdminLoginProps) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +22,9 @@ export default function AdminLogin() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setIsLoading(false);
+    if (onLogin) {
+      onLogin();
+    }
   };
 
   return (
