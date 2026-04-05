@@ -141,7 +141,7 @@ function BarChart() {
                             }}
                         />
                     </div>
-                    <span className="text-[9px] text-slate-500 font-mono">{d.label}</span>
+                    <span className="text-[9px] text-slate-300 font-mono">{d.label}</span>
                 </div>
             ))}
         </div>
@@ -202,7 +202,7 @@ function StatCard({ icon, label, value, trend, trendType }: {
                     {trend}
                 </span>
             </div>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">{label}</p>
+            <p className="text-xs text-slate-300 font-medium mt-0.5">{label}</p>
             <p className="text-2xl font-bold text-slate-100 tracking-tight">{value}</p>
         </div>
     );
@@ -216,7 +216,7 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
             onClick={onClick}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-left ${active
                     ? "bg-teal-500/15 text-teal-400 border border-teal-500/20"
-                    : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+                    : "text-slate-300 hover:bg-white/5 hover:text-slate-300"
                 }`}
         >
             <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>
@@ -301,7 +301,7 @@ export default function AdminDashboard() {
                             value={searchValue}
                             onChange={(e) => setSearchValue(e.target.value)}
                             placeholder="Search reports, users or locations..."
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
+                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-4 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
                         />
                     </div>
 
@@ -310,7 +310,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2.5">
                             <div className="text-right hidden sm:block">
                                 <p className="text-xs font-semibold text-slate-300">Alex Morgan</p>
-                                <p className="text-[10px] text-slate-500">Super Admin</p>
+                                <p className="text-[10px] text-slate-300">Super Admin</p>
                             </div>
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-teal-900/40">
                                 AM
@@ -326,7 +326,7 @@ export default function AdminDashboard() {
                     <div className="flex items-start justify-between flex-wrap gap-3">
                         <div>
                             <h1 className="text-lg font-bold text-slate-100 tracking-tight">Dashboard Overview</h1>
-                            <p className="text-xs text-slate-500 mt-0.5">Real-time emergency monitoring and response status.</p>
+                            <p className="text-xs text-slate-300 mt-0.5">Real-time emergency monitoring and response status.</p>
                         </div>
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
@@ -368,7 +368,7 @@ export default function AdminDashboard() {
                     <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-xl p-5 hover:border-teal-500/10 transition-colors">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-sm font-semibold text-slate-200">Incidents by Category</h2>
-                            <button className="text-slate-600 hover:text-slate-400 transition-colors">
+                            <button className="text-slate-400 hover:text-slate-400 transition-colors">
                                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                     <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
                                 </svg>
@@ -385,9 +385,9 @@ export default function AdminDashboard() {
                         <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
                             <div>
                                 <h2 className="text-sm font-semibold text-slate-200">Monthly Trend</h2>
-                                <p className="text-[11px] text-slate-500 mt-0.5">Incident volume over the current year</p>
+                                <p className="text-[11px] text-slate-300 mt-0.5">Incident volume over the current year</p>
                             </div>
-                            <div className="flex items-center gap-4 text-[11px] text-slate-500">
+                            <div className="flex items-center gap-4 text-[11px] text-slate-300">
                                 <span className="flex items-center gap-1.5">
                                     <span className="w-6 h-0.5 bg-teal-400 rounded inline-block" />2025
                                 </span>
@@ -399,7 +399,7 @@ export default function AdminDashboard() {
                         <LineChart />
                         <div className="flex justify-between px-1 mt-1.5">
                             {MONTHLY_DATA.map((d) => (
-                                <span key={d.month} className="text-[9px] text-slate-600 font-mono">{d.month}</span>
+                                <span key={d.month} className="text-[9px] text-slate-400 font-mono">{d.month}</span>
                             ))}
                         </div>
                     </div>
@@ -415,7 +415,7 @@ export default function AdminDashboard() {
                         <div className="overflow-x-auto">
                             <table className="w-full text-xs min-w-[580px]">
                                 <thead>
-                                    <tr className="bg-white/3 text-slate-600 font-semibold uppercase tracking-wide text-[10px] border-b border-white/5">
+                                    <tr className="bg-white/3 text-slate-400 font-semibold uppercase tracking-wide text-[10px] border-b border-white/5">
                                         <th className="px-5 py-3 text-left">Incident ID</th>
                                         <th className="px-5 py-3 text-left">Category</th>
                                         <th className="px-5 py-3 text-left">Location</th>
@@ -437,7 +437,7 @@ export default function AdminDashboard() {
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3.5 text-slate-400">{r.location}</td>
-                                                <td className="px-5 py-3.5 text-slate-600 font-mono text-[11px]">{r.time}</td>
+                                                <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">{r.time}</td>
                                                 <td className="px-5 py-3.5">
                                                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${st.bg} ${st.color} border border-white/5`}>
                                                         <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
@@ -445,7 +445,7 @@ export default function AdminDashboard() {
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3.5">
-                                                    <button className="text-slate-600 hover:text-teal-400 transition-colors group-hover:text-slate-500">
+                                                    <button className="text-slate-400 hover:text-teal-400 transition-colors group-hover:text-slate-300">
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -461,7 +461,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* Footer */}
-                    <p className="text-center text-[11px] text-slate-600 pb-2">
+                    <p className="text-center text-[11px] text-slate-400 pb-2">
                         © 2026 AlertZone Municipal Infrastructure. All Rights Reserved.
                     </p>
                 </main>
