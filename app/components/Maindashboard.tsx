@@ -10,16 +10,16 @@ type Report = {
     category: "Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety";
     location: string;
     time: string;
-    status: "Dispatched" | "Unassigned" | "Resolved" | "Investigating";
+    status: "Reported" | "In Progress" | "Solved" | "Closed";
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const REPORTS: Report[] = [
-    { id: "#REP-8284", category: "Hazard", location: "122 Baker St. NW", time: "3 mins ago", status: "Dispatched" },
-    { id: "#REP-8283", category: "Lighting", location: "Grand Central Station", time: "14 mins ago", status: "Unassigned" },
-    { id: "#REP-8292", category: "Roads", location: "Highway 401, Exit 4", time: "45 mins ago", status: "Resolved" },
-    { id: "#REP-8281", category: "Waste", location: "Silicon Valley Plaza", time: "1 hour ago", status: "Investigating" },
+    { id: "#REP-8284", category: "Hazard", location: "122 Baker St. NW", time: "3 mins ago", status: "In Progress" },
+    { id: "#REP-8283", category: "Lighting", location: "Grand Central Station", time: "14 mins ago", status: "Reported" },
+    { id: "#REP-8292", category: "Roads", location: "Highway 401, Exit 4", time: "45 mins ago", status: "Solved" },
+    { id: "#REP-8281", category: "Waste", location: "Silicon Valley Plaza", time: "1 hour ago", status: "Closed" },
 ];
 
 const MONTHLY_DATA = [
@@ -38,12 +38,12 @@ const MONTHLY_DATA = [
 ];
 
 const BAR_DATA = [
-    { label: "Hazard", value: 234, color: "#f43f5e", breakdown: { reported: 80, inProgress: 34, resolved: 120 } },
-    { label: "Lighting", value: 250, color: "#eab308", breakdown: { reported: 90, inProgress: 60, resolved: 100 } },
-    { label: "Waste", value: 140, color: "#22c55e", breakdown: { reported: 40, inProgress: 20, resolved: 80 } },
-    { label: "Roads", value: 190, color: "#3b82f6", breakdown: { reported: 60, inProgress: 50, resolved: 80 } },
-    { label: "Water", value: 210, color: "#0ea5e9", breakdown: { reported: 72, inProgress: 38, resolved: 100 } },
-    { label: "Safety", value: 260, color: "#8b5cf6", breakdown: { reported: 90, inProgress: 13, resolved: 157 } },
+    { label: "Hazard", value: 234, color: "#f43f5e", breakdown: { reported: 80, inProgress: 34, solved: 100, closed: 20 } },
+    { label: "Lighting", value: 250, color: "#eab308", breakdown: { reported: 90, inProgress: 60, solved: 90, closed: 10 } },
+    { label: "Waste", value: 140, color: "#22c55e", breakdown: { reported: 40, inProgress: 20, solved: 70, closed: 10 } },
+    { label: "Roads", value: 190, color: "#3b82f6", breakdown: { reported: 60, inProgress: 50, solved: 70, closed: 10 } },
+    { label: "Water", value: 210, color: "#0ea5e9", breakdown: { reported: 72, inProgress: 38, solved: 80, closed: 20 } },
+    { label: "Safety", value: 260, color: "#8b5cf6", breakdown: { reported: 90, inProgress: 13, solved: 127, closed: 30 } },
 ];
 
 // ─── Category / Status Meta ───────────────────────────────────────────────────
@@ -58,10 +58,10 @@ const categoryMeta: Record<Report["category"], { color: string; bg: string; icon
 };
 
 const statusMeta: Record<Report["status"], { color: string; bg: string; dot: string }> = {
-    Dispatched: { color: "text-orange-300", bg: "bg-orange-500/10", dot: "bg-orange-400" },
-    Unassigned: { color: "text-yellow-300", bg: "bg-yellow-500/10", dot: "bg-yellow-400" },
-    Resolved: { color: "text-teal-300", bg: "bg-teal-500/10", dot: "bg-teal-400" },
-    Investigating: { color: "text-cyan-300", bg: "bg-cyan-500/10", dot: "bg-cyan-400" },
+    Reported: { color: "text-orange-300", bg: "bg-orange-500/10", dot: "bg-orange-400" },
+    "In Progress": { color: "text-cyan-300", bg: "bg-cyan-500/10", dot: "bg-cyan-400" },
+    Solved: { color: "text-teal-300", bg: "bg-teal-500/10", dot: "bg-teal-400" },
+    Closed: { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" },
 };
 
 // ─── AlertZone Logo ───────────────────────────────────────────────────────────
@@ -80,10 +80,11 @@ function AlertZoneLogo({ size = 28 }: { size?: number }) {
 // ─── Donut Chart ──────────────────────────────────────────────────────────────
 
 function DonutChart() {
-    const total = 1284, resolved = 637, inProgress = 215, reported = 432;
+    const total = 1284, solved = 537, closed = 100, inProgress = 215, reported = 432;
     const cx = 80, cy = 80, r = 54, sw = 16;
     const circ = 2 * Math.PI * r;
-    const dRes = circ * (resolved / total);
+    const dSol = circ * (solved / total);
+    const dClo = circ * (closed / total);
     const dProg = circ * (inProgress / total);
     const dRep = circ * (reported / total);
     return (
@@ -91,26 +92,31 @@ function DonutChart() {
             <svg width="160" height="160" viewBox="0 0 160 160">
                 {/* track */}
                 <circle cx={cx} cy={cy} r={r} fill="none" stroke="#ffffff08" strokeWidth={sw} />
-                {/* resolved – teal */}
+                {/* solved – teal */}
                 <circle cx={cx} cy={cy} r={r} fill="none" stroke="#2dd4bf" strokeWidth={sw}
-                    strokeDasharray={`${dRes} ${circ - dRes}`} strokeDashoffset={0}
+                    strokeDasharray={`${dSol} ${circ - dSol}`} strokeDashoffset={0}
+                    transform={`rotate(-90 ${cx} ${cy})`} />
+                {/* closed – slate */}
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="#64748b" strokeWidth={sw}
+                    strokeDasharray={`${dClo} ${circ - dClo}`} strokeDashoffset={-dSol}
                     transform={`rotate(-90 ${cx} ${cy})`} />
                 {/* in-progress – cyan */}
                 <circle cx={cx} cy={cy} r={r} fill="none" stroke="#06b6d4" strokeWidth={sw}
-                    strokeDasharray={`${dProg} ${circ - dProg}`} strokeDashoffset={-(circ - (circ - dRes))}
+                    strokeDasharray={`${dProg} ${circ - dProg}`} strokeDashoffset={-(dSol + dClo)}
                     transform={`rotate(-90 ${cx} ${cy})`} />
                 {/* reported – orange */}
                 <circle cx={cx} cy={cy} r={r} fill="none" stroke="#f97316" strokeWidth={sw}
-                    strokeDasharray={`${dRep} ${circ - dRep}`} strokeDashoffset={-(circ - (circ - dRes - dProg))}
+                    strokeDasharray={`${dRep} ${circ - dRep}`} strokeDashoffset={-(dSol + dClo + dProg)}
                     transform={`rotate(-90 ${cx} ${cy})`} />
                 <text x={cx} y={cy - 5} textAnchor="middle" fontSize="9" fill="#64748b" fontFamily="monospace">TOTAL</text>
                 <text x={cx} y={cy + 13} textAnchor="middle" fontWeight="700" fontSize="18" fill="#e2e8f0">
                     {total.toLocaleString()}
                 </text>
             </svg>
-            <div className="space-y-2.5 text-xs">
+            <div className="space-y-2 text-xs">
                 {[
-                    { label: "Resolved", color: "bg-teal-400" },
+                    { label: "Solved", color: "bg-teal-400" },
+                    { label: "Closed", color: "bg-slate-400" },
                     { label: "In Progress", color: "bg-cyan-400" },
                     { label: "Reported", color: "bg-orange-400" },
                 ].map((l) => (
@@ -147,19 +153,23 @@ function BarChart() {
                         />
                         
                         {/* Custom Hover Tooltip */}
-                        <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl min-w-[130px] z-50 pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200">
+                        <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl z-50 pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200">
                             <span className="text-xs font-bold text-slate-100 mb-1 border-b border-white/5 pb-1 line-clamp-1 truncate" style={{ color: d.color }}>{d.label} Breakdown</span>
-                            <div className="flex justify-between items-center text-[10px] py-0.5">
+                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
                                 <span className="text-orange-400">Reported</span>
                                 <span className="font-mono text-slate-200">{d.breakdown.reported}</span>
                             </div>
-                            <div className="flex justify-between items-center text-[10px] py-0.5">
+                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
                                 <span className="text-cyan-400">In Progress</span>
                                 <span className="font-mono text-slate-200">{d.breakdown.inProgress}</span>
                             </div>
-                            <div className="flex justify-between items-center text-[10px] py-0.5">
-                                <span className="text-teal-400">Resolved</span>
-                                <span className="font-mono text-slate-200">{d.breakdown.resolved}</span>
+                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
+                                <span className="text-teal-400">Solved</span>
+                                <span className="font-mono text-slate-200">{d.breakdown.solved}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
+                                <span className="text-slate-400">Closed</span>
+                                <span className="font-mono text-slate-200">{d.breakdown.closed}</span>
                             </div>
                         </div>
                     </div>
@@ -452,7 +462,7 @@ export default function AdminDashboard() {
                     </div>
 
                     {/* ── Stat Cards ── */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up stagger-1">
+                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 animate-slide-up stagger-1">
                         <StatCard
                             icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                             label="Total Reports" value="1,284" trend="+10% from last month" trendType="up"
@@ -467,7 +477,11 @@ export default function AdminDashboard() {
                         />
                         <StatCard
                             icon={<svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                            label="Resolved" value="637" trend="+54% interactive" trendType="down"
+                            label="Solved" value="537" trend="+40% solved faster" trendType="up"
+                        />
+                        <StatCard
+                            icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
+                            label="Closed" value="100" trend="Archived completely" trendType="neutral"
                         />
                     </div>
 
@@ -548,7 +562,7 @@ export default function AdminDashboard() {
                                                 <td className="px-5 py-3.5">
                                                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${st.bg} ${st.color} border border-white/5 transition-all outline outline-1 outline-transparent hover:outline-teal-500/30 cursor-default`}>
                                                         <span className="relative flex w-1.5 h-1.5">
-                                                            {(r.status === "Investigating" || r.status === "Dispatched") && (
+                                                            {(r.status === "Reported" || r.status === "In Progress") && (
                                                                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${st.dot}`}></span>
                                                             )}
                                                             <span className={`relative inline-flex rounded-full w-1.5 h-1.5 ${st.dot}`} />
