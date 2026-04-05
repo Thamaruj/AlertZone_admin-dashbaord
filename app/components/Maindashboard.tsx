@@ -230,6 +230,7 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
 export default function AdminDashboard() {
     const [activeNav, setActiveNav] = useState("dashboard");
     const [searchValue, setSearchValue] = useState("");
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const navItems: NavItem[] = [
         {
@@ -270,8 +271,16 @@ export default function AdminDashboard() {
             <div className="absolute top-[-20%] left-[-5%] w-[600px] h-[600px] rounded-full bg-teal-900/20 blur-[140px] pointer-events-none" />
             <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-cyan-900/20 blur-[120px] pointer-events-none" />
 
+            {/* Mobile Sidebar Overlay */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/50 z-20 md:hidden backdrop-blur-sm" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-            <aside className="relative z-10 w-56 flex-shrink-0 bg-[#0f2233]/80 backdrop-blur-xl border-r border-white/5 flex flex-col">
+            <aside className={`fixed md:relative z-30 h-full w-56 flex-shrink-0 bg-[#0f2233] md:bg-[#0f2233]/80 backdrop-blur-xl border-r border-white/5 flex flex-col transition-transform duration-300 md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 {/* Brand */}
                 <div className="px-4 py-5 flex items-center gap-2.5 border-b border-white/5">
                     <AlertZoneLogo size={28} />
@@ -291,7 +300,17 @@ export default function AdminDashboard() {
             <div className="relative z-10 flex-1 flex flex-col min-w-0 overflow-hidden">
 
                 {/* Topbar */}
-                <header className="bg-[#0f2233]/80 backdrop-blur-xl border-b border-white/5 px-6 py-3 flex items-center gap-4 flex-shrink-0">
+                <header className="bg-[#0f2233]/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4 flex-shrink-0">
+                    {/* Mobile Menu Toggle */}
+                    <button 
+                        className="md:hidden p-2 -ml-2 text-slate-300 hover:bg-white/5 rounded-lg transition-colors"
+                        onClick={() => setIsMobileMenuOpen(true)}
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+
                     {/* Search */}
                     <div className="flex-1 max-w-md relative">
                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -320,7 +339,7 @@ export default function AdminDashboard() {
                 </header>
 
                 {/* ── Scrollable page ── */}
-                <main className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+                <main className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5">
 
                     {/* Page heading */}
                     <div className="flex items-start justify-between flex-wrap gap-3">
@@ -328,24 +347,25 @@ export default function AdminDashboard() {
                             <h1 className="text-lg font-bold text-slate-100 tracking-tight">Dashboard Overview</h1>
                             <p className="text-xs text-slate-300 mt-0.5">Real-time emergency monitoring and response status.</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
                                 <svg className="w-3.5 h-3.5 text-teal-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
                                 Last 30 Days
                             </div>
-                            <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white text-xs font-semibold px-4 py-2 rounded-lg shadow-lg shadow-teal-900/40 transition-all duration-200 active:scale-[0.98] flex items-center gap-1.5">
+                            <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white text-xs font-semibold px-3 sm:px-4 py-2 rounded-lg shadow-lg shadow-teal-900/40 transition-all duration-200 active:scale-[0.98] flex items-center gap-1.5">
                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
                                 </svg>
-                                Create Report
+                                <span className="hidden sm:inline">Create Report</span>
+                                <span className="sm:hidden">New</span>
                             </button>
                         </div>
                     </div>
 
                     {/* ── Stat Cards ── */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         <StatCard
                             icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                             label="Total Reports" value="1,284" trend="+10% from last month" trendType="up"
