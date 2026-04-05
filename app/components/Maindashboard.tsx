@@ -7,7 +7,7 @@ import { useState } from "react";
 type NavItem = { label: string; icon: React.ReactNode; id: string };
 type Report = {
     id: string;
-    category: "Fire" | "Medical" | "Accident" | "Theft";
+    category: "Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety";
     location: string;
     time: string;
     status: "Dispatched" | "Unassigned" | "Resolved" | "Investigating";
@@ -16,10 +16,10 @@ type Report = {
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const REPORTS: Report[] = [
-    { id: "#REP-8284", category: "Fire", location: "122 Baker St. NW", time: "3 mins ago", status: "Dispatched" },
-    { id: "#REP-8283", category: "Medical", location: "Grand Central Station", time: "14 mins ago", status: "Unassigned" },
-    { id: "#REP-8292", category: "Accident", location: "Highway 401, Exit 4", time: "45 mins ago", status: "Resolved" },
-    { id: "#REP-8281", category: "Theft", location: "Silicon Valley Plaza", time: "1 hour ago", status: "Investigating" },
+    { id: "#REP-8284", category: "Hazard", location: "122 Baker St. NW", time: "3 mins ago", status: "Dispatched" },
+    { id: "#REP-8283", category: "Lighting", location: "Grand Central Station", time: "14 mins ago", status: "Unassigned" },
+    { id: "#REP-8292", category: "Roads", location: "Highway 401, Exit 4", time: "45 mins ago", status: "Resolved" },
+    { id: "#REP-8281", category: "Waste", location: "Silicon Valley Plaza", time: "1 hour ago", status: "Investigating" },
 ];
 
 const MONTHLY_DATA = [
@@ -38,21 +38,23 @@ const MONTHLY_DATA = [
 ];
 
 const BAR_DATA = [
-    { label: "Fire", value: 180, color: "#f97316" },
-    { label: "Medical", value: 250, color: "#2dd4bf" },
-    { label: "Theft", value: 140, color: "#06b6d4" },
-    { label: "Flood", value: 90, color: "#0d9488" },
-    { label: "Accident", value: 210, color: "#14b8a6" },
-    { label: "Other", value: 70, color: "#334155" },
+    { label: "Hazard", value: 180, color: "#f43f5e" }, // Rose
+    { label: "Lighting", value: 250, color: "#eab308" }, // Yellow
+    { label: "Waste", value: 140, color: "#22c55e" }, // Green
+    { label: "Roads", value: 90, color: "#3b82f6" }, // Blue
+    { label: "Water", value: 210, color: "#0ea5e9" }, // Sky
+    { label: "Safety", value: 130, color: "#8b5cf6" }, // Violet
 ];
 
 // ─── Category / Status Meta ───────────────────────────────────────────────────
 
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
-    Fire: { color: "text-orange-400", bg: "bg-orange-500/10", icon: "🔥" },
-    Medical: { color: "text-teal-300", bg: "bg-teal-500/10", icon: "🏥" },
-    Accident: { color: "text-cyan-300", bg: "bg-cyan-500/10", icon: "🚗" },
-    Theft: { color: "text-rose-400", bg: "bg-rose-500/10", icon: "🔓" },
+    Hazard: { color: "text-rose-400", bg: "bg-rose-500/10", icon: "⚠️" },
+    Lighting: { color: "text-yellow-400", bg: "bg-yellow-500/10", icon: "💡" },
+    Waste: { color: "text-green-400", bg: "bg-green-500/10", icon: "🗑️" },
+    Roads: { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
+    Water: { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
+    Safety: { color: "text-violet-400", bg: "bg-violet-500/10", icon: "🛡️" },
 };
 
 const statusMeta: Record<Report["status"], { color: string; bg: string; dot: string }> = {
@@ -129,19 +131,22 @@ function BarChart() {
     return (
         <div className="flex items-end gap-3 px-1" style={{ height: 148 }}>
             {BAR_DATA.map((d) => (
-                <div key={d.label} className="flex flex-col items-center gap-1.5 flex-1">
-                    <div className="w-full flex items-end justify-center" style={{ height: 120 }}>
+                <div key={d.label} className="flex flex-col items-center gap-1.5 flex-1 group">
+                    <span className="text-[10px] font-bold text-slate-200 opacity-70 group-hover:opacity-100 transition-opacity duration-300 -mb-1">
+                        {d.value}
+                    </span>
+                    <div className="w-full flex items-end justify-center" style={{ height: 100 }}>
                         <div
                             className="w-full rounded-t-sm transition-all duration-700"
                             style={{
-                                height: `${(d.value / max) * 115}px`,
+                                height: `${(d.value / max) * 95}px`,
                                 backgroundColor: d.color,
-                                opacity: 0.8,
+                                opacity: 0.85,
                                 boxShadow: `0 -2px 8px ${d.color}44`,
                             }}
                         />
                     </div>
-                    <span className="text-[9px] text-slate-300 font-mono">{d.label}</span>
+                    <span className="text-[9px] text-slate-300 font-mono pt-0.5">{d.label}</span>
                 </div>
             ))}
         </div>
