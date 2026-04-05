@@ -23,18 +23,18 @@ const REPORTS: Report[] = [
 ];
 
 const MONTHLY_DATA = [
-    { month: "Jan", y2024: 30, y2025: 20 },
-    { month: "Feb", y2024: 45, y2025: 30 },
-    { month: "Mar", y2024: 35, y2025: 50 },
-    { month: "Apr", y2024: 50, y2025: 40 },
-    { month: "May", y2024: 40, y2025: 60 },
-    { month: "Jun", y2024: 55, y2025: 55 },
-    { month: "Jul", y2024: 45, y2025: 70 },
-    { month: "Aug", y2024: 60, y2025: 80 },
-    { month: "Sep", y2024: 50, y2025: 75 },
-    { month: "Oct", y2024: 65, y2025: 85 },
-    { month: "Nov", y2024: 55, y2025: 90 },
-    { month: "Dec", y2024: 70, y2025: 95 },
+    { month: "Jan", y2025: 30, y2026: 20 },
+    { month: "Feb", y2025: 45, y2026: 30 },
+    { month: "Mar", y2025: 35, y2026: 50 },
+    { month: "Apr", y2025: 50, y2026: 40 },
+    { month: "May", y2025: 40, y2026: 60 },
+    { month: "Jun", y2025: 55, y2026: 55 },
+    { month: "Jul", y2025: 45, y2026: 70 },
+    { month: "Aug", y2025: 60, y2026: 80 },
+    { month: "Sep", y2025: 50, y2026: 75 },
+    { month: "Oct", y2025: 65, y2026: 85 },
+    { month: "Nov", y2025: 55, y2026: 90 },
+    { month: "Dec", y2025: 70, y2026: 95 },
 ];
 
 const BAR_DATA = [
@@ -173,6 +173,7 @@ function BarChart() {
 // ─── Line Chart ───────────────────────────────────────────────────────────────
 
 function LineChart() {
+    const [hoverIdx, setHoverIdx] = useState<number | null>(null);
     const W = 560, H = 120;
     const pad = { l: 8, r: 8, t: 8, b: 8 };
     const iW = W - pad.l - pad.r;
@@ -180,27 +181,74 @@ function LineChart() {
     const maxVal = 100;
     const toX = (i: number) => pad.l + (i / (MONTHLY_DATA.length - 1)) * iW;
     const toY = (v: number) => pad.t + iH - (v / maxVal) * iH;
-    const pathD = (key: "y2024" | "y2025") =>
+    const pathD = (key: "y2025" | "y2026") =>
         MONTHLY_DATA.map((d, i) => `${i === 0 ? "M" : "L"} ${toX(i)} ${toY(d[key])}`).join(" ");
-    const areaD = (key: "y2024" | "y2025") =>
+    const areaD = (key: "y2025" | "y2026") =>
         `${pathD(key)} L ${toX(MONTHLY_DATA.length - 1)} ${toY(0)} L ${toX(0)} ${toY(0)} Z`;
+    
     return (
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none" style={{ height: 120 }}>
-            <defs>
-                <linearGradient id="lgTeal" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="lgSlate" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#475569" stopOpacity="0.15" />
-                    <stop offset="100%" stopColor="#475569" stopOpacity="0" />
-                </linearGradient>
-            </defs>
-            <path d={areaD("y2024")} fill="url(#lgSlate)" />
-            <path d={areaD("y2025")} fill="url(#lgTeal)" />
-            <path d={pathD("y2024")} fill="none" stroke="#334155" strokeWidth="1.5" strokeDasharray="5 3" />
-            <path d={pathD("y2025")} fill="none" stroke="#2dd4bf" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
+        <div className="relative w-full" style={{ height: 120 }} onMouseLeave={() => setHoverIdx(null)}>
+            <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
+                <defs>
+                    <linearGradient id="lgTeal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.25" />
+                        <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id="lgSlate" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#475569" stopOpacity="0.15" />
+                        <stop offset="100%" stopColor="#475569" stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+                <path d={areaD("y2025")} fill="url(#lgSlate)" />
+                <path d={areaD("y2026")} fill="url(#lgTeal)" />
+                <path d={pathD("y2025")} fill="none" stroke="#475569" strokeWidth="1.5" strokeDasharray="5 3" />
+                <path d={pathD("y2026")} fill="none" stroke="#2dd4bf" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+
+                {/* Interaction Overlay mapped to invisible rectangles */}
+                {MONTHLY_DATA.map((d, i) => {
+                    const xP = toX(i);
+                    const isHovered = hoverIdx === i;
+                    const bandWidth = iW / (MONTHLY_DATA.length - 1);
+                    return (
+                        <g key={d.month} onMouseEnter={() => setHoverIdx(i)}>
+                            <rect 
+                                x={xP - bandWidth / 2} y={0} width={bandWidth} height={H} 
+                                fill="transparent" className="cursor-crosshair" 
+                            />
+                            {isHovered && (
+                                <line x1={xP} y1={pad.t} x2={xP} y2={H - pad.b} stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" pointerEvents="none" />
+                            )}
+                            <circle cx={xP} cy={toY(d.y2025)} r={isHovered ? 4 : 0} fill="#0d1f2d" stroke="#475569" strokeWidth="2" pointerEvents="none" className="transition-all duration-200" />
+                            <circle cx={xP} cy={toY(d.y2026)} r={isHovered ? 4 : 0} fill="#0d1f2d" stroke="#2dd4bf" strokeWidth="2" pointerEvents="none" className="transition-all duration-200" />
+                        </g>
+                    );
+                })}
+            </svg>
+
+            {/* Floating Tooltip */}
+            {hoverIdx !== null && (
+                <div 
+                    className="absolute z-50 bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200 min-w-[120px]"
+                    style={{
+                        left: `${(toX(hoverIdx) / W) * 100}%`,
+                        top: '10px',
+                        transform: 'translateX(calc(-50% + 5px))' // Slight correction for standard centering
+                    }}
+                >
+                    <span className="text-xs font-bold text-slate-100 mb-2 border-b border-white/5 pb-1 block">
+                        {MONTHLY_DATA[hoverIdx].month} Trend
+                    </span>
+                    <div className="flex justify-between items-center text-[10px] py-0.5 gap-4">
+                        <span className="flex items-center gap-1.5 text-white"><span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>2025</span>
+                        <span className="font-mono text-slate-300 font-semibold">{MONTHLY_DATA[hoverIdx].y2025}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] py-0.5 gap-4">
+                        <span className="flex items-center gap-1.5 text-white"><span className="w-1.5 h-1.5 rounded-full bg-teal-400"></span>2026</span>
+                        <span className="font-mono text-slate-100 font-bold">{MONTHLY_DATA[hoverIdx].y2026}</span>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -448,10 +496,10 @@ export default function AdminDashboard() {
                             </div>
                             <div className="flex items-center gap-4 text-[11px] text-slate-300">
                                 <span className="flex items-center gap-1.5">
-                                    <span className="w-6 h-0.5 bg-teal-400 rounded inline-block" />2025
+                                    <span className="w-6 h-0.5 bg-teal-400 rounded inline-block" />2026
                                 </span>
                                 <span className="flex items-center gap-1.5">
-                                    <span className="w-5 border-t border-dashed border-slate-600 inline-block" />2024
+                                    <span className="w-5 border-t border-dashed border-slate-600 inline-block" />2025
                                 </span>
                             </div>
                         </div>
