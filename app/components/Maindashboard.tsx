@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
+import logo1 from "../assets/logo1.png";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -376,7 +378,7 @@ export default function AdminDashboard() {
             <aside className={`fixed md:relative z-30 h-full w-56 flex-shrink-0 bg-[#0f2233] md:bg-[#0f2233]/80 backdrop-blur-xl border-r border-white/5 flex flex-col transition-transform duration-300 md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 {/* Brand */}
                 <div className="px-4 py-5 flex items-center gap-2.5 border-b border-white/5">
-                    <AlertZoneLogo size={28} />
+                    <Image src={logo1} alt="AlertZone Logo" width={28} height={28} className="object-contain drop-shadow-md" />
                     <span className="text-white font-bold text-sm tracking-wide">AlertZone</span>
                 </div>
 
