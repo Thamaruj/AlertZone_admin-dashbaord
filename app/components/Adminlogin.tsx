@@ -4,7 +4,11 @@ import { useState } from "react";
 import Image from "next/image";
 import logo1 from "../assets/logo1.png";
 
-export default function AdminLogin() {
+type AdminLoginProps = {
+  onLogin?: () => void;
+};
+
+export default function AdminLogin({ onLogin }: AdminLoginProps) {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -18,6 +22,9 @@ export default function AdminLogin() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
     setIsLoading(false);
+    if (onLogin) {
+      onLogin();
+    }
   };
 
   return (
@@ -77,7 +84,7 @@ export default function AdminLogin() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your admin username"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-1.5 text-sm text-slate-200 placeholder:text-slate-300 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -98,7 +105,7 @@ export default function AdminLogin() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your admin email"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-1.5 text-sm text-slate-200 placeholder:text-slate-300 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
                   />
                 </div>
               </div>
@@ -127,12 +134,12 @@ export default function AdminLogin() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••••"
-                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-1.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-1.5 text-sm text-slate-200 placeholder:text-slate-300 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                    className="absolute inset-y-0 right-3.5 flex items-center text-slate-300 hover:text-slate-300 transition-colors"
                   >
                     {showPassword ? (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +218,7 @@ export default function AdminLogin() {
                   <button
                     key={link}
                     type="button"
-                    className="text-[10px] text-slate-500 hover:text-teal-400 transition-colors duration-150"
+                    className="text-[10px] text-slate-300 hover:text-teal-400 transition-colors duration-150"
                   >
                     {link}
                   </button>
@@ -221,7 +228,7 @@ export default function AdminLogin() {
           </div>
 
           {/* Copyright */}
-          <p className="text-center text-[11px] text-slate-500 mt-4 opacity-80">
+          <p className="text-center text-[11px] text-slate-300 mt-4 opacity-80">
             © 2026 AlertZone Municipal Infrastructure. All Rights Reserved.
           </p>
         </div>
