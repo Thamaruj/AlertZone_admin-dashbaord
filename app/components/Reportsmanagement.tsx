@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,11 +49,24 @@ const priorityMeta: Record<Report["priority"], { color: string; bg: string }> = 
 };
 
 export default function ReportsManagement() {
+    const [reports, setReports] = useState<Report[]>([]);
+    const [loading, setLoading] = useState(true);
     const [selectedTab, setSelectedTab] = useState<Report["status"] | "All">("All");
 
+    // ─── Simulated Data Fetch ──────────────────────────────────────────────────
+    // In the future, replace this with a Firebase onSnapshot or getDocs call
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setReports(REPORTS);
+            setLoading(false);
+        }, 1200);
+        return () => clearTimeout(timer);
+    }, []);
+
     const filteredReports = selectedTab === "All" 
-        ? REPORTS 
-        : REPORTS.filter(r => r.status === selectedTab);
+        ? reports 
+        : reports.filter(r => r.status === selectedTab);
+
 
     return (
         <div className="space-y-6">
@@ -96,7 +109,25 @@ export default function ReportsManagement() {
 
             {/* Reports List */}
             <div className="grid grid-cols-1 gap-4 animate-slide-up stagger-2">
-                {filteredReports.map((report, idx) => {
+                {loading ? (
+                    // Loading Skeletons
+                    [1, 2, 3].map((i) => (
+                        <div key={i} className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-5 h-40 animate-pulse relative overflow-hidden">
+                            <div className="flex gap-4">
+                                <div className="w-12 h-12 bg-white/5 rounded-xl" />
+                                <div className="flex-1 space-y-3">
+                                    <div className="h-4 bg-white/5 rounded w-1/4" />
+                                    <div className="h-3 bg-white/5 rounded w-1/2" />
+                                    <div className="h-3 bg-white/5 rounded w-1/3" />
+                                </div>
+                            </div>
+                            <div className="absolute top-5 right-5 w-24 h-6 bg-white/5 rounded-full" />
+                            <div className="mt-8 pt-4 border-t border-white/5">
+                                <div className="h-3 bg-white/5 rounded w-full" />
+                            </div>
+                        </div>
+                    ))
+                ) : filteredReports.map((report, idx) => {
                     const cat = categoryMeta[report.category];
                     const st = statusMeta[report.status];
                     const prio = priorityMeta[report.priority];
@@ -154,7 +185,8 @@ export default function ReportsManagement() {
             </div>
 
             {/* Empty State */}
-            {filteredReports.length === 0 && (
+            {!loading && filteredReports.length === 0 && (
+
                 <div className="flex flex-col items-center justify-center py-20 text-center animate-slide-up">
                     <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-3xl mb-4 opacity-50">
                         📁

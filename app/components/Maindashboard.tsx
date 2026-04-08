@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import logo1 from "../assets/logo1.png";
 import ReportsManagement from "./Reportsmanagement";
@@ -471,6 +471,16 @@ export default function AdminDashboard() {
     const [activeNav, setActiveNav] = useState("dashboard");
     const [searchValue, setSearchValue] = useState("");
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    // Simulated initial load for the whole dashboard
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setLoading(false);
+        }, 800);
+        return () => clearTimeout(timer);
+    }, []);
+
 
     const navItems: NavItem[] = [
         {
@@ -599,38 +609,29 @@ export default function AdminDashboard() {
                 <main className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5">
 
                     {/* Section Content based on active navigation */}
-                    {activeNav === "dashboard" && <DashboardOverviewContent />}
-                    
-                    {activeNav === "reports" && <ReportsManagement />}
-                    {activeNav === "map" && (
-                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
-                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Map View</h2>
-                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
+                    {loading ? (
+                        <div className="flex flex-col gap-6 animate-pulse">
+                            <div className="h-10 bg-white/5 rounded-lg w-1/3" />
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                                {[1, 2, 3, 4, 5].map(i => <div key={i} className="h-24 bg-white/5 rounded-xl" />)}
+                            </div>
+                            <div className="h-64 bg-white/5 rounded-xl" />
                         </div>
-                    )}
-                    {activeNav === "users" && (
-                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
-                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Users Management</h2>
-                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
-                        </div>
-                    )}
-                    {activeNav === "analytics" && (
-                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
-                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Analytics</h2>
-                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
-                        </div>
-                    )}
-                    {activeNav === "notifications" && (
-                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
-                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Notifications</h2>
-                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
-                        </div>
-                    )}
-                    {activeNav === "settings" && (
-                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
-                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Settings</h2>
-                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
-                        </div>
+                    ) : (
+                        <>
+                            {activeNav === "dashboard" && <DashboardOverviewContent />}
+                            {activeNav === "reports" && <ReportsManagement />}
+                            
+                            {/* Other section placeholders remain same for now */}
+                            {["map", "users", "analytics", "notifications", "settings"].includes(activeNav) && (
+                                <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
+                                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+                                        {navItems.find(n => n.id === activeNav)?.label}
+                                    </h2>
+                                    <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
+                                </div>
+                            )}
+                        </>
                     )}
 
                     {/* Footer */}
