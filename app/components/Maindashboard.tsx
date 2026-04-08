@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Image from "next/image";
 import logo1 from "../assets/logo1.png";
+import ReportsManagement from "./Reportsmanagement";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -599,12 +601,7 @@ export default function AdminDashboard() {
                     {/* Section Content based on active navigation */}
                     {activeNav === "dashboard" && <DashboardOverviewContent />}
                     
-                    {activeNav === "reports" && (
-                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
-                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Reports Management</h2>
-                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
-                        </div>
-                    )}
+                    {activeNav === "reports" && <ReportsManagement />}
                     {activeNav === "map" && (
                         <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
                             <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Map View</h2>
