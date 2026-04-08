@@ -1,28 +1,107 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type Reporter = {
+    name: string;
+    phone: string;
+    email: string;
+    reportsCount: number;
+};
+
+type Note = {
+    id: string;
+    author: string;
+    text: string;
+    time: string;
+};
 
 type Report = {
     id: string;
     category: "Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety";
     location: string;
+    coordinates: { lat: number; lng: number };
     time: string;
     status: "Reported" | "In Progress" | "Solved" | "Closed";
     priority: "Low" | "Medium" | "High" | "Critical";
     description: string;
+    images: string[];
+    reporter: Reporter;
+    notes: Note[];
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const REPORTS: Report[] = [
-    { id: "#REP-8284", category: "Hazard", location: "122 Baker St. NW", time: "Oct 24, 2025 • 09:20 AM", status: "In Progress", priority: "High", description: "Exposed electrical wires near the bus stop." },
-    { id: "#REP-8283", category: "Lighting", location: "Grand Central Station", time: "Oct 24, 2025 • 08:45 AM", status: "Reported", priority: "Medium", description: "Street light flickering repeatedly." },
-    { id: "#REP-8292", category: "Roads", location: "Highway 401, Exit 4", time: "Oct 23, 2025 • 11:30 PM", status: "Solved", priority: "Critical", description: "Large pothole causing traffic disruption." },
-    { id: "#REP-8281", category: "Waste", location: "Silicon Valley Plaza", time: "Oct 23, 2025 • 04:15 PM", status: "Closed", priority: "Low", description: "Overflowing trash bins behind the mall." },
-    { id: "#REP-8301", category: "Water", location: "Main St. Fountain", time: "Oct 25, 2025 • 10:00 AM", status: "Reported", priority: "High", description: "Water pipe leaking onto the sidewalk." },
-    { id: "#REP-8305", category: "Safety", location: "Central Park Entrance", time: "Oct 25, 2025 • 11:05 AM", status: "In Progress", priority: "Medium", description: "Broken safety railing on the pedestrian bridge." },
+    { 
+        id: "#REP-8284", 
+        category: "Hazard", 
+        location: "122 Baker St. NW", 
+        coordinates: { lat: 40.7128, lng: -74.0060 },
+        time: "Oct 24, 2025 • 09:20 AM", 
+        status: "In Progress", 
+        priority: "High", 
+        description: "Exposed electrical wires near the bus stop. The wires are sparking occasionally and are close to a puddle.",
+        images: [
+            "https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?q=80&w=600&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1516937941344-00b4e0337589?q=80&w=600&auto=format&fit=crop"
+        ],
+        reporter: {
+            name: "John Doe",
+            phone: "+1 (555) 123-4567",
+            email: "john.doe@example.com",
+            reportsCount: 5
+        },
+        notes: [
+            { id: "n1", author: "Alex (Admin)", text: "Dispatched electrical team at 10:00 AM.", time: "Oct 24, 2:15 PM" }
+        ]
+    },
+    { 
+        id: "#REP-8283", 
+        category: "Lighting", 
+        location: "Grand Central Station", 
+        coordinates: { lat: 40.7527, lng: -73.9772 },
+        time: "Oct 24, 2025 • 08:45 AM", 
+        status: "Reported", 
+        priority: "Medium", 
+        description: "Street light flickering repeatedly. Causes poor visibility for drivers at night.",
+        images: [
+            "https://images.unsplash.com/photo-1471101173712-b9884175254e?q=80&w=600&auto=format&fit=crop"
+        ],
+        reporter: {
+            name: "Sarah Miller",
+            phone: "+1 (555) 987-6543",
+            email: "s.miller@webmail.com",
+            reportsCount: 2
+        },
+        notes: []
+    },
+    { 
+        id: "#REP-8292", 
+        category: "Roads", 
+        location: "Highway 401, Exit 4", 
+        coordinates: { lat: 40.8448, lng: -73.8648 },
+        time: "Oct 23, 2025 • 11:30 PM", 
+        status: "Solved", 
+        priority: "Critical", 
+        description: "Large pothole causing traffic disruption. Several cars have suffered tire damage.",
+        images: [
+            "https://images.unsplash.com/photo-1599389717196-80517726d36e?q=80&w=600&auto=format&fit=crop",
+            "https://images.unsplash.com/photo-1544027960-ca2ca8985172?q=80&w=600&auto=format&fit=crop"
+        ],
+        reporter: {
+            name: "Michael Chen",
+            phone: "+1 (555) 444-3333",
+            email: "mchen@roads.org",
+            reportsCount: 12
+        },
+        notes: [
+            { id: "n2", author: "Team Lead", text: "Patching completed. Road reopened.", time: "Oct 24, 8:00 AM" }
+        ]
+    },
 ];
 
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
@@ -53,6 +132,7 @@ export default function ReportsManagement() {
     const [loading, setLoading] = useState(true);
     const [selectedTab, setSelectedTab] = useState<Report["status"] | "All">("All");
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+    const [newNote, setNewNote] = useState("");
 
     // ─── Simulated Data Fetch ──────────────────────────────────────────────────
     useEffect(() => {
@@ -73,6 +153,21 @@ export default function ReportsManagement() {
         if (selectedReport?.id === id) {
             setSelectedReport(prev => prev ? { ...prev, status: newStatus } : null);
         }
+    };
+
+    // ─── Add Note Function ────────────────────────────────────────────────────
+    const handleAddNote = () => {
+        if (!newNote.trim() || !selectedReport) return;
+        const note: Note = {
+            id: Math.random().toString(36).substr(2, 9),
+            author: "Alex Morgan (Admin)",
+            text: newNote,
+            time: "Just now"
+        };
+        const updatedReport = { ...selectedReport, notes: [note, ...selectedReport.notes] };
+        setReports(prev => prev.map(r => r.id === selectedReport.id ? updatedReport : r));
+        setSelectedReport(updatedReport);
+        setNewNote("");
     };
 
     return (
@@ -185,7 +280,7 @@ export default function ReportsManagement() {
                             </div>
                             
                             <div className="mt-4 pt-4 border-t border-white/5">
-                                <p className="text-xs text-slate-400 leading-relaxed max-w-2xl italic">
+                                <p className="text-xs text-slate-400 leading-relaxed max-w-2xl italic line-clamp-2">
                                     "{report.description}"
                                 </p>
                             </div>
@@ -212,16 +307,17 @@ export default function ReportsManagement() {
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
                         onClick={() => setSelectedReport(null)}
                     />
-                    <div className="relative w-full max-w-2xl bg-[#0f2233] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300">
+                    <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#0f2233] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col">
+                        
                         {/* Header */}
-                        <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2">
+                        <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2 flex-shrink-0">
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 rounded-xl ${categoryMeta[selectedReport.category].bg} flex items-center justify-center text-xl`}>
                                     {categoryMeta[selectedReport.category].icon}
                                 </div>
                                 <div>
                                     <h2 className="text-white font-bold tracking-tight">{selectedReport.id} Details</h2>
-                                    <p className="text-[11px] text-slate-400">Manage and update report status</p>
+                                    <p className="text-[11px] text-slate-400">View evidence, location, and manage notes</p>
                                 </div>
                             </div>
                             <button 
@@ -232,68 +328,167 @@ export default function ReportsManagement() {
                             </button>
                         </div>
 
-                        {/* Content */}
-                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category</p>
-                                    <p className="text-sm font-semibold text-slate-200">{selectedReport.category}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Priority</p>
-                                    <div className={`w-fit px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${priorityMeta[selectedReport.priority].bg} ${priorityMeta[selectedReport.priority].color} border border-white/5`}>
-                                        {selectedReport.priority}
+                        {/* Content Scrollable */}
+                        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                            
+                            {/* Top Grid: Overview + Map */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-3 bg-white/3 border border-white/5 rounded-xl space-y-1">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category</p>
+                                            <p className="text-sm font-semibold text-slate-200">{selectedReport.category}</p>
+                                        </div>
+                                        <div className="p-3 bg-white/3 border border-white/5 rounded-xl space-y-1">
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Priority</p>
+                                            <div className={`w-fit px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${priorityMeta[selectedReport.priority].bg} ${priorityMeta[selectedReport.priority].color} border border-white/5`}>
+                                                {selectedReport.priority}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-4 bg-white/3 border border-white/5 rounded-2xl space-y-3">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reporter Evidence</p>
+                                        <p className="text-xs text-slate-300 leading-relaxed italic">"{selectedReport.description}"</p>
+                                        <div className="flex gap-2.5 mt-2 overflow-x-auto pb-1">
+                                            {selectedReport.images.map((img, i) => (
+                                                <div key={i} className="relative w-32 h-32 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 group/img">
+                                                    <img src={img} alt="Evidence" className="w-full h-full object-crop object-cover transition-transform duration-500 group-hover/img:scale-110" />
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location</p>
-                                    <p className="text-sm font-semibold text-slate-200">{selectedReport.location}</p>
-                                </div>
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reported Time</p>
-                                    <p className="text-sm font-semibold text-slate-200">{selectedReport.time}</p>
-                                </div>
-                            </div>
 
-                            <div className="space-y-2">
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Description</p>
-                                <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
-                                    <p className="text-xs text-slate-300 leading-relaxed">
-                                        {selectedReport.description}
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Update Progress Status</p>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                    {(["Reported", "In Progress", "Solved", "Closed"] as Report["status"][]).map((st) => (
-                                        <button
-                                            key={st}
-                                            onClick={() => updateReportStatus(selectedReport.id, st)}
-                                            className={`px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 border ${
-                                                selectedReport.status === st
-                                                ? `${statusMeta[st].bg} ${statusMeta[st].color} border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/40`
-                                                : "bg-[#0d1f2d] text-slate-400 border-white/5 hover:bg-white/5 hover:text-slate-300"
-                                            }`}
-                                        >
-                                            <div className="flex flex-col items-center gap-1.5">
-                                                <span className={`w-2 h-2 rounded-full ${statusMeta[st].dot}`} />
-                                                {st}
+                                {/* Mini Map Placeholder */}
+                                <div className="relative h-full min-h-[240px] bg-slate-900 rounded-2xl overflow-hidden border border-white/10 group/map">
+                                    <div className="absolute inset-0 bg-[#0d1f2d] flex items-center justify-center">
+                                        {/* Mock Map Background */}
+                                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#2dd4bf 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
+                                        <div className="relative text-center">
+                                            <div className="inline-flex p-3 bg-teal-500/10 rounded-full animate-bounce">
+                                                <svg className="w-8 h-8 text-teal-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
                                             </div>
+                                            <p className="text-[11px] text-teal-400/80 font-mono mt-2 uppercase tracking-widest">{selectedReport.coordinates.lat.toFixed(4)}, {selectedReport.coordinates.lng.toFixed(4)}</p>
+                                        </div>
+                                    </div>
+                                    <div className="absolute top-4 left-4 p-2 bg-[#0f2233]/90 backdrop-blur-md rounded-lg border border-white/10 text-[10px] text-slate-200">
+                                        {selectedReport.location}
+                                    </div>
+                                    <div className="absolute bottom-4 right-4 flex flex-col gap-1">
+                                        <button className="p-2 bg-white/10 hover:bg-white/20 rounded shadow-lg text-white transition-colors backdrop-blur-md border border-white/10">
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth="2.5"/></svg>
                                         </button>
+                                        <button className="p-2 bg-white/10 hover:bg-white/20 rounded shadow-lg text-white transition-colors backdrop-blur-md border border-white/10">
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 12H4" strokeWidth="2.5"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Citizen Details & Management */}
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                {/* Reporter Card */}
+                                <div className="p-5 bg-white/2 border border-white/5 rounded-2xl space-y-4">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reporter Details</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
+                                            {selectedReport.reporter.name.split(' ').map(n=>n[0]).join('')}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-200">{selectedReport.reporter.name}</p>
+                                            <p className="text-[10px] text-slate-400">{selectedReport.reporter.phone}</p>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 pt-2">
+                                        <div className="flex justify-between text-[11px]">
+                                            <span className="text-slate-500">Total Reports</span>
+                                            <span className="text-teal-400 font-bold">{selectedReport.reporter.reportsCount}</span>
+                                        </div>
+                                        <div className="flex justify-between text-[11px]">
+                                            <span className="text-slate-500">Trust Level</span>
+                                            <span className="text-green-400">High</span>
+                                        </div>
+                                    </div>
+                                    <button className="w-full py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-300 hover:bg-white/10 transition-colors uppercase tracking-widest">
+                                        View Full Profile
+                                    </button>
+                                </div>
+
+                                {/* Status Update */}
+                                <div className="lg:col-span-2 space-y-4">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Update Progress Status</p>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                        {(["Reported", "In Progress", "Solved", "Closed"] as Report["status"][]).map((st) => (
+                                            <button
+                                                key={st}
+                                                onClick={() => updateReportStatus(selectedReport.id, st)}
+                                                className={`px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 border ${
+                                                    selectedReport.status === st
+                                                    ? `${statusMeta[st].bg} ${statusMeta[st].color} border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/40`
+                                                    : "bg-[#0d1f2d] text-slate-400 border-white/5 hover:bg-white/5 hover:text-slate-300"
+                                                }`}
+                                            >
+                                                <div className="flex flex-col items-center gap-1.5">
+                                                    <span className={`w-2 h-2 rounded-full ${statusMeta[st].dot}`} />
+                                                    {st}
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Internal Notes Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Internal Admin Notes</p>
+                                    <span className="text-[10px] text-slate-400 font-mono">{selectedReport.notes.length} notes</span>
+                                </div>
+                                
+                                {/* Add Note Input */}
+                                <div className="flex gap-2">
+                                    <input 
+                                        type="text" 
+                                        value={newNote}
+                                        onChange={(e) => setNewNote(e.target.value)}
+                                        placeholder="Add a private note for other admins..."
+                                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-colors"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleAddNote()}
+                                    />
+                                    <button 
+                                        onClick={handleAddNote}
+                                        className="px-4 bg-teal-500/10 border border-teal-500/20 text-teal-400 rounded-xl text-xs font-bold hover:bg-teal-500/20 transition-all"
+                                    >
+                                        Add Note
+                                    </button>
+                                </div>
+
+                                {/* Notes List */}
+                                <div className="space-y-3">
+                                    {selectedReport.notes.map((note) => (
+                                        <div key={note.id} className="p-3 bg-white/3 border border-white/5 rounded-xl space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold text-teal-400/80">{note.author}</span>
+                                                <span className="text-[9px] text-slate-500 font-mono">{note.time}</span>
+                                            </div>
+                                            <p className="text-[11px] text-slate-300 leading-relaxed">{note.text}</p>
+                                        </div>
                                     ))}
+                                    {selectedReport.notes.length === 0 && (
+                                        <p className="text-center py-4 text-[10px] text-slate-500 italic">No notes added yet.</p>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-5 bg-white/2 border-t border-white/5 flex justify-end gap-3">
+                        <div className="px-6 py-5 bg-white/2 border-t border-white/5 flex justify-end gap-3 flex-shrink-0">
                             <button 
                                 onClick={() => setSelectedReport(null)}
-                                className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold rounded-xl transition-all"
+                                className="px-8 py-3 bg-gradient-to-r from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30 text-teal-400 border border-teal-500/30 text-xs font-bold rounded-xl shadow-lg transition-all"
                             >
-                                Done
+                                Close Management View
                             </button>
                         </div>
                     </div>
