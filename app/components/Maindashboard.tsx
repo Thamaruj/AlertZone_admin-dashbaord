@@ -155,7 +155,7 @@ function BarChart() {
                                 boxShadow: `0 -2px 8px ${d.color}44`,
                             }}
                         />
-                        
+
                         {/* Custom Hover Tooltip */}
                         <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl z-50 pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200">
                             <span className="text-xs font-bold text-slate-100 mb-1 border-b border-white/5 pb-1 line-clamp-1 truncate" style={{ color: d.color }}>{d.label} Breakdown</span>
@@ -199,7 +199,7 @@ function LineChart() {
         MONTHLY_DATA.map((d, i) => `${i === 0 ? "M" : "L"} ${toX(i)} ${toY(d[key])}`).join(" ");
     const areaD = (key: "y2025" | "y2026") =>
         `${pathD(key)} L ${toX(MONTHLY_DATA.length - 1)} ${toY(0)} L ${toX(0)} ${toY(0)} Z`;
-    
+
     return (
         <div className="relative w-full" style={{ height: 120 }} onMouseLeave={() => setHoverIdx(null)}>
             <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
@@ -225,9 +225,9 @@ function LineChart() {
                     const bandWidth = iW / (MONTHLY_DATA.length - 1);
                     return (
                         <g key={d.month} onMouseEnter={() => setHoverIdx(i)}>
-                            <rect 
-                                x={xP - bandWidth / 2} y={0} width={bandWidth} height={H} 
-                                fill="transparent" className="cursor-crosshair" 
+                            <rect
+                                x={xP - bandWidth / 2} y={0} width={bandWidth} height={H}
+                                fill="transparent" className="cursor-crosshair"
                             />
                             {isHovered && (
                                 <line x1={xP} y1={pad.t} x2={xP} y2={H - pad.b} stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" pointerEvents="none" />
@@ -241,7 +241,7 @@ function LineChart() {
 
             {/* Floating Tooltip */}
             {hoverIdx !== null && (
-                <div 
+                <div
                     className="absolute z-50 bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200 min-w-[120px]"
                     style={{
                         left: `${(toX(hoverIdx) / W) * 100}%`,
@@ -299,8 +299,8 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
         <button
             onClick={onClick}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-left ${active
-                    ? "bg-teal-500/15 text-teal-400 border border-teal-500/20"
-                    : "text-slate-300 hover:bg-white/5 hover:text-slate-300"
+                ? "bg-teal-500/15 text-teal-400 border border-teal-500/20"
+                : "text-slate-300 hover:bg-white/5 hover:text-slate-300"
                 }`}
         >
             <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>
@@ -536,8 +536,8 @@ export default function AdminDashboard() {
 
             {/* Mobile Sidebar Overlay */}
             {isMobileMenuOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/50 z-20 md:hidden backdrop-blur-sm" 
+                <div
+                    className="fixed inset-0 bg-black/50 z-20 md:hidden backdrop-blur-sm"
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
@@ -565,7 +565,7 @@ export default function AdminDashboard() {
                 {/* Topbar */}
                 <header className="bg-[#0f2233]/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4 flex-shrink-0">
                     {/* Mobile Menu Toggle */}
-                    <button 
+                    <button
                         className="md:hidden p-2 -ml-2 text-slate-300 hover:bg-white/5 rounded-lg transition-colors"
                         onClick={() => setIsMobileMenuOpen(true)}
                     >
@@ -621,7 +621,7 @@ export default function AdminDashboard() {
                         <>
                             {activeNav === "dashboard" && <DashboardOverviewContent />}
                             {activeNav === "reports" && <ReportsManagement />}
-                            
+
                             {/* Other section placeholders remain same for now */}
                             {["map", "users", "analytics", "notifications", "settings"].includes(activeNav) && (
                                 <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
