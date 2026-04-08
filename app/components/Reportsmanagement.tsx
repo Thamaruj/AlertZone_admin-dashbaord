@@ -52,9 +52,9 @@ export default function ReportsManagement() {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedTab, setSelectedTab] = useState<Report["status"] | "All">("All");
+    const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
     // ─── Simulated Data Fetch ──────────────────────────────────────────────────
-    // In the future, replace this with a Firebase onSnapshot or getDocs call
     useEffect(() => {
         const timer = setTimeout(() => {
             setReports(REPORTS);
@@ -67,9 +67,16 @@ export default function ReportsManagement() {
         ? reports 
         : reports.filter(r => r.status === selectedTab);
 
+    // ─── Update Status Function ───────────────────────────────────────────────
+    const updateReportStatus = (id: string, newStatus: Report["status"]) => {
+        setReports(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+        if (selectedReport?.id === id) {
+            setSelectedReport(prev => prev ? { ...prev, status: newStatus } : null);
+        }
+    };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 relative">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-slide-up">
                 <div>
@@ -102,7 +109,7 @@ export default function ReportsManagement() {
                         }`}
                     >
                         {tab}
-                        {tab === "All" ? "" : ` (${REPORTS.filter(r => r.status === tab).length})`}
+                        {tab === "All" ? "" : ` (${reports.filter(r => r.status === tab).length})`}
                     </button>
                 ))}
             </div>
@@ -127,7 +134,7 @@ export default function ReportsManagement() {
                             </div>
                         </div>
                     ))
-                ) : filteredReports.map((report, idx) => {
+                ) : filteredReports.map((report) => {
                     const cat = categoryMeta[report.category];
                     const st = statusMeta[report.status];
                     const prio = priorityMeta[report.priority];
@@ -168,7 +175,10 @@ export default function ReportsManagement() {
                                         <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
                                         {report.status}
                                     </span>
-                                    <button className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-white/10 transition-all group/btn">
+                                    <button 
+                                        onClick={() => setSelectedReport(report)}
+                                        className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-white/10 transition-all group/btn"
+                                    >
                                         <svg className="w-4 h-4 group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                                     </button>
                                 </div>
@@ -186,13 +196,107 @@ export default function ReportsManagement() {
 
             {/* Empty State */}
             {!loading && filteredReports.length === 0 && (
-
                 <div className="flex flex-col items-center justify-center py-20 text-center animate-slide-up">
                     <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-3xl mb-4 opacity-50">
                         📁
                     </div>
                     <h3 className="text-slate-200 font-semibold">No reports found</h3>
                     <p className="text-slate-500 text-xs mt-1">There are no reports matching the selected filter.</p>
+                </div>
+            )}
+
+            {/* ─── Detail Modal ────────────────────────────────────────────────── */}
+            {selectedReport && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div 
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm" 
+                        onClick={() => setSelectedReport(null)}
+                    />
+                    <div className="relative w-full max-w-2xl bg-[#0f2233] border border-white/10 rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300">
+                        {/* Header */}
+                        <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl ${categoryMeta[selectedReport.category].bg} flex items-center justify-center text-xl`}>
+                                    {categoryMeta[selectedReport.category].icon}
+                                </div>
+                                <div>
+                                    <h2 className="text-white font-bold tracking-tight">{selectedReport.id} Details</h2>
+                                    <p className="text-[11px] text-slate-400">Manage and update report status</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => setSelectedReport(null)}
+                                className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                            >
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+
+                        {/* Content */}
+                        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category</p>
+                                    <p className="text-sm font-semibold text-slate-200">{selectedReport.category}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Priority</p>
+                                    <div className={`w-fit px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${priorityMeta[selectedReport.priority].bg} ${priorityMeta[selectedReport.priority].color} border border-white/5`}>
+                                        {selectedReport.priority}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Location</p>
+                                    <p className="text-sm font-semibold text-slate-200">{selectedReport.location}</p>
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reported Time</p>
+                                    <p className="text-sm font-semibold text-slate-200">{selectedReport.time}</p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Description</p>
+                                <div className="p-4 bg-white/5 border border-white/5 rounded-2xl">
+                                    <p className="text-xs text-slate-300 leading-relaxed">
+                                        {selectedReport.description}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Update Progress Status</p>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                    {(["Reported", "In Progress", "Solved", "Closed"] as Report["status"][]).map((st) => (
+                                        <button
+                                            key={st}
+                                            onClick={() => updateReportStatus(selectedReport.id, st)}
+                                            className={`px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 border ${
+                                                selectedReport.status === st
+                                                ? `${statusMeta[st].bg} ${statusMeta[st].color} border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/40`
+                                                : "bg-[#0d1f2d] text-slate-400 border-white/5 hover:bg-white/5 hover:text-slate-300"
+                                            }`}
+                                        >
+                                            <div className="flex flex-col items-center gap-1.5">
+                                                <span className={`w-2 h-2 rounded-full ${statusMeta[st].dot}`} />
+                                                {st}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-6 py-5 bg-white/2 border-t border-white/5 flex justify-end gap-3">
+                            <button 
+                                onClick={() => setSelectedReport(null)}
+                                className="px-6 py-2.5 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-bold rounded-xl transition-all"
+                            >
+                                Done
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
