@@ -132,7 +132,9 @@ export default function ReportsManagement() {
     const [loading, setLoading] = useState(true);
     const [selectedTab, setSelectedTab] = useState<Report["status"] | "All">("All");
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+    const [tempStatus, setTempStatus] = useState<Report["status"] | "">("");
     const [newNote, setNewNote] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
 
     // ─── Simulated Data Fetch ──────────────────────────────────────────────────
     useEffect(() => {
@@ -148,11 +150,17 @@ export default function ReportsManagement() {
         : reports.filter(r => r.status === selectedTab);
 
     // ─── Update Status Function ───────────────────────────────────────────────
-    const updateReportStatus = (id: string, newStatus: Report["status"]) => {
-        setReports(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
-        if (selectedReport?.id === id) {
-            setSelectedReport(prev => prev ? { ...prev, status: newStatus } : null);
-        }
+    const handleSaveStatus = async () => {
+        if (!selectedReport || !tempStatus || tempStatus === selectedReport.status) return;
+        
+        setIsSaving(true);
+        // Simulate API/Firebase delay
+        await new Promise(res => setTimeout(res, 800));
+        
+        const newStatus = tempStatus as Report["status"];
+        setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, status: newStatus } : r));
+        setSelectedReport(prev => prev ? { ...prev, status: newStatus } : null);
+        setIsSaving(false);
     };
 
     // ─── Add Note Function ────────────────────────────────────────────────────
@@ -168,6 +176,11 @@ export default function ReportsManagement() {
         setReports(prev => prev.map(r => r.id === selectedReport.id ? updatedReport : r));
         setSelectedReport(updatedReport);
         setNewNote("");
+    };
+
+    const openDetails = (report: Report) => {
+        setSelectedReport(report);
+        setTempStatus(report.status);
     };
 
     return (
@@ -271,7 +284,7 @@ export default function ReportsManagement() {
                                         {report.status}
                                     </span>
                                     <button 
-                                        onClick={() => setSelectedReport(report)}
+                                        onClick={() => openDetails(report)}
                                         className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-white/10 transition-all group/btn"
                                     >
                                         <svg className="w-4 h-4 group-hover/btn:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
@@ -389,53 +402,81 @@ export default function ReportsManagement() {
                             {/* Citizen Details & Management */}
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 {/* Reporter Card */}
-                                <div className="p-5 bg-white/2 border border-white/5 rounded-2xl space-y-4">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Reporter Details</p>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
-                                            {selectedReport.reporter.name.split(' ').map(n=>n[0]).join('')}
+                                <div className="p-5 bg-white/2 border border-white/5 rounded-2xl space-y-4 flex flex-col justify-between">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Reporter Details</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
+                                                {selectedReport.reporter.name.split(' ').map(n=>n[0]).join('')}
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-200">{selectedReport.reporter.name}</p>
+                                                <p className="text-[10px] text-slate-400">{selectedReport.reporter.phone}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-semibold text-slate-200">{selectedReport.reporter.name}</p>
-                                            <p className="text-[10px] text-slate-400">{selectedReport.reporter.phone}</p>
+                                        <div className="space-y-2 pt-4">
+                                            <div className="flex justify-between text-[11px]">
+                                                <span className="text-slate-500">Total Reports</span>
+                                                <span className="text-teal-400 font-bold">{selectedReport.reporter.reportsCount}</span>
+                                            </div>
+                                            <div className="flex justify-between text-[11px]">
+                                                <span className="text-slate-500">Trust Level</span>
+                                                <span className="text-green-400 font-bold">Verified</span>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-2 pt-2">
-                                        <div className="flex justify-between text-[11px]">
-                                            <span className="text-slate-500">Total Reports</span>
-                                            <span className="text-teal-400 font-bold">{selectedReport.reporter.reportsCount}</span>
-                                        </div>
-                                        <div className="flex justify-between text-[11px]">
-                                            <span className="text-slate-500">Trust Level</span>
-                                            <span className="text-green-400">High</span>
-                                        </div>
-                                    </div>
-                                    <button className="w-full py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-300 hover:bg-white/10 transition-colors uppercase tracking-widest">
+                                    <button className="w-full mt-4 py-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-slate-300 hover:bg-white/10 transition-colors uppercase tracking-widest">
                                         View Full Profile
                                     </button>
                                 </div>
 
-                                {/* Status Update */}
-                                <div className="lg:col-span-2 space-y-4">
-                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Update Progress Status</p>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                                        {(["Reported", "In Progress", "Solved", "Closed"] as Report["status"][]).map((st) => (
-                                            <button
-                                                key={st}
-                                                onClick={() => updateReportStatus(selectedReport.id, st)}
-                                                className={`px-3 py-3 rounded-xl text-xs font-semibold transition-all duration-200 border ${
-                                                    selectedReport.status === st
-                                                    ? `${statusMeta[st].bg} ${statusMeta[st].color} border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/40`
-                                                    : "bg-[#0d1f2d] text-slate-400 border-white/5 hover:bg-white/5 hover:text-slate-300"
-                                                }`}
-                                            >
-                                                <div className="flex flex-col items-center gap-1.5">
-                                                    <span className={`w-2 h-2 rounded-full ${statusMeta[st].dot}`} />
-                                                    {st}
-                                                </div>
-                                            </button>
-                                        ))}
+                                {/* Status Update Dropdown Section */}
+                                <div className="lg:col-span-2 p-5 bg-white/2 border border-white/5 rounded-2xl flex flex-col gap-4">
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Update Progress Status</p>
+                                        <p className="text-xs text-slate-400 italic">Select the current progress stage for this report.</p>
                                     </div>
+                                    
+                                    <div className="flex flex-col sm:flex-row gap-3 items-end sm:items-center">
+                                        <div className="w-full relative group">
+                                            <select 
+                                                value={tempStatus}
+                                                onChange={(e) => setTempStatus(e.target.value as any)}
+                                                className="w-full appearance-none bg-[#0d1f2d] border border-white/10 rounded-xl px-4 py-3 text-sm text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all cursor-pointer hover:bg-[#0f2233]"
+                                            >
+                                                <option value="Reported">Reported</option>
+                                                <option value="In Progress">In Progress</option>
+                                                <option value="Solved">Solved</option>
+                                                <option value="Closed">Closed</option>
+                                            </select>
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-teal-400 transition-colors">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth="2.5"/></svg>
+                                            </div>
+                                        </div>
+
+                                        <button 
+                                            onClick={handleSaveStatus}
+                                            disabled={isSaving || tempStatus === selectedReport.status}
+                                            className={`min-w-[140px] px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${
+                                                tempStatus === selectedReport.status 
+                                                ? "bg-slate-700/20 text-slate-500 border border-white/5 cursor-not-allowed"
+                                                : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-teal-900/40 hover:brightness-110 active:scale-[0.98]"
+                                            }`}
+                                        >
+                                            {isSaving ? (
+                                                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/></svg>
+                                            ) : (
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="3"/></svg>
+                                            )}
+                                            {isSaving ? "Saving..." : "Save Status"}
+                                        </button>
+                                    </div>
+                                    
+                                    {tempStatus !== selectedReport.status && !isSaving && (
+                                        <p className="text-[10px] text-teal-400 font-medium animate-pulse">
+                                            ⚠️ You have unsaved changes to the status.
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
@@ -467,7 +508,7 @@ export default function ReportsManagement() {
                                 {/* Notes List */}
                                 <div className="space-y-3">
                                     {selectedReport.notes.map((note) => (
-                                        <div key={note.id} className="p-3 bg-white/3 border border-white/5 rounded-xl space-y-1.5">
+                                        <div key={note.id} className="p-3 bg-white/3 border border-white/5 rounded-xl space-y-1.5 transition-all animate-in slide-in-from-top-1">
                                             <div className="flex items-center justify-between">
                                                 <span className="text-[10px] font-bold text-teal-400/80">{note.author}</span>
                                                 <span className="text-[9px] text-slate-500 font-mono">{note.time}</span>
@@ -486,7 +527,7 @@ export default function ReportsManagement() {
                         <div className="px-6 py-5 bg-white/2 border-t border-white/5 flex justify-end gap-3 flex-shrink-0">
                             <button 
                                 onClick={() => setSelectedReport(null)}
-                                className="px-8 py-3 bg-gradient-to-r from-teal-500/20 to-cyan-500/20 hover:from-teal-500/30 hover:to-cyan-500/30 text-teal-400 border border-teal-500/30 text-xs font-bold rounded-xl shadow-lg transition-all"
+                                className="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-bold rounded-xl transition-all"
                             >
                                 Close Management View
                             </button>
