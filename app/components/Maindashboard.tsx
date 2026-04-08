@@ -560,7 +560,7 @@ export default function AdminDashboard() {
             </aside>
 
             {/* ── Main ────────────────────────────────────────────────────────────── */}
-            <div className="relative z-10 flex-1 flex flex-col min-w-0 overflow-hidden">
+            <div className="relative flex-1 flex flex-col min-w-0 overflow-hidden">
 
                 {/* Topbar */}
                 <header className="bg-[#0f2233]/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4 flex-shrink-0">
