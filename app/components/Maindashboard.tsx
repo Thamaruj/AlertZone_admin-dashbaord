@@ -307,6 +307,162 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
     );
 }
 
+// ─── Dashboard Overview Content ───────────────────────────────────────────────
+
+function DashboardOverviewContent() {
+    return (
+        <>
+            {/* Page heading */}
+            <div className="flex items-start justify-between flex-wrap gap-3 animate-slide-up">
+                <div>
+                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1">Dashboard Overview</h1>
+                    <p className="text-xs text-slate-300 mt-0.5">Real-time emergency monitoring and response status.</p>
+                </div>
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+                        <svg className="w-3.5 h-3.5 text-teal-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Last 30 Days
+                    </div>
+                    <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white text-xs font-semibold px-3 sm:px-4 py-2 rounded-lg shadow-lg shadow-teal-900/40 transition-all duration-200 active:scale-[0.98] flex items-center gap-1.5">
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                        <span className="hidden sm:inline">Create Report</span>
+                        <span className="sm:hidden">New</span>
+                    </button>
+                </div>
+            </div>
+
+            {/* ── Stat Cards ── */}
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 animate-slide-up stagger-1">
+                <StatCard
+                    icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                    label="Total Reports" value="1,284" trend="+10% from last month" trendType="up"
+                />
+                <StatCard
+                    icon={<svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
+                    label="Reported" value="432" trend="-9% now stable" trendType="down"
+                />
+                <StatCard
+                    icon={<svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
+                    label="In Progress" value="215" trend="Stable trend" trendType="neutral"
+                />
+                <StatCard
+                    icon={<svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
+                    label="Solved" value="537" trend="+40% solved faster" trendType="up"
+                />
+                <StatCard
+                    icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
+                    label="Closed" value="100" trend="Archived completely" trendType="neutral"
+                />
+            </div>
+
+            {/* ── Charts Row ── */}
+            <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-2">
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-sm font-semibold text-slate-200">Incidents by Category</h2>
+                    <button className="text-slate-400 hover:text-slate-400 transition-colors">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
+                        </svg>
+                    </button>
+                </div>
+                <div className="flex items-start justify-between gap-6 flex-wrap">
+                    <div className="flex-1 min-w-[200px]"><BarChart /></div>
+                    <div className="flex-shrink-0"><DonutChart /></div>
+                </div>
+            </div>
+
+            {/* ── Monthly Trend ── */}
+            <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
+                <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+                    <div>
+                        <h2 className="text-sm font-semibold text-slate-200">Monthly Trend</h2>
+                        <p className="text-[11px] text-slate-300 mt-0.5">Incident volume over the current year</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-[11px] text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-6 h-0.5 bg-teal-400 rounded inline-block" />2026
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                            <span className="w-5 border-t border-dashed border-slate-600 inline-block" />2025
+                        </span>
+                    </div>
+                </div>
+                <LineChart />
+                <div className="flex justify-between px-1 mt-1.5">
+                    {MONTHLY_DATA.map((d) => (
+                        <span key={d.month} className="text-[9px] text-slate-400 font-mono">{d.month}</span>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Recent Reports ── */}
+            <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl overflow-hidden hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
+                <div className="px-5 py-4 flex items-center justify-between border-b border-white/5">
+                    <h2 className="text-sm font-semibold text-slate-200">Recent Reports</h2>
+                    <button className="text-xs text-teal-400 font-semibold hover:text-teal-300 transition-colors">
+                        View All
+                    </button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-xs min-w-[580px]">
+                        <thead>
+                            <tr className="bg-white/3 text-slate-400 font-semibold uppercase tracking-wide text-[10px] border-b border-white/5">
+                                <th className="px-5 py-3 text-left">Incident ID</th>
+                                <th className="px-5 py-3 text-left">Category</th>
+                                <th className="px-5 py-3 text-left">Location</th>
+                                <th className="px-5 py-3 text-left">Time</th>
+                                <th className="px-5 py-3 text-left">Status</th>
+                                <th className="px-5 py-3 text-left">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {REPORTS.map((r) => {
+                                const cat = categoryMeta[r.category];
+                                const st = statusMeta[r.status];
+                                return (
+                                    <tr key={r.id} className="hover:bg-white/3 transition-colors group">
+                                        <td className="px-5 py-3.5 font-mono font-semibold text-teal-400/80">{r.id}</td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cat.bg} ${cat.color} border border-white/5`}>
+                                                <span>{cat.icon}</span>{r.category}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5 text-slate-400">{r.location}</td>
+                                        <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">{r.time}</td>
+                                        <td className="px-5 py-3.5">
+                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${st.bg} ${st.color} border border-white/5 transition-all outline outline-1 outline-transparent hover:outline-teal-500/30 cursor-default`}>
+                                                <span className="relative flex w-1.5 h-1.5">
+                                                    {(r.status === "Reported" || r.status === "In Progress") && (
+                                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${st.dot}`}></span>
+                                                    )}
+                                                    <span className={`relative inline-flex rounded-full w-1.5 h-1.5 ${st.dot}`} />
+                                                </span>
+                                                {r.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-5 py-3.5">
+                                            <button className="text-slate-400 hover:text-teal-400 transition-colors group-hover:text-slate-300">
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </>
+    );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function AdminDashboard() {
@@ -440,153 +596,45 @@ export default function AdminDashboard() {
                 {/* ── Scrollable page ── */}
                 <main className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5">
 
-                    {/* Page heading */}
-                    <div className="flex items-start justify-between flex-wrap gap-3 animate-slide-up">
-                        <div>
-                            <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1">Dashboard Overview</h1>
-                            <p className="text-xs text-slate-300 mt-0.5">Real-time emergency monitoring and response status.</p>
+                    {/* Section Content based on active navigation */}
+                    {activeNav === "dashboard" && <DashboardOverviewContent />}
+                    
+                    {activeNav === "reports" && (
+                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
+                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Reports Management</h2>
+                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
                         </div>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                            <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
-                                <svg className="w-3.5 h-3.5 text-teal-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Last 30 Days
-                            </div>
-                            <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white text-xs font-semibold px-3 sm:px-4 py-2 rounded-lg shadow-lg shadow-teal-900/40 transition-all duration-200 active:scale-[0.98] flex items-center gap-1.5">
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-                                </svg>
-                                <span className="hidden sm:inline">Create Report</span>
-                                <span className="sm:hidden">New</span>
-                            </button>
+                    )}
+                    {activeNav === "map" && (
+                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
+                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Map View</h2>
+                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
                         </div>
-                    </div>
-
-                    {/* ── Stat Cards ── */}
-                    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 animate-slide-up stagger-1">
-                        <StatCard
-                            icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-                            label="Total Reports" value="1,284" trend="+10% from last month" trendType="up"
-                        />
-                        <StatCard
-                            icon={<svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
-                            label="Reported" value="432" trend="-9% now stable" trendType="down"
-                        />
-                        <StatCard
-                            icon={<svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-                            label="In Progress" value="215" trend="Stable trend" trendType="neutral"
-                        />
-                        <StatCard
-                            icon={<svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                            label="Solved" value="537" trend="+40% solved faster" trendType="up"
-                        />
-                        <StatCard
-                            icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
-                            label="Closed" value="100" trend="Archived completely" trendType="neutral"
-                        />
-                    </div>
-
-                    {/* ── Charts Row ── */}
-                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-2">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-sm font-semibold text-slate-200">Incidents by Category</h2>
-                            <button className="text-slate-400 hover:text-slate-400 transition-colors">
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-                                </svg>
-                            </button>
+                    )}
+                    {activeNav === "users" && (
+                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
+                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Users Management</h2>
+                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
                         </div>
-                        <div className="flex items-start justify-between gap-6 flex-wrap">
-                            <div className="flex-1 min-w-[200px]"><BarChart /></div>
-                            <div className="flex-shrink-0"><DonutChart /></div>
+                    )}
+                    {activeNav === "analytics" && (
+                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
+                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Analytics</h2>
+                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
                         </div>
-                    </div>
-
-                    {/* ── Monthly Trend ── */}
-                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
-                        <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                            <div>
-                                <h2 className="text-sm font-semibold text-slate-200">Monthly Trend</h2>
-                                <p className="text-[11px] text-slate-300 mt-0.5">Incident volume over the current year</p>
-                            </div>
-                            <div className="flex items-center gap-4 text-[11px] text-slate-300">
-                                <span className="flex items-center gap-1.5">
-                                    <span className="w-6 h-0.5 bg-teal-400 rounded inline-block" />2026
-                                </span>
-                                <span className="flex items-center gap-1.5">
-                                    <span className="w-5 border-t border-dashed border-slate-600 inline-block" />2025
-                                </span>
-                            </div>
+                    )}
+                    {activeNav === "notifications" && (
+                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
+                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Notifications</h2>
+                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
                         </div>
-                        <LineChart />
-                        <div className="flex justify-between px-1 mt-1.5">
-                            {MONTHLY_DATA.map((d) => (
-                                <span key={d.month} className="text-[9px] text-slate-400 font-mono">{d.month}</span>
-                            ))}
+                    )}
+                    {activeNav === "settings" && (
+                        <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
+                            <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">Settings</h2>
+                            <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
                         </div>
-                    </div>
-
-                    {/* ── Recent Reports ── */}
-                    <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl overflow-hidden hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
-                        <div className="px-5 py-4 flex items-center justify-between border-b border-white/5">
-                            <h2 className="text-sm font-semibold text-slate-200">Recent Reports</h2>
-                            <button className="text-xs text-teal-400 font-semibold hover:text-teal-300 transition-colors">
-                                View All
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs min-w-[580px]">
-                                <thead>
-                                    <tr className="bg-white/3 text-slate-400 font-semibold uppercase tracking-wide text-[10px] border-b border-white/5">
-                                        <th className="px-5 py-3 text-left">Incident ID</th>
-                                        <th className="px-5 py-3 text-left">Category</th>
-                                        <th className="px-5 py-3 text-left">Location</th>
-                                        <th className="px-5 py-3 text-left">Time</th>
-                                        <th className="px-5 py-3 text-left">Status</th>
-                                        <th className="px-5 py-3 text-left">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-white/5">
-                                    {REPORTS.map((r) => {
-                                        const cat = categoryMeta[r.category];
-                                        const st = statusMeta[r.status];
-                                        return (
-                                            <tr key={r.id} className="hover:bg-white/3 transition-colors group">
-                                                <td className="px-5 py-3.5 font-mono font-semibold text-teal-400/80">{r.id}</td>
-                                                <td className="px-5 py-3.5">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cat.bg} ${cat.color} border border-white/5`}>
-                                                        <span>{cat.icon}</span>{r.category}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-3.5 text-slate-400">{r.location}</td>
-                                                <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">{r.time}</td>
-                                                <td className="px-5 py-3.5">
-                                                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${st.bg} ${st.color} border border-white/5 transition-all outline outline-1 outline-transparent hover:outline-teal-500/30 cursor-default`}>
-                                                        <span className="relative flex w-1.5 h-1.5">
-                                                            {(r.status === "Reported" || r.status === "In Progress") && (
-                                                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${st.dot}`}></span>
-                                                            )}
-                                                            <span className={`relative inline-flex rounded-full w-1.5 h-1.5 ${st.dot}`} />
-                                                        </span>
-                                                        {r.status}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-3.5">
-                                                    <button className="text-slate-400 hover:text-teal-400 transition-colors group-hover:text-slate-300">
-                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                        </svg>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Footer */}
                     <p className="text-center text-[11px] text-slate-400 pb-2">
