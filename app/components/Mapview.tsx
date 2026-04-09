@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import "leaflet/dist/leaflet.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,70 +19,15 @@ type Report = {
     description: string;
 };
 
-// ─── Mock Data (Consistent with Management View) ──────────────────────────────
+// ─── Dynamic Imports for Leaflet (SSR Fix) ────────────────────────────────────
 
-const REPORTS: Report[] = [
-    {
-        id: "#REP-8284",
-        category: "Hazard",
-        location: "122 Baker St. NW",
-        coordinates: { lat: 40.7128, lng: -74.0060 },
-        time: "3 mins ago",
-        status: "In Progress",
-        priority: "High",
-        description: "Exposed electrical wires near the bus stop."
-    },
-    {
-        id: "#REP-8283",
-        category: "Lighting",
-        location: "Grand Central Station",
-        coordinates: { lat: 40.7527, lng: -73.9772 },
-        time: "14 mins ago",
-        status: "Reported",
-        priority: "Medium",
-        description: "Street light flickering repeatedly."
-    },
-    {
-        id: "#REP-8292",
-        category: "Roads",
-        location: "Highway 401, Exit 4",
-        coordinates: { lat: 40.8448, lng: -73.8648 },
-        time: "45 mins ago",
-        status: "Solved",
-        priority: "Critical",
-        description: "Large pothole causing traffic disruption."
-    },
-    {
-        id: "#REP-8281",
-        category: "Waste",
-        location: "Silicon Valley Plaza",
-        coordinates: { lat: 40.7829, lng: -73.9654 },
-        time: "1 hour ago",
-        status: "Closed",
-        priority: "Low",
-        description: "Illegal dumping behind the commercial complex."
-    },
-    {
-        id: "#REP-8295",
-        category: "Water",
-        location: "Riverside Dr. & 79th St",
-        coordinates: { lat: 40.7850, lng: -73.9841 },
-        time: "2 hours ago",
-        status: "In Progress",
-        priority: "High",
-        description: "Main water pipe burst, flooding street."
-    },
-    {
-        id: "#REP-8301",
-        category: "Safety",
-        location: "Central Park West",
-        coordinates: { lat: 40.7711, lng: -73.9741 },
-        time: "5 hours ago",
-        status: "Reported",
-        priority: "Critical",
-        description: "Suspicious package reported near the entrance."
-    }
-];
+const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
+const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
+const ZoomControl = dynamic(() => import("react-leaflet").then((mod) => mod.ZoomControl), { ssr: false });
+
+// ─── Constants & Styles ────────────────────────────────────────────────────────
 
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
     Hazard: { color: "text-rose-400", bg: "bg-rose-500/10", icon: "⚠️" },
@@ -103,46 +52,111 @@ const priorityMeta: Record<Report["priority"], { color: string; bg: string }> = 
     Critical: { color: "text-rose-500", bg: "bg-rose-500/10" },
 };
 
+// Custom Marker Helper (since standard L.Icon doesn't play well with Next.js paths easily)
+let L: any;
+if (typeof window !== "undefined") {
+    L = require("leaflet");
+}
+
+const createCustomIcon = (catIcon: string, isSelected: boolean) => {
+    if (!L) return null;
+    return new L.DivIcon({
+        className: 'custom-div-icon',
+        html: `<div class="relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${isSelected ? 'scale-125 ring-4 ring-teal-500/30 bg-teal-500' : 'bg-[#0f2233] border border-white/20 shadow-xl'} shadow-lg group">
+                <span class="text-lg">${catIcon}</span>
+              </div>`,
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+    });
+};
+
 export default function MapView() {
+    const [reports, setReports] = useState<Report[]>([]);
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [filter, setFilter] = useState<Report["category"] | "All">("All");
     const [searchQuery, setSearchQuery] = useState("");
-    const [zoom, setZoom] = useState(13);
+    const [loading, setLoading] = useState(true);
+
+    // ─── Firebase Real-time Connection ──────────────────────────────────────────
+    useEffect(() => {
+        const q = query(collection(db, "reports"), orderBy("time", "desc"));
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const reportsData = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })) as Report[];
+            
+            setReports(reportsData);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching reports from Firestore:", error);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     const filteredReports = useMemo(() => {
-        return REPORTS.filter(r => {
+        return reports.filter(r => {
             const matchesFilter = filter === "All" || r.category === filter;
-            const matchesSearch = r.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                r.id.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = r.location?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                 r.id?.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesFilter && matchesSearch;
         });
-    }, [filter, searchQuery]);
+    }, [reports, filter, searchQuery]);
 
-    // Map logic mock: transform lat/lng to representative X/Y percentages for the simulation
-    // Central point (NYCish): 40.75, -73.98
-    const mapCenter = { lat: 40.75, lng: -73.98 };
-    const coordinateToPos = (lat: number, lng: number) => {
-        const x = 50 + (lng - mapCenter.lng) * 500 * (zoom / 13);
-        const y = 50 - (lat - mapCenter.lat) * 800 * (zoom / 13);
-        return { x: `${x}%`, y: `${y}%` };
-    };
+    const mapCenter: [number, number] = [40.7128, -74.0060]; // Default NYC Center
 
     return (
         <div className="h-[calc(100vh-140px)] w-full flex flex-col lg:flex-row gap-5 animate-slide-up">
+            
+            <style jsx global>{`
+                .leaflet-container {
+                    background: #0d1f2d !important;
+                    width: 100%;
+                    height: 100%;
+                }
+                .leaflet-control-zoom {
+                    border: none !important;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.4) !important;
+                }
+                .leaflet-control-zoom-in, .leaflet-control-zoom-out {
+                    background: #0f2233f0 !important;
+                    color: #94a3b8 !important;
+                    border: 1px solid rgba(255,255,255,0.1) !important;
+                    backdrop-filter: blur(8px);
+                }
+                .leaflet-popup-content-wrapper {
+                    background: #0f2233 !important;
+                    color: white !important;
+                    border: 1px solid rgba(255,255,255,0.1) !important;
+                    border-radius: 12px !important;
+                    padding: 0 !important;
+                }
+                .leaflet-popup-tip {
+                    background: #0f2233 !important;
+                }
+            `}</style>
 
             {/* ── Left Sidebar: Report List ── */}
-            <div className="w-full lg:w-80 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
+            <div className="w-full lg:w-80 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-[1000]">
                 <div className="p-4 border-b border-white/5 space-y-4">
-                    <div>
-                        <h2 className="text-lg font-bold text-white tracking-tight">Active Reports</h2>
-                        <p className="text-[10px] text-slate-400 font-medium uppercase tracking-widest mt-1">Live Feed - {filteredReports.length} Shown</p>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-bold text-white tracking-tight">Active Reports</h2>
+                            <p className="text-[10px] text-teal-400 font-bold uppercase tracking-widest mt-1">Live from Firebase</p>
+                        </div>
+                        {loading && (
+                            <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                        )}
                     </div>
 
                     <div className="relative">
                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        <input
+                        <input 
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Find location or ID..."
@@ -155,10 +169,11 @@ export default function MapView() {
                             <button
                                 key={cat}
                                 onClick={() => setFilter(cat as any)}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all border ${filter === cat
-                                    ? "bg-teal-500/20 border-teal-500/40 text-teal-400"
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all border ${
+                                    filter === cat 
+                                    ? "bg-teal-500/20 border-teal-500/40 text-teal-400" 
                                     : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
-                                    }`}
+                                }`}
                             >
                                 {cat}
                             </button>
@@ -176,23 +191,24 @@ export default function MapView() {
                             <button
                                 key={report.id}
                                 onClick={() => setSelectedReport(report)}
-                                className={`w-full text-left p-3 rounded-xl border transition-all group ${isSelected
-                                    ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
+                                className={`w-full text-left p-3 rounded-xl border transition-all group ${
+                                    isSelected 
+                                    ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10" 
                                     : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
-                                    }`}
+                                }`}
                             >
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex items-center gap-2">
                                         <span className={`w-2 h-2 rounded-full ${st.dot}`} />
                                         <span className="text-[10px] font-bold text-white tracking-tight">{report.id}</span>
                                     </div>
-                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${priorityMeta[report.priority].bg} ${priorityMeta[report.priority].color}`}>
+                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${priorityMeta[report.priority]?.bg || 'bg-white/5'} ${priorityMeta[report.priority]?.color || 'text-slate-400'}`}>
                                         {report.priority}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-lg ${cat.bg} flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition-transform`}>
-                                        {cat.icon}
+                                    <div className={`w-8 h-8 rounded-lg ${cat?.bg || 'bg-white/5'} flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition-transform`}>
+                                        {cat?.icon || '📍'}
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-xs font-semibold text-slate-200 truncate">{report.location}</p>
@@ -203,163 +219,105 @@ export default function MapView() {
                         );
                     })}
 
-                    {filteredReports.length === 0 && (
-                        <div className="py-10 text-center opacity-40">
-                            <p className="text-xs text-slate-300">No reports found.</p>
+                    {!loading && filteredReports.length === 0 && (
+                        <div className="py-20 text-center opacity-40">
+                            <p className="text-2xl mb-2">📁</p>
+                            <p className="text-xs text-slate-300 font-bold uppercase tracking-widest">No matching reports</p>
+                            <p className="text-[10px] text-slate-500 mt-1">Check back later for updates</p>
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* ── Main Map Area ── */}
-            <div className="flex-1 bg-[#0d1f2d] rounded-2xl overflow-hidden border border-white/10 relative group/map cursor-crosshair">
-                {/* Simulated Map Background */}
-                <div className="absolute inset-0 overflow-hidden">
-                    {/* Grid Pattern */}
-                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#2dd4bf 2px, transparent 2px)', backgroundSize: '40px 40px' }} />
-                    <div className="absolute inset-0 opacity-[0.02]" style={{ backgroundImage: 'linear-gradient(#ffffff 1px, transparent 1px), linear-gradient(90deg, #ffffff 1px, transparent 1px)', backgroundSize: '100px 100px' }} />
+            {/* ── Main Map Area (Leaflet) ── */}
+            <div className="flex-1 bg-[#0d1f2d] rounded-2xl overflow-hidden border border-white/10 relative z-10 shadow-inner">
+                {typeof window !== "undefined" && (
+                    <MapContainer 
+                        center={selectedReport ? [selectedReport.coordinates.lat, selectedReport.coordinates.lng] : mapCenter} 
+                        zoom={13} 
+                        zoomControl={false}
+                    >
+                        {/* Dark Theme Tile Layer (CartoDB Dark Matter) */}
+                        <TileLayer
+                            url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
+                        />
 
-                    {/* Abstract Map Lines (Simulating Roads) */}
-                    <svg className="absolute inset-0 w-full h-full opacity-10 pointer-events-none" viewBox="0 0 1000 1000">
-                        <path d="M0,200 Q200,150 500,200 T1000,100" fill="none" stroke="#2dd4bf" strokeWidth="2" />
-                        <path d="M100,0 L150,1000" fill="none" stroke="#2dd4bf" strokeWidth="1.5" />
-                        <path d="M400,0 L420,1000" fill="none" stroke="#2dd4bf" strokeWidth="1.5" />
-                        <path d="M850,0 Q700,500 900,1000" fill="none" stroke="#2dd4bf" strokeWidth="2" />
-                        <path d="M0,600 L1000,650" fill="none" stroke="#2dd4bf" strokeWidth="2.5" />
-                        <path d="M0,450 L1000,420" fill="none" stroke="#2dd4bf" strokeWidth="1" />
-                    </svg>
+                        <ZoomControl position="topright" />
 
-                    {/* Markers */}
-                    {filteredReports.map((report) => {
-                        const pos = coordinateToPos(report.coordinates.lat, report.coordinates.lng);
-                        const isSelected = selectedReport?.id === report.id;
-                        const cat = categoryMeta[report.category];
-                        const st = statusMeta[report.status];
-
-                        return (
-                            <div
-                                key={report.id}
-                                className="absolute transition-all duration-700 ease-out"
-                                style={{ left: pos.x, top: pos.y, transform: 'translate(-50%, -100%)' }}
+                        {filteredReports.map((report) => (
+                            <Marker 
+                                key={report.id} 
+                                position={[report.coordinates.lat, report.coordinates.lng]}
+                                icon={createCustomIcon(categoryMeta[report.category]?.icon || '📍', selectedReport?.id === report.id) as any}
+                                eventHandlers={{
+                                    click: () => setSelectedReport(report),
+                                }}
                             >
-                                <button
-                                    onClick={() => setSelectedReport(report)}
-                                    className={`relative flex flex-col items-center group/pin ${isSelected ? 'z-50' : 'z-10'}`}
-                                >
-                                    {/* Tooltip on marker */}
-                                    <div className={`absolute bottom-full mb-3 px-3 py-2 bg-[#0f2233] border border-white/10 rounded-xl shadow-2xl transition-all duration-300 min-w-[160px] pointer-events-none ${isSelected ? 'opacity-100 scale-100' : 'opacity-0 scale-95 group-hover/pin:opacity-100 group-hover/pin:scale-100'
-                                        }`}>
+                                <Popup>
+                                    <div className="p-2 min-w-[150px]">
                                         <div className="flex items-center gap-2 mb-1">
-                                            <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
-                                            <span className="text-[10px] font-bold text-white">{report.id}</span>
+                                            <span className="text-xs font-bold text-white">{report.id}</span>
                                         </div>
-                                        <p className="text-[10px] font-bold text-slate-200 truncate">{report.location}</p>
-                                        <p className="text-[9px] text-teal-400/80 mt-1 uppercase font-bold tracking-tighter">{report.status}</p>
+                                        <p className="text-[11px] text-slate-300 mb-2">{report.location}</p>
+                                        <button className="w-full py-1.5 bg-teal-500 rounded text-[10px] font-bold text-white uppercase tracking-widest">Details View</button>
                                     </div>
+                                </Popup>
+                            </Marker>
+                        ))}
+                    </MapContainer>
+                )}
 
-                                    {/* Pin Visual */}
-                                    <div className={`relative w-10 h-10 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 ${isSelected
-                                        ? "scale-110 ring-4 ring-teal-500/20 bg-teal-500 text-white"
-                                        : `${cat.bg} border border-white/20 text-white hover:scale-110`
-                                        }`}>
-                                        <span className="text-lg">{cat.icon}</span>
-
-                                        {/* Status Ripple for active reports */}
-                                        {(report.status === "Reported" || report.status === "In Progress") && (
-                                            <span className={`absolute -inset-1 rounded-full animate-ping opacity-40 ${st.bg}`} />
-                                        )}
-                                    </div>
-
-                                    {/* Pin Bottom shadow/indicator */}
-                                    <div className={`w-2 h-2 rounded-full mt-1 blur-[1px] ${isSelected ? 'bg-teal-400' : 'bg-white/20'}`} />
-                                </button>
-                            </div>
-                        );
-                    })}
+                {/* Info BarHUD */}
+                <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/50 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-mono text-slate-300 flex items-center gap-3 shadow-lg pointer-events-none z-[1000]">
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" /> LIVE STREAM</span>
+                    <span className="w-px h-2 bg-white/20" />
+                    <span>DATA: CLOUD FIRESTORE</span>
+                    <span className="w-px h-2 bg-white/20" />
+                    <span>TARGET: {filteredReports.length} NODES</span>
                 </div>
 
-                {/* Map HUD Controls */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
-                    <div className="bg-[#0f2233]/90 backdrop-blur-md rounded-xl border border-white/10 p-1 flex flex-col shadow-2xl">
-                        <button onClick={() => setZoom(z => Math.min(z + 1, 18))} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/5 transition-all rounded-lg">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6v12m6-6H6" /></svg>
-                        </button>
-                        <div className="h-px bg-white/5 mx-2" />
-                        <button onClick={() => setZoom(z => Math.max(z - 1, 10))} className="p-2.5 text-slate-300 hover:text-white hover:bg-white/5 transition-all rounded-lg">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 12H6" /></svg>
-                        </button>
-                    </div>
-
-                    <button className="bg-[#0f2233]/90 backdrop-blur-md rounded-xl border border-white/10 p-3 text-slate-300 hover:text-teal-400 hover:bg-white/5 transition-all shadow-2xl">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    </button>
-                </div>
-
-                {/* Legend Overlay */}
-                <div className="absolute bottom-4 left-4 p-3 bg-[#0f2233]/90 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl flex gap-6">
-                    <div className="space-y-1.5">
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Incident Types</p>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                            {Object.entries(categoryMeta).map(([label, meta]) => (
-                                <div key={label} className="flex items-center gap-1.5">
-                                    <span className="text-xs">{meta.icon}</span>
-                                    <span className="text-[10px] text-slate-300">{label}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Selection Details Panel */}
+                {/* Selection Details Panel overlay - Fixed positioning */}
                 {selectedReport && (
-                    <div className="absolute bottom-4 right-4 max-w-sm bg-[#0f2233] border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden animate-in slide-in-from-right-10 duration-500 z-[100]">
-                        <div className="p-4 flex gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl shadow-inner ${categoryMeta[selectedReport.category].bg}`}>
-                                {categoryMeta[selectedReport.category].icon}
+                    <div className="absolute bottom-6 right-6 max-w-sm bg-[#0f2233]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden animate-in slide-in-from-right-10 duration-500 z-[1000]">
+                        <div className="p-5 flex gap-4">
+                            <div className={`w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl shadow-inner ${categoryMeta[selectedReport.category]?.bg || 'bg-white/5'}`}>
+                                {categoryMeta[selectedReport.category]?.icon || '📍'}
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="flex justify-between items-start">
                                     <div>
-                                        <h3 className="text-sm font-bold text-white tracking-tight">{selectedReport.id}</h3>
-                                        <p className="text-[11px] text-slate-400 font-medium truncate">{selectedReport.location}</p>
+                                        <h3 className="text-base font-bold text-white tracking-tight">{selectedReport.id}</h3>
+                                        <p className="text-xs text-slate-400 font-medium truncate">{selectedReport.location}</p>
                                     </div>
-                                    <button onClick={() => setSelectedReport(null)} className="text-slate-500 hover:text-white transition-colors">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                                    <button onClick={() => setSelectedReport(null)} className="p-1 text-slate-500 hover:text-white transition-colors">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
-
-                                <div className="mt-3 flex gap-3">
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${statusMeta[selectedReport.status].bg} ${statusMeta[selectedReport.status].color}`}>
+                                
+                                <div className="mt-4 flex gap-3">
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusMeta[selectedReport.status]?.bg} ${statusMeta[selectedReport.status]?.color}`}>
                                         {selectedReport.status}
                                     </span>
-                                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${priorityMeta[selectedReport.priority].bg} ${priorityMeta[selectedReport.priority].color}`}>
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${priorityMeta[selectedReport.priority]?.bg} ${priorityMeta[selectedReport.priority]?.color}`}>
                                         {selectedReport.priority}
                                     </span>
                                 </div>
-
-                                <p className="mt-3 text-[11px] text-slate-300 leading-relaxed italic line-clamp-2">"{selectedReport.description}"</p>
-
-                                <div className="mt-4 flex gap-2">
-                                    <button className="flex-1 py-1.5 bg-teal-500 hover:bg-teal-400 text-white text-[10px] font-bold rounded-lg transition-all shadow-lg shadow-teal-900/20 active:scale-[0.98]">
-                                        View Full Details
+                                
+                                <p className="mt-4 text-xs text-slate-300 leading-relaxed italic line-clamp-2 pr-2 opacity-80 uppercase tracking-tight font-medium">"{selectedReport.description}"</p>
+                                
+                                <div className="mt-6 flex gap-2">
+                                    <button className="flex-1 py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-white text-[10px] font-bold rounded-xl transition-all shadow-lg shadow-teal-900/40 active:scale-[0.98] uppercase tracking-widest">
+                                        Open Management
                                     </button>
-                                    <button className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-[10px] font-bold rounded-lg transition-all">
-                                        Dispatch
+                                    <button className="px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest">
+                                        Share
                                     </button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
-
-                {/* Map Info Bar */}
-                <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/40 backdrop-blur-md border border-white/5 rounded-full text-[9px] font-mono text-slate-300 flex items-center gap-3 shadow-lg pointer-events-none">
-                    <span className="flex items-center gap-1"><span className="w-1 h-1 rounded-full bg-green-400 animate-pulse" /> SYSTEM ACTIVE</span>
-                    <span className="w-px h-2 bg-white/20" />
-                    <span>REF: 40.75N, 73.98W</span>
-                    <span className="w-px h-2 bg-white/20" />
-                    <span>ZOOM: {zoom}x</span>
-                </div>
             </div>
         </div>
     );
