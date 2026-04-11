@@ -109,7 +109,7 @@ export default function MapView() {
     const mapCenter: [number, number] = [40.7128, -74.0060]; // Default NYC Center
 
     return (
-        <div className="h-[calc(100vh-140px)] w-full flex flex-col lg:flex-row gap-5 animate-slide-up">
+        <div className="h-auto lg:h-[calc(100vh-220px)] w-full flex flex-col lg:flex-row gap-4 lg:gap-5 animate-slide-up">
 
             <style jsx global>{`
                 .leaflet-container {
@@ -140,7 +140,7 @@ export default function MapView() {
             `}</style>
 
             {/* ── Left Sidebar: Report List ── */}
-            <div className="w-full lg:w-80 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-[1000]">
+            <div className="w-full lg:w-80 h-[300px] lg:h-full flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-[1000] flex-shrink-0">
                 <div className="p-4 border-b border-white/5 space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -228,7 +228,7 @@ export default function MapView() {
             </div>
 
             {/* ── Main Map Area (Leaflet) ── */}
-            <div className="flex-1 bg-[#0d1f2d] rounded-2xl overflow-hidden border border-white/10 relative z-10 shadow-inner">
+            <div className="flex-1 min-h-[400px] bg-[#0d1f2d] rounded-2xl overflow-hidden border border-white/10 relative z-10 shadow-inner">
                 {typeof window !== "undefined" && (
                     <MapContainer
                         center={selectedReport ? [selectedReport.coordinates.lat, selectedReport.coordinates.lng] : mapCenter}
@@ -277,7 +277,7 @@ export default function MapView() {
 
                 {/* Selection Details Panel overlay - Fixed positioning */}
                 {selectedReport && (
-                    <div className="absolute bottom-6 right-6 max-w-sm bg-[#0f2233]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden animate-in slide-in-from-right-10 duration-500 z-[1000]">
+                    <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 sm:max-w-sm bg-[#0f2233]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden animate-in slide-in-from-bottom-10 sm:slide-in-from-right-10 duration-500 z-[1000]">
                         <div className="p-5 flex gap-4">
                             <div className={`w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl shadow-inner ${categoryMeta[selectedReport.category]?.bg || 'bg-white/5'}`}>
                                 {categoryMeta[selectedReport.category]?.icon || '📍'}
