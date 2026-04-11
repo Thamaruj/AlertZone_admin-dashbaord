@@ -80,13 +80,13 @@ export default function MapView() {
     // ─── Firebase Real-time Connection ──────────────────────────────────────────
     useEffect(() => {
         const q = query(collection(db, "reports"), orderBy("time", "desc"));
-        
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const reportsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as Report[];
-            
+
             setReports(reportsData);
             setLoading(false);
         }, (error) => {
@@ -100,8 +100,8 @@ export default function MapView() {
     const filteredReports = useMemo(() => {
         return reports.filter(r => {
             const matchesFilter = filter === "All" || r.category === filter;
-            const matchesSearch = r.location?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                 r.id?.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = r.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.id?.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesFilter && matchesSearch;
         });
     }, [reports, filter, searchQuery]);
@@ -110,7 +110,7 @@ export default function MapView() {
 
     return (
         <div className="h-[calc(100vh-140px)] w-full flex flex-col lg:flex-row gap-5 animate-slide-up">
-            
+
             <style jsx global>{`
                 .leaflet-container {
                     background: #0d1f2d !important;
@@ -156,7 +156,7 @@ export default function MapView() {
                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
-                        <input 
+                        <input
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             placeholder="Find location or ID..."
@@ -169,11 +169,10 @@ export default function MapView() {
                             <button
                                 key={cat}
                                 onClick={() => setFilter(cat as any)}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all border ${
-                                    filter === cat 
-                                    ? "bg-teal-500/20 border-teal-500/40 text-teal-400" 
-                                    : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
-                                }`}
+                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all border ${filter === cat
+                                        ? "bg-teal-500/20 border-teal-500/40 text-teal-400"
+                                        : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
+                                    }`}
                             >
                                 {cat}
                             </button>
@@ -191,11 +190,10 @@ export default function MapView() {
                             <button
                                 key={report.id}
                                 onClick={() => setSelectedReport(report)}
-                                className={`w-full text-left p-3 rounded-xl border transition-all group ${
-                                    isSelected 
-                                    ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10" 
-                                    : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
-                                }`}
+                                className={`w-full text-left p-3 rounded-xl border transition-all group ${isSelected
+                                        ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
+                                        : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
+                                    }`}
                             >
                                 <div className="flex justify-between items-start mb-2">
                                     <div className="flex items-center gap-2">
@@ -232,9 +230,9 @@ export default function MapView() {
             {/* ── Main Map Area (Leaflet) ── */}
             <div className="flex-1 bg-[#0d1f2d] rounded-2xl overflow-hidden border border-white/10 relative z-10 shadow-inner">
                 {typeof window !== "undefined" && (
-                    <MapContainer 
-                        center={selectedReport ? [selectedReport.coordinates.lat, selectedReport.coordinates.lng] : mapCenter} 
-                        zoom={13} 
+                    <MapContainer
+                        center={selectedReport ? [selectedReport.coordinates.lat, selectedReport.coordinates.lng] : mapCenter}
+                        zoom={13}
                         zoomControl={false}
                     >
                         {/* Dark Theme Tile Layer (CartoDB Dark Matter) */}
@@ -246,8 +244,8 @@ export default function MapView() {
                         <ZoomControl position="topright" />
 
                         {filteredReports.map((report) => (
-                            <Marker 
-                                key={report.id} 
+                            <Marker
+                                key={report.id}
                                 position={[report.coordinates.lat, report.coordinates.lng]}
                                 icon={createCustomIcon(categoryMeta[report.category]?.icon || '📍', selectedReport?.id === report.id) as any}
                                 eventHandlers={{
@@ -294,7 +292,7 @@ export default function MapView() {
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
-                                
+
                                 <div className="mt-4 flex gap-3">
                                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusMeta[selectedReport.status]?.bg} ${statusMeta[selectedReport.status]?.color}`}>
                                         {selectedReport.status}
@@ -303,9 +301,9 @@ export default function MapView() {
                                         {selectedReport.priority}
                                     </span>
                                 </div>
-                                
+
                                 <p className="mt-4 text-xs text-slate-300 leading-relaxed italic line-clamp-2 pr-2 opacity-80 uppercase tracking-tight font-medium">"{selectedReport.description}"</p>
-                                
+
                                 <div className="mt-6 flex gap-2">
                                     <button className="flex-1 py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-white text-[10px] font-bold rounded-xl transition-all shadow-lg shadow-teal-900/40 active:scale-[0.98] uppercase tracking-widest">
                                         Open Management
