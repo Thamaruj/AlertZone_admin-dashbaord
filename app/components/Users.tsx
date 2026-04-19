@@ -4,300 +4,216 @@ import { useState, useMemo } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type UserStatus = "Active" | "Suspended" | "Offline";
-type UserRole = "Super Admin" | "Admin" | "Dispatcher" | "Operator";
+type UserStatus = "Active" | "Suspended" | "Pending";
+type ReputationLevel = "Gold" | "Silver" | "Bronze" | "None";
 
 type User = {
     id: string;
     name: string;
     email: string;
-    role: UserRole;
+    points: string;
+    reputation: ReputationLevel;
     status: UserStatus;
-    joined: string;
-    reportsHandled: number;
     avatar: string;
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 
 const MOCK_USERS: User[] = [
-    { id: "USR-001", name: "Alex Morgan", email: "alex.m@alertzone.gov", role: "Super Admin", status: "Active", joined: "Jan 12, 2025", reportsHandled: 452, avatar: "AM" },
-    { id: "USR-002", name: "Sarah Chen", email: "s.chen@alertzone.gov", role: "Admin", status: "Active", joined: "Feb 05, 2025", reportsHandled: 284, avatar: "SC" },
-    { id: "USR-003", name: "Marcus Wright", email: "m.wright@alertzone.gov", role: "Dispatcher", status: "Offline", joined: "Mar 10, 2025", reportsHandled: 156, avatar: "MW" },
-    { id: "USR-004", name: "Elena Rodriguez", email: "e.rod@alertzone.gov", role: "Operator", status: "Active", joined: "Mar 15, 2025", reportsHandled: 92, avatar: "ER" },
-    { id: "USR-005", name: "David Kim", email: "d.kim@alertzone.gov", role: "Dispatcher", status: "Suspended", joined: "Apr 02, 2025", reportsHandled: 215, avatar: "DK" },
-    { id: "USR-006", name: "James Wilson", email: "j.wilson@alertzone.gov", role: "Operator", status: "Active", joined: "Apr 10, 2025", reportsHandled: 48, avatar: "JW" },
-    { id: "USR-007", name: "Lisa Thompson", email: "l.thompson@alertzone.gov", role: "Admin", status: "Offline", joined: "Jan 20, 2025", reportsHandled: 312, avatar: "LT" },
-    { id: "USR-008", name: "Robert Taylor", email: "r.taylor@alertzone.gov", role: "Operator", status: "Active", joined: "May 01, 2025", reportsHandled: 12, avatar: "RT" },
+    { id: "1", name: "Alex Rivera", email: "alex.r@email.com", points: "4,250", reputation: "Gold", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" },
+    { id: "2", name: "Sarah Chen", email: "s.chen@web.com", points: "2,100", reputation: "Silver", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" },
+    { id: "3", name: "Marcus Thorne", email: "m.thorne@net.com", points: "850", reputation: "Bronze", status: "Suspended", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus" },
+    { id: "4", name: "Elena Gomez", email: "elena.g@st.com", points: "120", reputation: "None", status: "Pending", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Elena" },
+    { id: "5", name: "Jason Park", email: "j.park@alert.io", points: "3,150", reputation: "Gold", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jason" },
+    { id: "6", name: "Maya Patel", email: "maya.p@global.com", points: "1,800", reputation: "Silver", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maya" },
 ];
 
 // ─── Constants & Meta ─────────────────────────────────────────────────────────
 
-const roleMeta: Record<UserRole, { color: string; bg: string }> = {
-    "Super Admin": { color: "text-rose-400", bg: "bg-rose-500/10" },
-    Admin: { color: "text-teal-400", bg: "bg-teal-500/10" },
-    Dispatcher: { color: "text-blue-400", bg: "bg-blue-500/10" },
-    Operator: { color: "text-amber-400", bg: "bg-amber-500/10" },
+const reputationMeta: Record<ReputationLevel, { color: string; bg: string; border: string }> = {
+    Gold: { color: "text-amber-500", bg: "bg-amber-500/10", border: "border-amber-500/20" },
+    Silver: { color: "text-slate-400", bg: "bg-slate-400/10", border: "border-slate-400/20" },
+    Bronze: { color: "text-orange-600", bg: "bg-orange-600/10", border: "border-orange-600/20" },
+    None: { color: "text-slate-500", bg: "bg-slate-500/10", border: "border-slate-500/20" },
 };
 
-const statusMeta: Record<UserStatus, { color: string; bg: string; dot: string }> = {
-    Active: { color: "text-teal-400", bg: "bg-teal-500/10", dot: "bg-teal-400" },
-    Suspended: { color: "text-rose-400", bg: "bg-rose-500/10", dot: "bg-rose-500" },
-    Offline: { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" },
+const statusMeta: Record<UserStatus, { color: string; bg: string }> = {
+    Active: { color: "text-emerald-500", bg: "bg-emerald-500/10" },
+    Suspended: { color: "text-rose-500", bg: "bg-rose-500/10" },
+    Pending: { color: "text-amber-600", bg: "bg-amber-600/10" },
 };
 
 // ─── Components ───────────────────────────────────────────────────────────────
 
-function UserStatCard({ icon, label, value, trend, colorClass }: {
-    icon: React.ReactNode; label: string; value: string; trend: string; colorClass: string;
+function StatCard({ label, value, trend, icon, color }: {
+    label: string; value: string; trend: { val: string; type: "up" | "down" }; icon: React.ReactNode; color: string;
 }) {
     return (
-        <div className="group bg-[#0f2233]/80 backdrop-blur-md border border-white/5 border-t-white/10 rounded-xl p-4 flex flex-col gap-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(20,184,166,0.15)] hover:border-teal-500/30">
-            <div className="flex items-center justify-between">
-                <div className={`w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 ${colorClass}`}>
+        <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col gap-1 transition-all duration-300 hover:border-teal-500/40 group">
+            <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-medium text-slate-400">{label}</span>
+                <div className={`p-2 rounded-xl bg-white/5 border border-white/10 ${color} group-hover:scale-110 transition-transform duration-300`}>
                     {icon}
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white/5 text-slate-400 group-hover:text-teal-400 transition-colors">
-                    {trend}
+            </div>
+            <div className="flex items-baseline gap-3">
+                <span className="text-3xl font-bold text-white tracking-tight">{value}</span>
+                <span className={`text-xs font-bold flex items-center gap-0.5 ${trend.type === "up" ? "text-emerald-400" : "text-rose-400"}`}>
+                    {trend.type === "up" ? "↗" : "↘"} {trend.val}
                 </span>
             </div>
-            <p className="text-xs text-slate-300 font-medium mt-0.5">{label}</p>
-            <p className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400 tracking-tight">{value}</p>
         </div>
     );
 }
 
 export default function Users() {
     const [searchQuery, setSearchQuery] = useState("");
-    const [roleFilter, setRoleFilter] = useState<UserRole | "All">("All");
-    const [statusFilter, setStatusFilter] = useState<UserStatus | "All">("All");
 
     const filteredUsers = useMemo(() => {
-        return MOCK_USERS.filter(user => {
-            const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                user.id.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesRole = roleFilter === "All" || user.role === roleFilter;
-            const matchesStatus = statusFilter === "All" || user.status === statusFilter;
-            return matchesSearch && matchesRole && matchesStatus;
-        });
-    }, [searchQuery, roleFilter, statusFilter]);
+        return MOCK_USERS.filter(user => 
+            user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [searchQuery]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 animate-slide-up">
             {/* Header Section */}
-            <div className="flex items-start justify-between flex-wrap gap-4 animate-slide-up">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1">Users Management</h1>
-                    <p className="text-xs text-slate-300 mt-0.5">Manage administrative roles and municipal operator access.</p>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">User Management</h1>
+                    <p className="text-slate-400 mt-1 text-sm font-medium">Manage and monitor registered community members and their reputations across the platform.</p>
                 </div>
-                <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white text-xs font-semibold px-4 py-2.5 rounded-lg shadow-lg shadow-teal-900/40 transition-all duration-200 active:scale-[0.98] flex items-center gap-2">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                    </svg>
-                    Add New User
-                </button>
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm font-bold hover:bg-white/10 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                        </svg>
+                        Filter
+                    </button>
+                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-slate-300 text-sm font-bold hover:bg-white/10 transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Export
+                    </button>
+                </div>
             </div>
 
-            {/* Quick Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-slide-up stagger-1">
-                <UserStatCard 
-                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>}
-                    label="Total Users" value="128" trend="+4 this week" colorClass="text-teal-400"
+            {/* Stats Overview */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-slide-up stagger-1">
+                <StatCard 
+                    label="Total Registered" 
+                    value="12,840" 
+                    trend={{ val: "12%", type: "up" }}
+                    color="text-blue-400"
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
                 />
-                <UserStatCard 
-                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>}
-                    label="Verification" value="98%" trend="1 pending" colorClass="text-blue-400"
+                <StatCard 
+                    label="Active Reporters" 
+                    value="8,420" 
+                    trend={{ val: "5%", type: "up" }}
+                    color="text-cyan-400"
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>}
                 />
-                <UserStatCard 
-                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-                    label="Active Now" value="42" trend="Live stream" colorClass="text-orange-400"
-                />
-                <UserStatCard 
-                    icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                    label="Uptime" value="99.9%" trend="Last 30d" colorClass="text-teal-400"
+                <StatCard 
+                    label="Elite Contributors" 
+                    value="1,250" 
+                    trend={{ val: "2%", type: "down" }}
+                    color="text-amber-400"
+                    icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>}
                 />
             </div>
 
-            {/* Main Table Container */}
-            <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-2xl overflow-hidden shadow-2xl animate-slide-up stagger-2">
-                
-                {/* Search & Filters Bar */}
-                <div className="p-5 border-b border-white/5 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex-1 min-w-[300px] relative group">
-                        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-500/60 group-focus-within:text-teal-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Table Section */}
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-slide-up stagger-2">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between gap-4">
+                    <div className="relative flex-1 max-w-md group">
+                        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-teal-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                         </svg>
                         <input 
+                            type="text"
+                            placeholder="Search users..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Find user by name, email or ID..."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:bg-white/10 focus:border-teal-500/50 transition-all font-medium"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all font-medium"
                         />
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:block">Role</span>
-                            <select 
-                                value={roleFilter}
-                                onChange={(e) => setRoleFilter(e.target.value as any)}
-                                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50"
-                            >
-                                <option value="All" className="bg-[#0f2233]">All Roles</option>
-                                <option value="Super Admin" className="bg-[#0f2233]">Super Admin</option>
-                                <option value="Admin" className="bg-[#0f2233]">Admin</option>
-                                <option value="Dispatcher" className="bg-[#0f2233]">Dispatcher</option>
-                                <option value="Operator" className="bg-[#0f2233]">Operator</option>
-                            </select>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden sm:block">Status</span>
-                            <select 
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value as any)}
-                                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50"
-                            >
-                                <option value="All" className="bg-[#0f2233]">All Status</option>
-                                <option value="Active" className="bg-[#0f2233]">Active</option>
-                                <option value="Suspended" className="bg-[#0f2233]">Suspended</option>
-                                <option value="Offline" className="bg-[#0f2233]">Offline</option>
-                            </select>
-                        </div>
                     </div>
                 </div>
 
-                {/* Users Table */}
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left min-w-[1000px]">
+                <div className="overflow-x-auto min-w-full inline-block align-middle">
+                    <table className="w-full text-left">
                         <thead>
-                            <tr className="bg-white/3 text-[10px] font-bold text-slate-400 uppercase tracking-widest border-b border-white/5">
-                                <th className="px-6 py-4">User Details</th>
-                                <th className="px-6 py-4">Role / Permissions</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4">Reports Handled</th>
-                                <th className="px-6 py-4">Joined Date</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                            <tr className="text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
+                                <th className="px-8 py-5">User Identity</th>
+                                <th className="px-8 py-5">Points</th>
+                                <th className="px-8 py-5">Reputation</th>
+                                <th className="px-8 py-5">Status</th>
+                                <th className="px-8 py-5 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {filteredUsers.map((user) => {
-                                const role = roleMeta[user.role];
-                                const status = statusMeta[user.status];
-
-                                return (
-                                    <tr key={user.id} className="hover:bg-white/3 transition-all group">
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 border border-white/10 flex items-center justify-center text-teal-400 font-bold text-sm shadow-inner group-hover:scale-105 transition-transform">
-                                                    {user.avatar}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white tracking-tight">{user.name}</p>
-                                                    <p className="text-[11px] text-slate-400 font-medium">{user.email}</p>
-                                                    <p className="text-[9px] text-teal-500/60 font-mono mt-0.5">{user.id}</p>
-                                                </div>
+                            {filteredUsers.map((user) => (
+                                <tr key={user.id} className="hover:bg-white/[0.03] transition-all group">
+                                    <td className="px-8 py-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
+                                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border border-white/5 shadow-sm ${role.bg} ${role.color}`}>
-                                                {user.role}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${user.status === 'Active' ? 'animate-pulse' : ''}`} />
-                                                <span className={`text-[11px] font-semibold ${status.color}`}>
-                                                    {user.status}
-                                                </span>
+                                            <div>
+                                                <p className="text-sm font-bold text-white group-hover:text-teal-400 transition-colors">{user.name}</p>
+                                                <p className="text-xs text-slate-500 font-medium">{user.email}</p>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="flex-1 h-1.5 max-w-[80px] bg-white/5 rounded-full overflow-hidden">
-                                                    <div 
-                                                        className="h-full bg-teal-500/50 rounded-full" 
-                                                        style={{ width: `${Math.min(100, (user.reportsHandled / 500) * 100)}%` }} 
-                                                    />
-                                                </div>
-                                                <span className="text-xs font-mono font-bold text-slate-300">
-                                                    {user.reportsHandled}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <p className="text-xs text-slate-400 font-medium tracking-tight">
-                                                {user.joined}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <button className="p-2 text-slate-400 hover:text-teal-400 hover:bg-white/5 rounded-lg transition-all" title="Edit User">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </button>
-                                                <button className="p-2 text-slate-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-all" title="Suspend User">
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                                    </svg>
-                                                </button>
-                                                <button className="p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all" title="More Options">
-                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                                        <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <span className="text-sm font-mono font-bold text-slate-300">{user.points}</span>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${reputationMeta[user.reputation].bg} ${reputationMeta[user.reputation].color} ${reputationMeta[user.reputation].border}`}>
+                                            <span className="w-1 h-1 rounded-full bg-current" />
+                                            {user.reputation}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold ${statusMeta[user.status].bg} ${statusMeta[user.status].color}`}>
+                                            {user.status}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5 text-right">
+                                        <div className="flex items-center justify-end gap-6 text-sm font-bold">
+                                            <button className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer">Manage</button>
+                                            <button className={`${user.status === "Suspended" ? "text-blue-400 hover:text-blue-300" : "text-rose-500 hover:text-rose-400"} transition-colors cursor-pointer`}>
+                                                {user.status === "Suspended" ? "Unsuspend" : "Suspend"}
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
-
-                    {filteredUsers.length === 0 && (
-                        <div className="py-24 flex flex-col items-center justify-center opacity-40">
-                            <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center text-4xl mb-4">
-                                👥
-                            </div>
-                            <p className="text-sm font-bold text-slate-300 uppercase tracking-[0.2em]">No users found</p>
-                            <p className="text-[11px] text-slate-500 mt-1">Try adjusting your filters or search query</p>
-                        </div>
-                    )}
                 </div>
 
-                {/* Footer / Pagination Placeholder */}
-                <div className="px-6 py-4 bg-white/2 border-t border-white/5 flex items-center justify-between">
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                        Showing {filteredUsers.length} of {MOCK_USERS.length} total users
+                {/* Pagination */}
+                <div className="px-8 py-5 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
+                    <p className="text-xs text-slate-500 font-medium">
+                        Showing 1 to {filteredUsers.length} of 1,284 users
                     </p>
-                    <div className="flex items-center gap-1">
-                         <button className="px-3 py-1 text-[10px] font-bold text-slate-500 hover:text-white transition-colors uppercase">Prev</button>
-                         <div className="flex gap-1 px-2">
-                             <span className="w-6 h-6 rounded bg-teal-500/20 border border-teal-500/40 text-[10px] font-bold text-teal-400 flex items-center justify-center">1</span>
-                             <span className="w-6 h-6 rounded hover:bg-white/5 text-[10px] font-bold text-slate-500 flex items-center justify-center cursor-pointer transition-colors">2</span>
-                         </div>
-                         <button className="px-3 py-1 text-[10px] font-bold text-slate-500 hover:text-white transition-colors uppercase">Next</button>
+                    <div className="flex items-center gap-2">
+                        <button className="p-2 text-slate-500 hover:text-white transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                        </button>
+                        <button className="w-8 h-8 rounded-lg bg-teal-500 text-white text-xs font-bold shadow-lg shadow-teal-500/20">1</button>
+                        <button className="w-8 h-8 rounded-lg hover:bg-white/5 text-slate-400 text-xs font-bold transition-colors">2</button>
+                        <button className="w-8 h-8 rounded-lg hover:bg-white/5 text-slate-400 text-xs font-bold transition-colors">3</button>
+                        <span className="text-slate-600 px-1 font-bold">...</span>
+                        <button className="w-8 h-8 rounded-lg hover:bg-white/5 text-slate-400 text-xs font-bold transition-colors">128</button>
+                        <button className="p-2 text-slate-500 hover:text-white transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            {/* Role Guidelines Hint */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-slide-up stagger-3">
-                {Object.entries(roleMeta).map(([role, meta]) => (
-                    <div key={role} className="p-4 bg-[#0f2233]/40 border border-white/5 rounded-xl">
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className={`w-2 h-2 rounded-full ${meta.bg.replace('/10', '')} ${meta.color}`} />
-                            <h3 className={`text-[11px] font-bold uppercase tracking-widest ${meta.color}`}>{role}</h3>
-                        </div>
-                        <p className="text-[10px] text-slate-400 leading-relaxed italic">
-                            {role === "Super Admin" && "Full system access including infrastructure config and audit logs."}
-                            {role === "Admin" && "Regional management, report oversight, and operator assignments."}
-                            {role === "Dispatcher" && "Real-time incident response routing and status coordination."}
-                            {role === "Operator" && "Field report handling, evidence collection, and status updates."}
-                        </p>
-                    </div>
-                ))}
             </div>
         </div>
     );
