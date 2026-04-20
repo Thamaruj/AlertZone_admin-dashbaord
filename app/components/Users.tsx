@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { collection, onSnapshot, query, orderBy, Timestamp, doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,16 +19,7 @@ type User = {
     avatar: string;
 };
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_USERS: User[] = [
-    { id: "1", name: "Alex Rivera", email: "alex.r@email.com", points: "4,250", reputation: "Gold", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alex" },
-    { id: "2", name: "Sarah Chen", email: "s.chen@web.com", points: "2,100", reputation: "Silver", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah" },
-    { id: "3", name: "Marcus Thorne", email: "m.thorne@net.com", points: "850", reputation: "Bronze", status: "Suspended", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus" },
-    { id: "4", name: "Elena Gomez", email: "elena.g@st.com", points: "120", reputation: "None", status: "Pending", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Elena" },
-    { id: "5", name: "Jason Park", email: "j.park@alert.io", points: "3,150", reputation: "Gold", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Jason" },
-    { id: "6", name: "Maya Patel", email: "maya.p@global.com", points: "1,800", reputation: "Silver", status: "Active", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Maya" },
-];
+// Mock data removed in favor of Firebase real-time connection
 
 // ─── Constants & Meta ─────────────────────────────────────────────────────────
 
@@ -67,14 +60,73 @@ function StatCard({ label, value, trend, icon, color }: {
 }
 
 export default function Users() {
+    const [users, setUsers] = useState<User[]>([]);
+    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Real-time listener for Firestore
+    useEffect(() => {
+        const usersRef = collection(db, "users");
+        // Ordering by points (descending) as a default useful view
+        const q = query(usersRef);
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const usersList = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    name: data.name || "Anonymous",
+                    email: data.email || "No Email",
+                    // Handle points if they are stored as numbers in Firestore
+                    points: typeof data.points === 'number' 
+                        ? new Intl.NumberFormat().format(data.points) 
+                        : (data.points || "0"),
+                    reputation: data.reputation || "None",
+                    status: data.status || "Pending",
+                    avatar: data.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${doc.id}`,
+                } as User;
+            });
+            setUsers(usersList);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching real-time users:", error);
+            setLoading(false);
+        });
+
+        // Cleanup listener on unmount
+        return () => unsubscribe();
+    }, []);
+
     const filteredUsers = useMemo(() => {
-        return MOCK_USERS.filter(user => 
+        return users.filter(user => 
             user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             user.email.toLowerCase().includes(searchQuery.toLowerCase())
         );
-    }, [searchQuery]);
+    }, [searchQuery, users]);
+
+    // Calculate dynamic stats from real-time data
+    const stats = useMemo(() => {
+        const total = users.length;
+        const active = users.filter(u => u.status === "Active").length;
+        const elite = users.filter(u => u.reputation === "Gold").length;
+        
+        return {
+            total: new Intl.NumberFormat().format(total),
+            active: new Intl.NumberFormat().format(active),
+            elite: new Intl.NumberFormat().format(elite)
+        };
+    }, [users]);
+
+    const handleStatusUpdate = async (userId: string, currentStatus: UserStatus) => {
+        const newStatus: UserStatus = currentStatus === "Suspended" ? "Active" : "Suspended";
+        try {
+            const userRef = doc(db, "users", userId);
+            await updateDoc(userRef, { status: newStatus });
+        } catch (error) {
+            console.error("Error updating user status:", error);
+            alert("Failed to update user status.");
+        }
+    };
 
     return (
         <div className="space-y-8 animate-slide-up">
@@ -104,22 +156,22 @@ export default function Users() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-slide-up stagger-1">
                 <StatCard 
                     label="Total Registered" 
-                    value="12,840" 
-                    trend={{ val: "12%", type: "up" }}
+                    value={loading ? "..." : stats.total} 
+                    trend={{ val: "Live", type: "up" }}
                     color="text-blue-400"
                     icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg>}
                 />
                 <StatCard 
                     label="Active Reporters" 
-                    value="8,420" 
-                    trend={{ val: "5%", type: "up" }}
+                    value={loading ? "..." : stats.active} 
+                    trend={{ val: "Active", type: "up" }}
                     color="text-cyan-400"
                     icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>}
                 />
                 <StatCard 
                     label="Elite Contributors" 
-                    value="1,250" 
-                    trend={{ val: "2%", type: "down" }}
+                    value={loading ? "..." : stats.elite} 
+                    trend={{ val: "Gold", type: "up" }}
                     color="text-amber-400"
                     icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>}
                 />
@@ -154,43 +206,63 @@ export default function Users() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {filteredUsers.map((user) => (
-                                <tr key={user.id} className="hover:bg-white/[0.03] transition-all group">
-                                    <td className="px-8 py-5">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
-                                                <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-bold text-white group-hover:text-teal-400 transition-colors">{user.name}</p>
-                                                <p className="text-xs text-slate-500 font-medium">{user.email}</p>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className="text-sm font-mono font-bold text-slate-300">{user.points}</span>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${reputationMeta[user.reputation].bg} ${reputationMeta[user.reputation].color} ${reputationMeta[user.reputation].border}`}>
-                                            <span className="w-1 h-1 rounded-full bg-current" />
-                                            {user.reputation}
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold ${statusMeta[user.status].bg} ${statusMeta[user.status].color}`}>
-                                            {user.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                        <div className="flex items-center justify-end gap-6 text-sm font-bold">
-                                            <button className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer">Manage</button>
-                                            <button className={`${user.status === "Suspended" ? "text-blue-400 hover:text-blue-300" : "text-rose-500 hover:text-rose-400"} transition-colors cursor-pointer`}>
-                                                {user.status === "Suspended" ? "Unsuspend" : "Suspend"}
-                                            </button>
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="w-8 h-8 border-2 border-teal-500/30 border-t-teal-500 rounded-full animate-spin" />
+                                            <p className="text-slate-400 text-sm font-medium">Connecting to live database...</p>
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            ) : filteredUsers.length > 0 ? (
+                                filteredUsers.map((user) => (
+                                    <tr key={user.id} className="hover:bg-white/[0.03] transition-all group">
+                                        <td className="px-8 py-5">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
+                                                    <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white group-hover:text-teal-400 transition-colors">{user.name}</p>
+                                                    <p className="text-xs text-slate-500 font-medium">{user.email}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <span className="text-sm font-mono font-bold text-slate-300">{user.points}</span>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${reputationMeta[user.reputation].bg} ${reputationMeta[user.reputation].color} ${reputationMeta[user.reputation].border}`}>
+                                                <span className="w-1 h-1 rounded-full bg-current" />
+                                                {user.reputation}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-5">
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold ${statusMeta[user.status].bg} ${statusMeta[user.status].color}`}>
+                                                {user.status}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-5 text-right">
+                                            <div className="flex items-center justify-end gap-6 text-sm font-bold">
+                                                <button className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer">Manage</button>
+                                                <button 
+                                                    onClick={() => handleStatusUpdate(user.id, user.status)}
+                                                    className={`${user.status === "Suspended" ? "text-blue-400 hover:text-blue-300" : "text-rose-500 hover:text-rose-400"} transition-colors cursor-pointer`}
+                                                >
+                                                    {user.status === "Suspended" ? "Unsuspend" : "Suspend"}
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-20 text-center">
+                                        <p className="text-slate-400 text-sm font-medium">No users found matching your search.</p>
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -198,7 +270,7 @@ export default function Users() {
                 {/* Pagination */}
                 <div className="px-8 py-5 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
                     <p className="text-xs text-slate-500 font-medium">
-                        Showing 1 to {filteredUsers.length} of 1,284 users
+                        Showing {filteredUsers.length} of {users.length} total users
                     </p>
                     <div className="flex items-center gap-2">
                         <button className="p-2 text-slate-500 hover:text-white transition-colors">
