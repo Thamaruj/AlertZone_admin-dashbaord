@@ -6,6 +6,7 @@ import logo1 from "../assets/logo1.png";
 import ReportsManagement from "./Reportsmanagement";
 import MapView from "./Mapview";
 import Users from "./Users";
+import Analytics from "./Analytics";
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -628,8 +629,10 @@ export default function AdminDashboard() {
 
                             {activeNav === "users" && <Users />}
 
+                            {activeNav === "analytics" && <Analytics />}
+
                             {/* Other section placeholders remain same for now */}
-                            {["analytics", "notifications", "settings"].includes(activeNav) && (
+                            {["notifications", "settings"].includes(activeNav) && (
                                 <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
                                     <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
                                         {navItems.find(n => n.id === activeNav)?.label}
