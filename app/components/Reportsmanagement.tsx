@@ -139,20 +139,20 @@ export default function ReportsManagement() {
     const [statusReason, setStatusReason] = useState("");
     const [newNote, setNewNote] = useState("");
     const [isSaving, setIsSaving] = useState(false);
-    
+
     // Note filtering state
     const [noteFilter, setNoteFilter] = useState<"all" | "internal" | "public">("all");
 
     // ─── Firebase Real-time Connection ──────────────────────────────────────────
     useEffect(() => {
         const q = query(collection(db, "reports"), orderBy("time", "desc"));
-        
+
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const reportsData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as Report[];
-            
+
             setReports(reportsData);
             setLoading(false);
         }, (error) => {
@@ -173,7 +173,7 @@ export default function ReportsManagement() {
 
         setIsSaving(true);
         const newStatus = tempStatus as Report["status"];
-        
+
         // Add status reason as a public note if provided
         const notes = [...(selectedReport.notes || [])];
         if (statusReason.trim()) {
@@ -211,7 +211,7 @@ export default function ReportsManagement() {
             time: String(new Date().toLocaleDateString()),
             type: "internal"
         };
-        
+
         try {
             const reportRef = doc(db, "reports", selectedReport.id);
             const updatedNotes = [note, ...(selectedReport.notes || [])];
@@ -228,7 +228,7 @@ export default function ReportsManagement() {
     const handleDeleteNote = async (noteId: string) => {
         if (!selectedReport) return;
         const updatedNotes = selectedReport.notes.filter(n => n.id !== noteId);
-        
+
         try {
             const reportRef = doc(db, "reports", selectedReport.id);
             await updateDoc(reportRef, {
@@ -281,8 +281,8 @@ export default function ReportsManagement() {
                         key={tab}
                         onClick={() => setSelectedTab(tab as any)}
                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${selectedTab === tab
-                                ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
-                                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                            ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
+                            : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                             }`}
                     >
                         {tab}
@@ -476,7 +476,7 @@ export default function ReportsManagement() {
                                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Reporter Details</p>
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
-                                                {selectedReport.reporter.name.split(' ').map(n=>n[0]).join('')}
+                                                {selectedReport.reporter.name.split(' ').map(n => n[0]).join('')}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-slate-200">{selectedReport.reporter.name}</p>
@@ -528,8 +528,8 @@ export default function ReportsManagement() {
                                                 onClick={handleSaveStatus}
                                                 disabled={isSaving || tempStatus === selectedReport.status}
                                                 className={`min-w-[140px] px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${tempStatus === selectedReport.status
-                                                        ? "bg-slate-700/20 text-slate-500 border border-white/5 cursor-not-allowed"
-                                                        : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-teal-900/40 hover:brightness-110 active:scale-[0.98]"
+                                                    ? "bg-slate-700/20 text-slate-500 border border-white/5 cursor-not-allowed"
+                                                    : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-teal-900/40 hover:brightness-110 active:scale-[0.98]"
                                                     }`}
                                             >
                                                 {isSaving ? (
@@ -540,10 +540,10 @@ export default function ReportsManagement() {
                                                 {isSaving ? "Saving..." : "Save Status"}
                                             </button>
                                         </div>
-                                        
+
                                         {/* Status Update Reason */}
                                         <div className="relative">
-                                            <textarea 
+                                            <textarea
                                                 value={statusReason}
                                                 onChange={(e) => setStatusReason(e.target.value)}
                                                 placeholder="Provide a reason or update details for the citizen (e.g., 'Team dispatched', 'Maintenance scheduled') - Optional"
@@ -564,27 +564,24 @@ export default function ReportsManagement() {
                             <div className="space-y-6">
                                 {/* Navigation for Notes Filter */}
                                 <div className="flex items-center gap-6 border-b border-white/5 pb-2">
-                                    <button 
+                                    <button
                                         onClick={() => setNoteFilter("all")}
-                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${
-                                            noteFilter === "all" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
-                                        }`}
+                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${noteFilter === "all" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
+                                            }`}
                                     >
                                         Timeline & Notes
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => setNoteFilter("internal")}
-                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${
-                                            noteFilter === "internal" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
-                                        }`}
+                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${noteFilter === "internal" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
+                                            }`}
                                     >
                                         Internal Only
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => setNoteFilter("public")}
-                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${
-                                            noteFilter === "public" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
-                                        }`}
+                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${noteFilter === "public" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
+                                            }`}
                                     >
                                         Public Updates
                                     </button>
@@ -607,8 +604,8 @@ export default function ReportsManagement() {
                                                     onClick={handleAddNote}
                                                     disabled={!newNote.trim()}
                                                     className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${!newNote.trim()
-                                                            ? "bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed"
-                                                            : "bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
+                                                        ? "bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed"
+                                                        : "bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
                                                         }`}
                                                 >
                                                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth="2.5" /></svg>
@@ -629,11 +626,10 @@ export default function ReportsManagement() {
 
                                         <div className="space-y-4 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
                                             {visibleNotes.map((note) => (
-                                                <div key={note.id} className={`group/note p-4 border rounded-2xl space-y-2 relative transition-all ${
-                                                    note.type === 'public' 
-                                                    ? 'bg-teal-500/5 border-teal-500/20' 
-                                                    : 'bg-white/3 border-white/5 hover:bg-white/[0.05]'
-                                                }`}>
+                                                <div key={note.id} className={`group/note p-4 border rounded-2xl space-y-2 relative transition-all ${note.type === 'public'
+                                                        ? 'bg-teal-500/5 border-teal-500/20'
+                                                        : 'bg-white/3 border-white/5 hover:bg-white/[0.05]'
+                                                    }`}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
                                                             <div className={`w-1.5 h-1.5 rounded-full ${note.type === 'public' ? 'bg-teal-400 animate-pulse' : 'bg-slate-500'}`} />

@@ -170,8 +170,8 @@ export default function MapView() {
                                 key={cat}
                                 onClick={() => setFilter(cat as any)}
                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all border ${filter === cat
-                                        ? "bg-teal-500/20 border-teal-500/40 text-teal-400"
-                                        : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
+                                    ? "bg-teal-500/20 border-teal-500/40 text-teal-400"
+                                    : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
                                     }`}
                             >
                                 {cat}
@@ -191,8 +191,8 @@ export default function MapView() {
                                 key={report.id}
                                 onClick={() => setSelectedReport(report)}
                                 className={`w-full text-left p-3 rounded-xl border transition-all group ${isSelected
-                                        ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
-                                        : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
+                                    ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
+                                    : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
                                     }`}
                             >
                                 <div className="flex justify-between items-start mb-2">

@@ -71,11 +71,11 @@ function AnalyticsStatCard({ label, value, trend, icon, color }: {
 function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
     const [hoverIdx, setHoverIdx] = useState<number | null>(null);
     const maxVal = Math.max(...data.map(d => Math.max(d.reports, d.solved))) * 1.2;
-    
+
     const width = 800;
     const height = 300;
     const padding = { top: 40, right: 40, bottom: 40, left: 40 };
-    
+
     const getX = (index: number) => padding.left + (index * (width - padding.left - padding.right)) / (data.length - 1);
     const getY = (value: number) => height - padding.bottom - (value * (height - padding.top - padding.bottom)) / maxVal;
 
@@ -102,14 +102,14 @@ function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
 
                 {/* Grid Lines */}
                 {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
-                    <line 
+                    <line
                         key={i}
-                        x1={padding.left} 
-                        y1={padding.top + p * (height - padding.top - padding.bottom)} 
-                        x2={width - padding.right} 
-                        y2={padding.top + p * (height - padding.top - padding.bottom)} 
-                        stroke="white" 
-                        strokeOpacity="0.05" 
+                        x1={padding.left}
+                        y1={padding.top + p * (height - padding.top - padding.bottom)}
+                        x2={width - padding.right}
+                        y2={padding.top + p * (height - padding.top - padding.bottom)}
+                        stroke="white"
+                        strokeOpacity="0.05"
                         strokeDasharray="4 4"
                     />
                 ))}
@@ -124,11 +124,11 @@ function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
 
                 {/* X-Axis Labels */}
                 {data.map((d, i) => (
-                    <text 
-                        key={i} 
-                        x={getX(i)} 
-                        y={height - 10} 
-                        textAnchor="middle" 
+                    <text
+                        key={i}
+                        x={getX(i)}
+                        y={height - 10}
+                        textAnchor="middle"
                         className="text-[12px] fill-slate-500 font-mono"
                     >
                         {d.day}
@@ -137,7 +137,7 @@ function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
 
                 {/* Interaction Bars */}
                 {data.map((_, i) => (
-                    <rect 
+                    <rect
                         key={i}
                         x={getX(i) - (width / data.length) / 2}
                         y={padding.top}
@@ -152,10 +152,10 @@ function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
                 {/* Hover Line & Points */}
                 {hoverIdx !== null && (
                     <g>
-                        <line 
-                            x1={getX(hoverIdx)} y1={padding.top} 
-                            x2={getX(hoverIdx)} y2={height - padding.bottom} 
-                            stroke="#ffffff30" strokeWidth="1" strokeDasharray="4 4" 
+                        <line
+                            x1={getX(hoverIdx)} y1={padding.top}
+                            x2={getX(hoverIdx)} y2={height - padding.bottom}
+                            stroke="#ffffff30" strokeWidth="1" strokeDasharray="4 4"
                         />
                         <circle cx={getX(hoverIdx)} cy={getY(data[hoverIdx].reports)} r="5" fill="#06b6d4" stroke="#0d1f2d" strokeWidth="2" />
                         <circle cx={getX(hoverIdx)} cy={getY(data[hoverIdx].solved)} r="5" fill="#2dd4bf" stroke="#0d1f2d" strokeWidth="2" />
@@ -165,9 +165,9 @@ function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
 
             {/* Tooltip Overlay */}
             {hoverIdx !== null && (
-                <div 
+                <div
                     className="absolute z-50 bg-[#0f2233] border border-white/10 rounded-xl p-3 shadow-2xl pointer-events-none fade-in animate-in duration-200"
-                    style={{ 
+                    style={{
                         left: `${(getX(hoverIdx) / width) * 100}%`,
                         top: `${getY(Math.max(data[hoverIdx].reports, data[hoverIdx].solved)) - 80}px`,
                         transform: 'translateX(-50%)'
@@ -212,8 +212,8 @@ export default function Analytics() {
                             key={range}
                             onClick={() => setTimeRange(range)}
                             className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${timeRange === range
-                                    ? "bg-teal-500 text-white shadow-lg shadow-teal-500/20"
-                                    : "text-slate-400 hover:text-slate-200"
+                                ? "bg-teal-500 text-white shadow-lg shadow-teal-500/20"
+                                : "text-slate-400 hover:text-slate-200"
                                 }`}
                         >
                             {range}
