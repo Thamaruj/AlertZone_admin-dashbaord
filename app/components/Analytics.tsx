@@ -68,28 +68,132 @@ function AnalyticsStatCard({ label, value, trend, icon, color }: {
     );
 }
 
-function MiniBarChart({ data }: { data: typeof DAILY_ACTIVITY }) {
-    const maxVal = Math.max(...data.map(d => d.reports));
+function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
+    const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+    const maxVal = Math.max(...data.map(d => Math.max(d.reports, d.solved))) * 1.2;
+    
+    const width = 800;
+    const height = 300;
+    const padding = { top: 40, right: 40, bottom: 40, left: 40 };
+    
+    const getX = (index: number) => padding.left + (index * (width - padding.left - padding.right)) / (data.length - 1);
+    const getY = (value: number) => height - padding.bottom - (value * (height - padding.top - padding.bottom)) / maxVal;
+
+    const pointsReports = data.map((d, i) => `${getX(i)},${getY(d.reports)}`).join(" ");
+    const pointsSolved = data.map((d, i) => `${getX(i)},${getY(d.solved)}`).join(" ");
+
+    // For smooth curves, we'd need more complex path logic, but let's start with clean polylines and nice gradients
+    const areaReports = `M ${getX(0)},${height - padding.bottom} ` + data.map((d, i) => `L ${getX(i)},${getY(d.reports)}`).join(" ") + ` L ${getX(data.length - 1)},${height - padding.bottom} Z`;
+    const areaSolved = `M ${getX(0)},${height - padding.bottom} ` + data.map((d, i) => `L ${getX(i)},${getY(d.solved)}`).join(" ") + ` L ${getX(data.length - 1)},${height - padding.bottom} Z`;
+
     return (
-        <div className="flex items-end justify-between h-32 gap-2 px-2">
-            {data.map((d, i) => (
-                <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
-                    <div className="w-full flex flex-col items-center gap-1 h-full justify-end">
-                        <div
-                            className="w-full max-w-[12px] bg-teal-500/40 rounded-t-sm transition-all duration-500 group-hover:bg-teal-500/60"
-                            style={{ height: `${(d.reports / maxVal) * 100}%` }}
+        <div className="relative w-full h-[350px] group" onMouseLeave={() => setHoverIdx(null)}>
+            <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+                <defs>
+                    <linearGradient id="gradReports" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                    </linearGradient>
+                    <linearGradient id="gradSolved" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.2" />
+                        <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
+                    </linearGradient>
+                </defs>
+
+                {/* Grid Lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
+                    <line 
+                        key={i}
+                        x1={padding.left} 
+                        y1={padding.top + p * (height - padding.top - padding.bottom)} 
+                        x2={width - padding.right} 
+                        y2={padding.top + p * (height - padding.top - padding.bottom)} 
+                        stroke="white" 
+                        strokeOpacity="0.05" 
+                        strokeDasharray="4 4"
+                    />
+                ))}
+
+                {/* Areas */}
+                <path d={areaReports} fill="url(#gradReports)" className="transition-all duration-700" />
+                <path d={areaSolved} fill="url(#gradSolved)" className="transition-all duration-700" />
+
+                {/* Lines */}
+                <polyline points={pointsReports} fill="none" stroke="#06b6d4" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-700" />
+                <polyline points={pointsSolved} fill="none" stroke="#2dd4bf" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="transition-all duration-700" />
+
+                {/* X-Axis Labels */}
+                {data.map((d, i) => (
+                    <text 
+                        key={i} 
+                        x={getX(i)} 
+                        y={height - 10} 
+                        textAnchor="middle" 
+                        className="text-[12px] fill-slate-500 font-mono"
+                    >
+                        {d.day}
+                    </text>
+                ))}
+
+                {/* Interaction Bars */}
+                {data.map((_, i) => (
+                    <rect 
+                        key={i}
+                        x={getX(i) - (width / data.length) / 2}
+                        y={padding.top}
+                        width={width / data.length}
+                        height={height - padding.top - padding.bottom}
+                        fill="transparent"
+                        className="cursor-crosshair"
+                        onMouseEnter={() => setHoverIdx(i)}
+                    />
+                ))}
+
+                {/* Hover Line & Points */}
+                {hoverIdx !== null && (
+                    <g>
+                        <line 
+                            x1={getX(hoverIdx)} y1={padding.top} 
+                            x2={getX(hoverIdx)} y2={height - padding.bottom} 
+                            stroke="#ffffff30" strokeWidth="1" strokeDasharray="4 4" 
                         />
-                        <div
-                            className="w-full max-w-[12px] bg-teal-400 rounded-t-sm -mt-full transition-all duration-700 delay-100 group-hover:bg-teal-300"
-                            style={{ height: `${(d.solved / maxVal) * 100}%` }}
-                        />
+                        <circle cx={getX(hoverIdx)} cy={getY(data[hoverIdx].reports)} r="5" fill="#06b6d4" stroke="#0d1f2d" strokeWidth="2" />
+                        <circle cx={getX(hoverIdx)} cy={getY(data[hoverIdx].solved)} r="5" fill="#2dd4bf" stroke="#0d1f2d" strokeWidth="2" />
+                    </g>
+                )}
+            </svg>
+
+            {/* Tooltip Overlay */}
+            {hoverIdx !== null && (
+                <div 
+                    className="absolute z-50 bg-[#0f2233] border border-white/10 rounded-xl p-3 shadow-2xl pointer-events-none fade-in animate-in duration-200"
+                    style={{ 
+                        left: `${(getX(hoverIdx) / width) * 100}%`,
+                        top: `${getY(Math.max(data[hoverIdx].reports, data[hoverIdx].solved)) - 80}px`,
+                        transform: 'translateX(-50%)'
+                    }}
+                >
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 border-b border-white/5 pb-1">{data[hoverIdx].day} Performance</p>
+                    <div className="space-y-1.5">
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-200">
+                                <span className="w-2 h-2 rounded-full bg-cyan-500" /> Reports
+                            </span>
+                            <span className="text-xs font-mono font-bold text-cyan-400">{data[hoverIdx].reports}</span>
+                        </div>
+                        <div className="flex items-center justify-between gap-6">
+                            <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-200">
+                                <span className="w-2 h-2 rounded-full bg-teal-500" /> Solved
+                            </span>
+                            <span className="text-xs font-mono font-bold text-teal-400">{data[hoverIdx].solved}</span>
+                        </div>
                     </div>
-                    <span className="text-[10px] font-mono text-slate-500">{d.day}</span>
                 </div>
-            ))}
+            )}
         </div>
     );
 }
+
 
 export default function Analytics() {
     const [timeRange, setTimeRange] = useState<TimeRange>("Last 30 Days");
@@ -170,7 +274,8 @@ export default function Analytics() {
                             </div>
                         </div>
                     </div>
-                    <MiniBarChart data={DAILY_ACTIVITY} />
+                    <DailyActivityChart data={DAILY_ACTIVITY} />
+
                 </div>
 
                 {/* Category Breakdown */}
