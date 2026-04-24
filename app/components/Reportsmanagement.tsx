@@ -627,8 +627,8 @@ export default function ReportsManagement() {
                                         <div className="space-y-4 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
                                             {visibleNotes.map((note) => (
                                                 <div key={note.id} className={`group/note p-4 border rounded-2xl space-y-2 relative transition-all ${note.type === 'public'
-                                                        ? 'bg-teal-500/5 border-teal-500/20'
-                                                        : 'bg-white/3 border-white/5 hover:bg-white/[0.05]'
+                                                    ? 'bg-teal-500/5 border-teal-500/20'
+                                                    : 'bg-white/3 border-white/5 hover:bg-white/[0.05]'
                                                     }`}>
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center gap-2">
