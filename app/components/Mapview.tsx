@@ -1,33 +1,9 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import dynamic from "next/dynamic";
-import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useState, useMemo } from "react";
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl } from "react-leaflet";
+import { MOCK_REPORTS as reports_data, Report } from "@/app/data/mockData";
 import "leaflet/dist/leaflet.css";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Report = {
-    id: string;
-    category: "Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety";
-    location: string;
-    coordinates: { lat: number; lng: number };
-    time: string;
-    status: "Reported" | "In Progress" | "Solved" | "Closed";
-    priority: "Low" | "Medium" | "High" | "Critical";
-    description: string;
-};
-
-// ─── Dynamic Imports for Leaflet (SSR Fix) ────────────────────────────────────
-
-const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false });
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false });
-const ZoomControl = dynamic(() => import("react-leaflet").then((mod) => mod.ZoomControl), { ssr: false });
-
-// ─── Constants & Styles ────────────────────────────────────────────────────────
 
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
     Hazard: { color: "text-rose-400", bg: "bg-rose-500/10", icon: "⚠️" },
@@ -71,31 +47,11 @@ const createCustomIcon = (catIcon: string, isSelected: boolean) => {
 };
 
 export default function MapView() {
-    const [reports, setReports] = useState<Report[]>([]);
+    const [reports] = useState<Report[]>(reports_data);
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [filter, setFilter] = useState<Report["category"] | "All">("All");
     const [searchQuery, setSearchQuery] = useState("");
-    const [loading, setLoading] = useState(true);
-
-    // ─── Firebase Real-time Connection ──────────────────────────────────────────
-    useEffect(() => {
-        const q = query(collection(db, "reports"), orderBy("time", "desc"));
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const reportsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as Report[];
-
-            setReports(reportsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching reports from Firestore:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
+    const [loading] = useState(false);
 
     const filteredReports = useMemo(() => {
         return reports.filter(r => {
@@ -109,7 +65,7 @@ export default function MapView() {
     const mapCenter: [number, number] = [40.7128, -74.0060]; // Default NYC Center
 
     return (
-        <div className="h-auto lg:h-[calc(100vh-220px)] w-full flex flex-col lg:flex-row gap-4 lg:gap-5 animate-slide-up">
+        <div className="h-auto md:flex-1 w-full flex flex-col md:flex-row gap-4 md:gap-0 animate-slide-up">
 
             <style jsx global>{`
                 .leaflet-container {
@@ -140,7 +96,7 @@ export default function MapView() {
             `}</style>
 
             {/* ── Left Sidebar: Report List ── */}
-            <div className="w-full lg:w-80 h-[300px] lg:h-full flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-[1000] flex-shrink-0">
+            <div className="w-full md:hidden h-[300px] flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-[1000] flex-shrink-0">
                 <div className="p-4 border-b border-white/5 space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
@@ -170,8 +126,8 @@ export default function MapView() {
                                 key={cat}
                                 onClick={() => setFilter(cat as any)}
                                 className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all border ${filter === cat
-                                        ? "bg-teal-500/20 border-teal-500/40 text-teal-400"
-                                        : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
+                                    ? "bg-teal-500/20 border-teal-500/40 text-teal-400"
+                                    : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
                                     }`}
                             >
                                 {cat}
@@ -191,8 +147,8 @@ export default function MapView() {
                                 key={report.id}
                                 onClick={() => setSelectedReport(report)}
                                 className={`w-full text-left p-3 rounded-xl border transition-all group ${isSelected
-                                        ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
-                                        : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
+                                    ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
+                                    : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
                                     }`}
                             >
                                 <div className="flex justify-between items-start mb-2">
@@ -228,7 +184,7 @@ export default function MapView() {
             </div>
 
             {/* ── Main Map Area (Leaflet) ── */}
-            <div className="flex-1 min-h-[400px] bg-[#0d1f2d] rounded-2xl overflow-hidden border border-white/10 relative z-10 shadow-inner">
+            <div className="flex-1 min-h-[400px] bg-[#0d1f2d] md:rounded-none rounded-2xl overflow-hidden md:border-none border border-white/10 relative z-10 shadow-inner">
                 {typeof window !== "undefined" && (
                     <MapContainer
                         center={selectedReport ? [selectedReport.coordinates.lat, selectedReport.coordinates.lng] : mapCenter}
@@ -268,9 +224,9 @@ export default function MapView() {
 
                 {/* Info BarHUD */}
                 <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/50 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-mono text-slate-300 flex items-center gap-3 shadow-lg pointer-events-none z-[1000]">
-                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" /> LIVE STREAM</span>
+                    <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" /> SIMULATED STREAM</span>
                     <span className="w-px h-2 bg-white/20" />
-                    <span>DATA: CLOUD FIRESTORE</span>
+                    <span>DATA: LOCAL MOCK</span>
                     <span className="w-px h-2 bg-white/20" />
                     <span>TARGET: {filteredReports.length} NODES</span>
                 </div>
