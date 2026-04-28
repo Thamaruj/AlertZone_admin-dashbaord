@@ -4,54 +4,15 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import logo1 from "../assets/logo1.png";
 import ReportsManagement from "./Reportsmanagement";
-import MapView from "./Mapview";
+import dynamic from "next/dynamic";
+const MapView = dynamic(() => import("./Mapview"), { ssr: false });
 import Users from "./Users";
 import Analytics from "./Analytics";
-
+import { MOCK_REPORTS as REPORTS, MONTHLY_DATA, BAR_DATA, Report } from "@/app/data/mockData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type NavItem = { label: string; icon: React.ReactNode; id: string };
-type Report = {
-    id: string;
-    category: "Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety";
-    location: string;
-    time: string;
-    status: "Reported" | "In Progress" | "Solved" | "Closed";
-};
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const REPORTS: Report[] = [
-    { id: "#REP-8284", category: "Hazard", location: "122 Baker St. NW", time: "3 mins ago", status: "In Progress" },
-    { id: "#REP-8283", category: "Lighting", location: "Grand Central Station", time: "14 mins ago", status: "Reported" },
-    { id: "#REP-8292", category: "Roads", location: "Highway 401, Exit 4", time: "45 mins ago", status: "Solved" },
-    { id: "#REP-8281", category: "Waste", location: "Silicon Valley Plaza", time: "1 hour ago", status: "Closed" },
-];
-
-const MONTHLY_DATA = [
-    { month: "Jan", y2025: 30, y2026: 20 },
-    { month: "Feb", y2025: 45, y2026: 30 },
-    { month: "Mar", y2025: 35, y2026: 50 },
-    { month: "Apr", y2025: 50, y2026: 40 },
-    { month: "May", y2025: 40, y2026: 60 },
-    { month: "Jun", y2025: 55, y2026: 55 },
-    { month: "Jul", y2025: 45, y2026: 70 },
-    { month: "Aug", y2025: 60, y2026: 80 },
-    { month: "Sep", y2025: 50, y2026: 75 },
-    { month: "Oct", y2025: 65, y2026: 85 },
-    { month: "Nov", y2025: 55, y2026: 90 },
-    { month: "Dec", y2025: 70, y2026: 95 },
-];
-
-const BAR_DATA = [
-    { label: "Hazard", value: 234, color: "#f43f5e", breakdown: { reported: 80, inProgress: 34, solved: 100, closed: 20 } },
-    { label: "Lighting", value: 250, color: "#eab308", breakdown: { reported: 90, inProgress: 60, solved: 90, closed: 10 } },
-    { label: "Waste", value: 140, color: "#22c55e", breakdown: { reported: 40, inProgress: 20, solved: 70, closed: 10 } },
-    { label: "Roads", value: 190, color: "#3b82f6", breakdown: { reported: 60, inProgress: 50, solved: 70, closed: 10 } },
-    { label: "Water", value: 210, color: "#0ea5e9", breakdown: { reported: 72, inProgress: 38, solved: 80, closed: 20 } },
-    { label: "Safety", value: 260, color: "#8b5cf6", breakdown: { reported: 90, inProgress: 13, solved: 127, closed: 30 } },
-];
 
 // ─── Category / Status Meta ───────────────────────────────────────────────────
 
@@ -140,6 +101,7 @@ function DonutChart() {
 // ─── Bar Chart ────────────────────────────────────────────────────────────────
 
 function BarChart() {
+    if (BAR_DATA.length === 0) return <div className="flex items-center justify-center w-full text-xs text-slate-500" style={{ height: 148 }}>No data available</div>;
     const max = Math.max(...BAR_DATA.map((d) => d.value));
     return (
         <div className="flex items-end gap-3 px-1" style={{ height: 148 }}>
@@ -190,6 +152,7 @@ function BarChart() {
 // ─── Line Chart ───────────────────────────────────────────────────────────────
 
 function LineChart() {
+    if (MONTHLY_DATA.length === 0) return <div className="flex items-center justify-center w-full text-xs text-slate-500" style={{ height: 120 }}>No data available</div>;
     const [hoverIdx, setHoverIdx] = useState<number | null>(null);
     const W = 560, H = 120;
     const pad = { l: 8, r: 8, t: 8, b: 8 };
@@ -425,7 +388,11 @@ function DashboardOverviewContent() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {REPORTS.map((r) => {
+                            {REPORTS.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-5 py-10 text-center text-xs text-slate-500">No recent reports available</td>
+                                </tr>
+                            ) : REPORTS.map((r) => {
                                 const cat = categoryMeta[r.category];
                                 const st = statusMeta[r.status];
                                 return (
@@ -609,7 +576,7 @@ export default function AdminDashboard() {
                 </header>
 
                 {/* ── Scrollable page ── */}
-                <main className="flex-1 overflow-y-auto px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5">
+                <main className={`flex-1 overflow-y-auto ${activeNav === 'map' ? 'md:flex md:flex-col md:overflow-hidden p-4 md:p-0' : 'px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5'}`}>
 
                     {/* Section Content based on active navigation */}
                     {loading ? (
@@ -644,7 +611,7 @@ export default function AdminDashboard() {
                     )}
 
                     {/* Footer */}
-                    <p className="text-center text-[11px] text-slate-400 pb-2">
+                    <p className={`text-center text-[11px] text-slate-400 pb-2 mt-auto flex-shrink-0 ${activeNav === 'map' ? 'md:hidden' : ''}`}>
                         © 2026 AlertZone Municipal Infrastructure. All Rights Reserved.
                     </p>
                 </main>

@@ -1,21 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
+import { INCIDENT_BY_CATEGORY, DAILY_ACTIVITY, REGIONAL_PERFORMANCE } from "@/app/data/mockData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TimeRange = "Last 7 Days" | "Last 30 Days" | "Last 90 Days" | "Last Year";
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const INCIDENT_BY_CATEGORY = [
-    { name: "Hazard", reported: 84, inProgress: 42, solved: 120, closed: 38, color: "#f43f5e" },
-    { name: "Lighting", reported: 65, inProgress: 45, solved: 140, closed: 25, color: "#eab308" },
-    { name: "Waste", reported: 32, inProgress: 28, solved: 95, closed: 15, color: "#22c55e" },
-    { name: "Roads", reported: 55, inProgress: 48, solved: 82, closed: 20, color: "#3b82f6" },
-    { name: "Water", reported: 40, inProgress: 35, solved: 110, closed: 30, color: "#0ea5e9" },
-    { name: "Safety", reported: 92, inProgress: 38, solved: 145, closed: 45, color: "#8b5cf6" },
-];
 
 const STATUS_META = {
     reported: { label: "Reported", color: "#f97316" },
@@ -23,25 +13,6 @@ const STATUS_META = {
     solved: { label: "Solved", color: "#2dd4bf" },
     closed: { label: "Closed", color: "#64748b" },
 };
-
-
-const DAILY_ACTIVITY = [
-    { day: "Mon", reports: 45, solved: 38 },
-    { day: "Tue", reports: 52, solved: 42 },
-    { day: "Wed", reports: 38, solved: 35 },
-    { day: "Thu", reports: 65, solved: 55 },
-    { day: "Fri", reports: 48, solved: 40 },
-    { day: "Sat", reports: 30, solved: 28 },
-    { day: "Sun", reports: 25, solved: 22 },
-];
-
-const REGIONAL_PERFORMANCE = [
-    { region: "North District", reports: 432, avgResolution: "4.2h", satisfaction: 94 },
-    { region: "South Side", reports: 312, avgResolution: "5.8h", satisfaction: 88 },
-    { region: "West End", reports: 284, avgResolution: "3.5h", satisfaction: 96 },
-    { region: "East Coast", reports: 256, avgResolution: "6.1h", satisfaction: 82 },
-    { region: "Central Hub", reports: 512, avgResolution: "2.9h", satisfaction: 98 },
-];
 
 // ─── Components ───────────────────────────────────────────────────────────────
 
@@ -69,6 +40,7 @@ function AnalyticsStatCard({ label, value, trend, icon, color }: {
 }
 
 function DailyActivityChart({ data }: { data: typeof DAILY_ACTIVITY }) {
+    if (data.length === 0) return <div className="flex items-center justify-center w-full h-[350px] text-xs text-slate-500">No data available</div>;
     const [hoverIdx, setHoverIdx] = useState<number | null>(null);
     const maxVal = Math.max(...data.map(d => Math.max(d.reports, d.solved))) * 1.2;
 
@@ -397,7 +369,11 @@ export default function Analytics() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {REGIONAL_PERFORMANCE.map((reg) => (
+                            {REGIONAL_PERFORMANCE.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-10 text-center text-xs text-slate-500">No regional data available</td>
+                                </tr>
+                            ) : REGIONAL_PERFORMANCE.map((reg) => (
                                 <tr key={reg.region} className="hover:bg-white/[0.03] transition-all group">
                                     <td className="px-8 py-5">
                                         <span className="text-sm font-bold text-white group-hover:text-teal-400 transition-colors">{reg.region}</span>

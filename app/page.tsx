@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import ConnectionTest from "./test-connection/page";
 import AdminLogin from "./components/Adminlogin";
 import Maindashboard from "./components/Maindashboard";
 
