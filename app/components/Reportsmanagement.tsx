@@ -1,111 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import { collection, doc, updateDoc, onSnapshot, query, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { useState } from "react";
+import { MOCK_REPORTS, Report, ReportStatus, Note } from "@/app/data/mockData";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Reporter = {
-    name: string;
-    phone: string;
-    email: string;
-    reportsCount: number;
-};
-
-type Note = {
-    id: string;
-    author: string;
-    text: string;
-    time: string;
-    type: "internal" | "public"; // internal = admin only, public = visible to reporter
-};
-
-type Report = {
-    id: string;
-    category: "Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety";
-    location: string;
-    coordinates: { lat: number; lng: number };
-    time: string;
-    status: "Reported" | "In Progress" | "Solved" | "Closed";
-    priority: "Low" | "Medium" | "High" | "Critical";
-    description: string;
-    images: string[];
-    reporter: Reporter;
-    notes: Note[];
-};
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const REPORTS: Report[] = [
-    {
-        id: "#REP-8284",
-        category: "Hazard",
-        location: "122 Baker St. NW",
-        coordinates: { lat: 40.7128, lng: -74.0060 },
-        time: "Oct 24, 2025 • 09:20 AM",
-        status: "In Progress",
-        priority: "High",
-        description: "Exposed electrical wires near the bus stop. The wires are sparking occasionally and are close to a puddle.",
-        images: [
-            "https://images.unsplash.com/photo-1544724569-5f546fd6f2b5?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1516937941344-00b4e0337589?q=80&w=600&auto=format&fit=crop"
-        ],
-        reporter: {
-            name: "John Doe",
-            phone: "+1 (555) 123-4567",
-            email: "john.doe@example.com",
-            reportsCount: 5
-        },
-        notes: [
-            { id: "n1", author: "Alex Morgan (Admin)", text: "Dispatched electrical team at 10:00 AM.", time: "Oct 24, 2:15 PM", type: "internal" }
-        ]
-    },
-    {
-        id: "#REP-8283",
-        category: "Lighting",
-        location: "Grand Central Station",
-        coordinates: { lat: 40.7527, lng: -73.9772 },
-        time: "Oct 24, 2025 • 08:45 AM",
-        status: "Reported",
-        priority: "Medium",
-        description: "Street light flickering repeatedly. Causes poor visibility for drivers at night.",
-        images: [
-            "https://images.unsplash.com/photo-1471101173712-b9884175254e?q=80&w=600&auto=format&fit=crop"
-        ],
-        reporter: {
-            name: "Sarah Miller",
-            phone: "+1 (555) 987-6543",
-            email: "s.miller@webmail.com",
-            reportsCount: 2
-        },
-        notes: []
-    },
-    {
-        id: "#REP-8292",
-        category: "Roads",
-        location: "Highway 401, Exit 4",
-        coordinates: { lat: 40.8448, lng: -73.8648 },
-        time: "Oct 23, 2025 • 11:30 PM",
-        status: "Solved",
-        priority: "Critical",
-        description: "Large pothole causing traffic disruption. Several cars have suffered tire damage.",
-        images: [
-            "https://images.unsplash.com/photo-1599389717196-80517726d36e?q=80&w=600&auto=format&fit=crop",
-            "https://images.unsplash.com/photo-1544027960-ca2ca8985172?q=80&w=600&auto=format&fit=crop"
-        ],
-        reporter: {
-            name: "Michael Chen",
-            phone: "+1 (555) 444-3333",
-            email: "mchen@roads.org",
-            reportsCount: 12
-        },
-        notes: [
-            { id: "n2", author: "Team Lead", text: "Patching completed. Road reopened.", time: "Oct 24, 8:00 AM", type: "public" }
-        ]
-    },
-];
+// ─── Constants & Meta ─────────────────────────────────────────────────────────
 
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
     Hazard: { color: "text-rose-400", bg: "bg-rose-500/10", icon: "⚠️" },
@@ -131,49 +29,28 @@ const priorityMeta: Record<Report["priority"], { color: string; bg: string }> = 
 };
 
 export default function ReportsManagement() {
-    const [reports, setReports] = useState<Report[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [reports, setReports] = useState<Report[]>(MOCK_REPORTS);
     const [selectedTab, setSelectedTab] = useState<Report["status"] | "All">("All");
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [tempStatus, setTempStatus] = useState<Report["status"] | "">("");
     const [statusReason, setStatusReason] = useState("");
     const [newNote, setNewNote] = useState("");
     const [isSaving, setIsSaving] = useState(false);
-    
+
     // Note filtering state
     const [noteFilter, setNoteFilter] = useState<"all" | "internal" | "public">("all");
-
-    // ─── Firebase Real-time Connection ──────────────────────────────────────────
-    useEffect(() => {
-        const q = query(collection(db, "reports"), orderBy("time", "desc"));
-        
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const reportsData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            })) as Report[];
-            
-            setReports(reportsData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching reports:", error);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
 
     const filteredReports = selectedTab === "All"
         ? reports
         : reports.filter(r => r.status === selectedTab);
 
     // ─── Update Status Function ───────────────────────────────────────────────
-    const handleSaveStatus = async () => {
+    const handleSaveStatus = () => {
         if (!selectedReport || !tempStatus || tempStatus === selectedReport.status) return;
 
         setIsSaving(true);
         const newStatus = tempStatus as Report["status"];
-        
+
         // Add status reason as a public note if provided
         const notes = [...(selectedReport.notes || [])];
         if (statusReason.trim()) {
@@ -186,23 +63,14 @@ export default function ReportsManagement() {
             });
         }
 
-        try {
-            const reportRef = doc(db, "reports", selectedReport.id);
-            await updateDoc(reportRef, {
-                status: newStatus,
-                notes: notes
-            });
-            setStatusReason("");
-        } catch (error) {
-            console.error("Error updating status:", error);
-            alert("Failed to update status in Firebase.");
-        } finally {
-            setIsSaving(false);
-        }
+        setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, status: newStatus, notes } : r));
+        setSelectedReport(prev => prev ? { ...prev, status: newStatus, notes } : null);
+        setStatusReason("");
+        setIsSaving(false);
     };
 
     // ─── Note Management Functions ───────────────────────────────────────────
-    const handleAddNote = async () => {
+    const handleAddNote = () => {
         if (!newNote.trim() || !selectedReport) return;
         const note: Note = {
             id: Math.random().toString(36).substr(2, 9),
@@ -211,33 +79,19 @@ export default function ReportsManagement() {
             time: String(new Date().toLocaleDateString()),
             type: "internal"
         };
-        
-        try {
-            const reportRef = doc(db, "reports", selectedReport.id);
-            const updatedNotes = [note, ...(selectedReport.notes || [])];
-            await updateDoc(reportRef, {
-                notes: updatedNotes
-            });
-            setNewNote("");
-        } catch (error) {
-            console.error("Error adding note:", error);
-            alert("Failed to add note to Firebase.");
-        }
+
+        const updatedNotes = [note, ...(selectedReport.notes || [])];
+        setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, notes: updatedNotes } : r));
+        setSelectedReport(prev => prev ? { ...prev, notes: updatedNotes } : null);
+        setNewNote("");
     };
 
-    const handleDeleteNote = async (noteId: string) => {
+    const handleDeleteNote = (noteId: string) => {
         if (!selectedReport) return;
         const updatedNotes = selectedReport.notes.filter(n => n.id !== noteId);
-        
-        try {
-            const reportRef = doc(db, "reports", selectedReport.id);
-            await updateDoc(reportRef, {
-                notes: updatedNotes
-            });
-        } catch (error) {
-            console.error("Error deleting note:", error);
-            alert("Failed to delete note from Firebase.");
-        }
+
+        setReports(prev => prev.map(r => r.id === selectedReport.id ? { ...r, notes: updatedNotes } : r));
+        setSelectedReport(prev => prev ? { ...prev, notes: updatedNotes } : null);
     };
 
     const openDetails = (report: Report) => {
@@ -267,7 +121,7 @@ export default function ReportsManagement() {
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                         Export Data
                     </button>
-                    <button className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-teal-900/40 hover:from-teal-400 hover:to-cyan-400 transition-all transition-all active:scale-[0.98] flex items-center gap-2">
+                    <button className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-teal-900/40 hover:from-teal-400 hover:to-cyan-400 transition-all active:scale-[0.98] flex items-center gap-2">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
                         New Report
                     </button>
@@ -281,8 +135,8 @@ export default function ReportsManagement() {
                         key={tab}
                         onClick={() => setSelectedTab(tab as any)}
                         className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${selectedTab === tab
-                                ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
-                                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                            ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
+                            : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                             }`}
                     >
                         {tab}
@@ -293,25 +147,7 @@ export default function ReportsManagement() {
 
             {/* Reports List */}
             <div className="grid grid-cols-1 gap-4 animate-slide-up stagger-2">
-                {loading ? (
-                    // Loading Skeletons
-                    [1, 2, 3].map((i) => (
-                        <div key={i} className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-5 h-40 animate-pulse relative overflow-hidden">
-                            <div className="flex gap-4">
-                                <div className="w-12 h-12 bg-white/5 rounded-xl" />
-                                <div className="flex-1 space-y-3">
-                                    <div className="h-4 bg-white/5 rounded w-1/4" />
-                                    <div className="h-3 bg-white/5 rounded w-1/2" />
-                                    <div className="h-3 bg-white/5 rounded w-1/3" />
-                                </div>
-                            </div>
-                            <div className="absolute top-5 right-5 w-24 h-6 bg-white/5 rounded-full" />
-                            <div className="mt-8 pt-4 border-t border-white/5">
-                                <div className="h-3 bg-white/5 rounded w-full" />
-                            </div>
-                        </div>
-                    ))
-                ) : filteredReports.map((report) => {
+                {filteredReports.map((report) => {
                     const cat = categoryMeta[report.category];
                     const st = statusMeta[report.status];
                     const prio = priorityMeta[report.priority];
@@ -372,7 +208,7 @@ export default function ReportsManagement() {
             </div>
 
             {/* Empty State */}
-            {!loading && filteredReports.length === 0 && (
+            {filteredReports.length === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 text-center animate-slide-up">
                     <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-3xl mb-4 opacity-50">
                         📁
@@ -389,7 +225,7 @@ export default function ReportsManagement() {
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                         onClick={() => setSelectedReport(null)}
                     />
-                    <div className="relative w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] bg-[#0f2233] border border-white/10 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col mx-2 sm:mx-0">
+                    <div className="relative w-full max-w-4xl max-h-[95vh] bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 fade-in duration-300 flex flex-col mx-2 sm:mx-0">
 
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2 flex-shrink-0">
@@ -435,7 +271,7 @@ export default function ReportsManagement() {
                                         <div className="flex gap-2.5 mt-2 overflow-x-auto pb-1">
                                             {selectedReport.images.map((img, i) => (
                                                 <div key={i} className="relative w-32 h-32 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 group/img">
-                                                    <img src={img} alt="Evidence" className="w-full h-full object-crop object-cover transition-transform duration-500 group-hover/img:scale-110" />
+                                                    <img src={img} alt="Evidence" className="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110" />
                                                 </div>
                                             ))}
                                         </div>
@@ -445,7 +281,6 @@ export default function ReportsManagement() {
                                 {/* Mini Map Placeholder */}
                                 <div className="relative h-full min-h-[240px] bg-slate-900 rounded-2xl overflow-hidden border border-white/10 group/map">
                                     <div className="absolute inset-0 bg-[#0d1f2d] flex items-center justify-center">
-                                        {/* Mock Map Background */}
                                         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#2dd4bf 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
                                         <div className="relative text-center">
                                             <div className="inline-flex p-3 bg-teal-500/10 rounded-full animate-bounce">
@@ -456,14 +291,6 @@ export default function ReportsManagement() {
                                     </div>
                                     <div className="absolute top-4 left-4 p-2 bg-[#0f2233]/90 backdrop-blur-md rounded-lg border border-white/10 text-[10px] text-slate-200">
                                         {selectedReport.location}
-                                    </div>
-                                    <div className="absolute bottom-4 right-4 flex flex-col gap-1">
-                                        <button className="p-2 bg-white/10 hover:bg-white/20 rounded shadow-lg text-white transition-colors backdrop-blur-md border border-white/10">
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth="2.5" /></svg>
-                                        </button>
-                                        <button className="p-2 bg-white/10 hover:bg-white/20 rounded shadow-lg text-white transition-colors backdrop-blur-md border border-white/10">
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 12H4" strokeWidth="2.5" /></svg>
-                                        </button>
                                     </div>
                                 </div>
                             </div>
@@ -476,7 +303,7 @@ export default function ReportsManagement() {
                                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Reporter Details</p>
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
-                                                {selectedReport.reporter.name.split(' ').map(n=>n[0]).join('')}
+                                                {selectedReport.reporter.name.split(' ').map(n => n[0]).join('')}
                                             </div>
                                             <div>
                                                 <p className="text-sm font-semibold text-slate-200">{selectedReport.reporter.name}</p>
@@ -528,70 +355,41 @@ export default function ReportsManagement() {
                                                 onClick={handleSaveStatus}
                                                 disabled={isSaving || tempStatus === selectedReport.status}
                                                 className={`min-w-[140px] px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${tempStatus === selectedReport.status
-                                                        ? "bg-slate-700/20 text-slate-500 border border-white/5 cursor-not-allowed"
-                                                        : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-teal-900/40 hover:brightness-110 active:scale-[0.98]"
+                                                    ? "bg-slate-700/20 text-slate-500 border border-white/5 cursor-not-allowed"
+                                                    : "bg-gradient-to-r from-teal-500 to-cyan-500 text-white shadow-teal-900/40 hover:brightness-110 active:scale-[0.98]"
                                                     }`}
                                             >
-                                                {isSaving ? (
-                                                    <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
-                                                ) : (
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" strokeWidth="3" /></svg>
-                                                )}
                                                 {isSaving ? "Saving..." : "Save Status"}
                                             </button>
                                         </div>
-                                        
-                                        {/* Status Update Reason */}
+
                                         <div className="relative">
-                                            <textarea 
+                                            <textarea
                                                 value={statusReason}
                                                 onChange={(e) => setStatusReason(e.target.value)}
-                                                placeholder="Provide a reason or update details for the citizen (e.g., 'Team dispatched', 'Maintenance scheduled') - Optional"
+                                                placeholder="Provide a reason or update details for the citizen..."
                                                 className="w-full bg-[#0d1f2d] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-colors resize-none h-16 placeholder:text-slate-600"
                                             />
                                         </div>
                                     </div>
-
-                                    {tempStatus !== selectedReport.status && !isSaving && (
-                                        <p className="text-[10px] text-teal-400 font-medium animate-pulse">
-                                            ⚠️ You have unsaved changes to the status.
-                                        </p>
-                                    )}
                                 </div>
                             </div>
 
                             {/* Notes Section Component */}
                             <div className="space-y-6">
-                                {/* Navigation for Notes Filter */}
                                 <div className="flex items-center gap-6 border-b border-white/5 pb-2">
-                                    <button 
-                                        onClick={() => setNoteFilter("all")}
-                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${
-                                            noteFilter === "all" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
-                                        }`}
-                                    >
-                                        Timeline & Notes
-                                    </button>
-                                    <button 
-                                        onClick={() => setNoteFilter("internal")}
-                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${
-                                            noteFilter === "internal" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
-                                        }`}
-                                    >
-                                        Internal Only
-                                    </button>
-                                    <button 
-                                        onClick={() => setNoteFilter("public")}
-                                        className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${
-                                            noteFilter === "public" ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"
-                                        }`}
-                                    >
-                                        Public Updates
-                                    </button>
+                                    {["all", "internal", "public"].map((f) => (
+                                        <button
+                                            key={f}
+                                            onClick={() => setNoteFilter(f as any)}
+                                            className={`text-[10px] font-bold uppercase tracking-widest pb-2 transition-all border-b-2 ${noteFilter === f ? "text-teal-400 border-teal-500" : "text-slate-500 border-transparent hover:text-slate-300"}`}
+                                        >
+                                            {f === "all" ? "Timeline & Notes" : f === "internal" ? "Internal Only" : "Public Updates"}
+                                        </button>
+                                    ))}
                                 </div>
 
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    {/* Add Note Section */}
                                     <div className="space-y-4">
                                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Add Internal Note</p>
                                         <div className="p-4 bg-white/2 border border-white/5 rounded-2xl flex flex-col gap-3">
@@ -601,65 +399,37 @@ export default function ReportsManagement() {
                                                 placeholder="Add a private note for other admins..."
                                                 className="w-full bg-[#0d1f2d] border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-colors resize-none h-24 placeholder:text-slate-500"
                                             />
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[9px] text-slate-600 font-mono">{newNote.length} chars</span>
-                                                <button
-                                                    onClick={handleAddNote}
-                                                    disabled={!newNote.trim()}
-                                                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${!newNote.trim()
-                                                            ? "bg-white/5 text-slate-600 border border-white/5 cursor-not-allowed"
-                                                            : "bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
-                                                        }`}
-                                                >
-                                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" strokeWidth="2.5" /></svg>
-                                                    Add Note
-                                                </button>
-                                            </div>
+                                            <button
+                                                onClick={handleAddNote}
+                                                disabled={!newNote.trim()}
+                                                className={`self-end px-4 py-2 rounded-lg text-xs font-bold transition-all ${!newNote.trim() ? "bg-white/5 text-slate-600 cursor-not-allowed" : "bg-teal-500/10 border border-teal-500/30 text-teal-400 hover:bg-teal-500/20"}`}
+                                            >
+                                                Add Note
+                                            </button>
                                         </div>
                                     </div>
 
-                                    {/* Notes List Timeline */}
                                     <div className="space-y-4">
                                         <div className="flex items-center justify-between">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                                {noteFilter === "internal" ? "Internal Logs" : noteFilter === "public" ? "Public Feed" : "Full History"}
-                                            </p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">History</p>
                                             <span className="text-[10px] text-slate-400 font-mono">{visibleNotes.length} items</span>
                                         </div>
 
                                         <div className="space-y-4 overflow-y-auto max-h-[350px] pr-2 custom-scrollbar">
                                             {visibleNotes.map((note) => (
-                                                <div key={note.id} className={`group/note p-4 border rounded-2xl space-y-2 relative transition-all ${
-                                                    note.type === 'public' 
-                                                    ? 'bg-teal-500/5 border-teal-500/20' 
-                                                    : 'bg-white/3 border-white/5 hover:bg-white/[0.05]'
-                                                }`}>
+                                                <div key={note.id} className={`p-4 border rounded-2xl space-y-2 relative transition-all ${note.type === 'public' ? 'bg-teal-500/5 border-teal-500/20' : 'bg-white/3 border-white/5'}`}>
                                                     <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2">
-                                                            <div className={`w-1.5 h-1.5 rounded-full ${note.type === 'public' ? 'bg-teal-400 animate-pulse' : 'bg-slate-500'}`} />
-                                                            <span className={`text-[10px] font-bold ${note.type === 'public' ? 'text-teal-400' : 'text-slate-400'}`}>
-                                                                {note.author} {note.type === 'public' && "• Public Update"}
-                                                            </span>
-                                                        </div>
+                                                        <span className={`text-[10px] font-bold ${note.type === 'public' ? 'text-teal-400' : 'text-slate-400'}`}>{note.author}</span>
                                                         <div className="flex items-center gap-3">
                                                             <span className="text-[9px] text-slate-500 font-mono">{note.time}</span>
-                                                            <button
-                                                                onClick={() => handleDeleteNote(note.id)}
-                                                                className="p-1 opacity-0 group-hover/note:opacity-100 text-slate-600 hover:text-rose-400 transition-all"
-                                                            >
+                                                            <button onClick={() => handleDeleteNote(note.id)} className="text-slate-600 hover:text-rose-400 transition-all">
                                                                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeWidth="2" /></svg>
                                                             </button>
                                                         </div>
                                                     </div>
-                                                    <p className="text-[11px] text-slate-300 leading-relaxed pr-6">{note.text}</p>
+                                                    <p className="text-[11px] text-slate-300 leading-relaxed">{note.text}</p>
                                                 </div>
                                             ))}
-                                            {visibleNotes.length === 0 && (
-                                                <div className="flex flex-col items-center justify-center py-10 opacity-30">
-                                                    <svg className="w-8 h-8 text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" strokeWidth="1.5" /></svg>
-                                                    <p className="text-[10px] text-slate-500">No {noteFilter === "all" ? "history" : noteFilter} items found.</p>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -667,12 +437,9 @@ export default function ReportsManagement() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-5 bg-white/2 border-t border-white/5 flex justify-end gap-3 flex-shrink-0">
-                            <button
-                                onClick={() => setSelectedReport(null)}
-                                className="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-bold rounded-xl transition-all"
-                            >
-                                Close Management View
+                        <div className="px-6 py-5 bg-white/2 border-t border-white/5 flex justify-end flex-shrink-0">
+                            <button onClick={() => setSelectedReport(null)} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-bold rounded-xl transition-all">
+                                Close
                             </button>
                         </div>
                     </div>
