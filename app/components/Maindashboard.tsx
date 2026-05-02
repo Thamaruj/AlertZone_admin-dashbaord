@@ -8,6 +8,7 @@ import dynamic from "next/dynamic";
 const MapView = dynamic(() => import("./Mapview"), { ssr: false });
 import Users from "./Users";
 import Analytics from "./Analytics";
+import Notifications from "./Notifications";
 import { MOCK_REPORTS as REPORTS, MONTHLY_DATA, BAR_DATA, Report } from "@/app/data/mockData";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -598,8 +599,10 @@ export default function AdminDashboard() {
 
                             {activeNav === "analytics" && <Analytics />}
 
+                            {activeNav === "notifications" && <Notifications />}
+
                             {/* Other section placeholders remain same for now */}
-                            {["notifications", "settings"].includes(activeNav) && (
+                            {["settings"].includes(activeNav) && (
                                 <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
                                     <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
                                         {navItems.find(n => n.id === activeNav)?.label}
