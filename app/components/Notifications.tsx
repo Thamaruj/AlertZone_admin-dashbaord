@@ -99,7 +99,7 @@ export default function Notifications() {
                         <button
                             key={tab}
                             onClick={() => setSelectedTab(tab as any)}
-                            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 whitespace-nowrap ${isSelected
+                            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all duration-200 whitespace-nowrap ${isSelected
                                 ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
                                 : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
                                 }`}
@@ -160,7 +160,7 @@ export default function Notifications() {
                                             <p className="text-xs text-slate-400 mt-1 leading-relaxed line-clamp-2">
                                                 {notif.message}
                                             </p>
-                                            
+
                                             <div className="flex items-center justify-between mt-3">
                                                 <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${meta.bg} ${meta.color} border border-white/5`}>
                                                     {notif.type}
