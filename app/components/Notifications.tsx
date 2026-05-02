@@ -87,7 +87,7 @@ export default function Notifications() {
             </div>
 
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto no-scrollbar animate-slide-up stagger-1 flex-shrink-0">
+            <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-slide-up stagger-1 flex-shrink-0">
                 {["All", "Unread", "Alert", "Report", "System", "User"].map((tab) => {
                     const isSelected = selectedTab === tab;
                     let count = 0;
