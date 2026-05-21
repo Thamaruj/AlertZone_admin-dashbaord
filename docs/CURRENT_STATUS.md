@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-20
+> **Last Updated:** 2026-05-21
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -57,11 +57,16 @@
 - [ ] User profile in topbar — hardcoded "Alex Morgan / Super Admin"
 
 ### Admin Login (`Adminlogin.tsx`)
-- [ ] Login form — simulates auth with `setTimeout(1500ms)`, no real Firebase Auth
-- [ ] No role verification (`role === 'admin'` check missing)
-- [ ] No session persistence
-- [ ] Username field exists but Firebase Auth uses email/password only
-- [ ] "Forgot password" button is a no-op
+- [x] Login form — real auth via `/api/auth/login` (username + password)
+- [x] Server-side credential validation (superadmin from `.env.local`, other admins from Firestore)
+- [x] Session persistence via HttpOnly JWT cookie (8-hour standard duration)
+- [x] AuthContext provider wraps the app — all components can use `useAuth()`
+- [x] Superadmin hardcoded in `.env.local` (SUPERADMIN_USERNAME, SUPERADMIN_PASSWORD_HASH)
+- [x] Additional admins stored in Firestore `adminUsers` collection with bcrypt hashes
+- [x] Role-based access: `admin` and `superadmin` roles
+- [x] Username-only login (email removed — can be added later)
+- [x] Real error messages for wrong credentials
+- [ ] "Forgot password" — not implemented (hardcoded credentials don't support reset)
 
 ### Reports Management (`Reportsmanagement.tsx`)
 - [ ] Reports table — uses mock data types that **don't match** the mobile app's Firestore schema
@@ -96,11 +101,12 @@
 ## What Is NOT Built Yet 🔴
 
 ### Firebase Integration
-- [ ] Admin authentication with role verification
-- [ ] Auth state persistence (session management)
-- [ ] Auth context/provider for the dashboard
-- [ ] Service layer (`lib/services/`) for Firebase operations
-- [ ] TypeScript types matching the mobile app's Firestore schema
+- [x] Admin authentication — hardcoded superadmin + Firestore-backed admin users
+- [x] Auth state persistence (HttpOnly JWT cookie session)
+- [x] Auth context/provider (`lib/context/AuthContext.tsx`) for the dashboard
+- [x] Auth service layer (`lib/services/auth.service.ts`)
+- [x] TypeScript types for admin auth (`lib/types/auth.ts`)
+- [ ] TypeScript types matching the mobile app's Firestore schema (reports, users, notifications)
 
 ### Core Functionality
 - [ ] Real-time report fetching from Firestore
@@ -147,12 +153,12 @@
 
 | Issue | Severity | Location | Notes |
 |---|---|---|---|
-| Login is fake (setTimeout simulation) | 🔴 Critical | `Adminlogin.tsx` | Must wire to Firebase Auth + admin role check |
+| Login is fake (setTimeout simulation) | 🟢 Fixed | Adminlogin.tsx | Real credential validation implemented with superadmin and Firestore admin users |
 | Mock data types don't match Firestore schema | 🔴 Critical | `app/data/mockData.ts` | Categories, statuses, and types are all wrong |
 | Test credentials hardcoded in test page | 🟡 Medium | `test-connection/page.tsx` | Password exposed in source code |
-| No auth state persistence | 🔴 Critical | `app/page.tsx` | Uses local `useState` — reloading loses session |
-| User profile hardcoded in topbar | 🟡 Medium | `Maindashboard.tsx:569-570` | Should read from auth context |
-| console.log in firebase.ts | 🟢 Low | `lib/firebase.ts:20` | Remove before production |
+| No auth state persistence | 🟢 Fixed | `app/page.tsx` | Uses HttpOnly JWT cookie via AuthContext |
+| User profile hardcoded in topbar | 🟢 Fixed | `Maindashboard.tsx` | Now reads from AuthContext |
+| console.log in firebase.ts | 🟢 Low | `lib/firebase.ts` | Remove before production |
 | No Firebase Storage import | 🟡 Medium | `lib/firebase.ts` | Needed for report image URLs |
 | No `.env.local` in `.gitignore` check | 🟡 Medium | `.gitignore` | Verify Firebase keys aren't committed |
 
