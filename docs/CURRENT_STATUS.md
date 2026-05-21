@@ -153,7 +153,7 @@
 
 | Issue | Severity | Location | Notes |
 |---|---|---|---|
-| Login is fake (setTimeout simulation) | 🔴 Critical | `Adminlogin.tsx` | Must wire to Firebase Auth + admin role check |
+| Login is fake (setTimeout simulation) | 🟢 Fixed | Adminlogin.tsx | Real credential validation implemented with superadmin and Firestore admin users |
 | Mock data types don't match Firestore schema | 🔴 Critical | `app/data/mockData.ts` | Categories, statuses, and types are all wrong |
 | Test credentials hardcoded in test page | 🟡 Medium | `test-connection/page.tsx` | Password exposed in source code |
 | No auth state persistence | 🟢 Fixed | `app/page.tsx` | Uses HttpOnly JWT cookie via AuthContext |

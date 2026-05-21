@@ -15,9 +15,13 @@ if (!plain) {
 
 const hash = await bcrypt.hash(plain, 12);
 
+// Next.js dotenv expands $VAR references. Escape every $ with \$ so the
+// bcrypt hash is treated as a literal value.
+const escaped = hash.replace(/\$/g, "\\$");
+
 console.log("\n✅ Password hash generated successfully!\n");
-console.log("Add this to your .env.local file:\n");
-console.log(`SUPERADMIN_PASSWORD_HASH="${hash}"`);
-console.log("\n⚠️  The double quotes are REQUIRED — bcrypt hashes contain $ signs that");
-console.log("    dotenv treats as variable expansions without them.");
+console.log("Add this line to your .env.local file:\n");
+console.log(`SUPERADMIN_PASSWORD_HASH=${escaped}`);
+console.log("\n⚠️  The \\$ escaping is REQUIRED — Next.js treats bare $ as variable");
+console.log("    expansion. See: https://nextjs.org/docs/app/guides/environment-variables");
 console.log("\n⚠️  Never commit .env.local to version control!\n");

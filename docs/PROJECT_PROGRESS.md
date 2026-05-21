@@ -101,6 +101,7 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 - **Updated `Maindashboard.tsx`** — real user display (name + role badge) from context; logout button in sidebar; "Admin Users" tab visible only to superadmin.
 - **New `AdminUserManagement.tsx`** — table of Firestore admin accounts; create/deactivate/delete modal; superadmin-only.
 - **`scripts/hash-password.mjs`** — utility to generate bcrypt hashes for `.env.local`.
+- **Environment Variable Bug Fix**: Resolved a critical issue where Next.js failed to load or incorrectly expanded the `SUPERADMIN_PASSWORD_HASH` because bcrypt hashes contain `$` symbols which Next.js interprets as environment variable expansions. Fixed by escaping all `$` signs with `\$` in `.env.local` and updating `scripts/hash-password.mjs` to automatically escape hashes in its output.
 
 **Default superadmin credentials (change before production):**
 - Username: `superadmin`
