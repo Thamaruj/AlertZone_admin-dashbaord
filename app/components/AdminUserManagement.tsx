@@ -519,6 +519,14 @@ export default function AdminUserManagement() {
         </div>
       </div>
 
+      {/* Create Admin Modal */}
+      {showCreateModal && (
+        <CreateAdminModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={fetchAdmins}
+        />
+      )}
+
       {/* Action Confirmation Modal */}
       {confirmAction && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
