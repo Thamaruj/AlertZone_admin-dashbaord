@@ -106,6 +106,19 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 - **Logout Confirmation**: Added a premium-styled custom modal prompting for confirmation before logging out, replacing the immediate sign out action.
 - **Removed "Keep me logged in"**: Cleaned up the login interface by removing the "keep me logged in" checkbox and defaulting all session lifetimes to the standard 8-hour duration.
 
+- **[2026-05-21] Firebase Admin SDK Integration (Admin Bypass):**
+    - Installed `firebase-admin` dependency to perform backend administrative Firestore actions.
+    - Created [lib/firebase-admin.ts](file:///e:/AlertZone_New/alertzone-admin-dashboard/lib/firebase-admin.ts) to handle administrative authentication (supporting environment variables and local `service-account.json` fallback).
+    - Refactored [lib/services/auth.service.ts](file:///e:/AlertZone_New/alertzone-admin-dashboard/lib/services/auth.service.ts) to utilize the Firebase Admin SDK instead of the client SDK. This resolves the `"Missing or insufficient permissions"` error when a superadmin creates, updates, or deletes other admin accounts (since server-side operations using service accounts bypass client Firestore security rules).
+    - Added `service-account.json` to `.gitignore` to prevent secret key leakage.
+    - Verified security boundaries: standard users/mobile app still utilize strict client-side Firestore security rules while admin portal operations are processed securely on the server-side.
+    - **Added `@opentelemetry/api` package**: Fixed a login crash/network error caused by the missing open telemetry peer dependency required by `firebase-admin`'s firestore package.
+    - **Enhanced User & Admin Management UIs**:
+      - Styled inactive admin accounts with a brightened red row background highlight (`bg-red-500/20`) and enhanced status badge for clear visibility.
+      - Styled suspended citizen user accounts with a brightened rose row background highlight (`bg-rose-500/20`) and matching text highlights to align with the admin table theme.
+      - Replaced generic browser `confirm()` alerts with beautiful, theme-matching interactive custom modals for all status actions (activation, deactivation/suspension, and deletion) on both screen flows.
+      - Added a double-layer safety validation checkbox for deleting accounts, requiring confirmation of irreversible action before enabling the button.
+
 **Default superadmin credentials (change before production):**
 - Username: `superadmin`
 - Password: `admin1234`

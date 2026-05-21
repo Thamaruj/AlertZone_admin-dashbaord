@@ -43,6 +43,13 @@
 - [x] Analytics page — multiple chart types and data visualizations
 - [x] Notifications page — notification list with read/unread status
 - [x] Mobile responsive sidebar (hamburger menu)
+- [x] Custom interactive dialogs/modals for activating, deactivating and deleting admins (replacing browser alerts)
+- [x] Custom interactive dialogs/modals for suspending/unsuspending citizen users (replacing browser alerts)
+- [x] Double-layer verification (irreversible deletion warning + confirm checkbox) for admin deletion
+- [x] Brightened inactive admin row red styling highlights in the admin table
+- [x] Brightened suspended citizen user row red styling highlights in the users table
+- [x] Inactive StatusBadge styled with red colors to match the table theme
+- [x] Suspended citizen user StatusBadge styled with rose/red colors to match the table theme
 
 ---
 
@@ -104,8 +111,8 @@
 - [x] Admin authentication — hardcoded superadmin + Firestore-backed admin users
 - [x] Auth state persistence (HttpOnly JWT cookie session)
 - [x] Auth context/provider (`lib/context/AuthContext.tsx`) for the dashboard
-- [x] Auth service layer (`lib/services/auth.service.ts`)
-- [x] TypeScript types for admin auth (`lib/types/auth.ts`)
+- [x] Auth service layer (`lib/services/auth.service.ts`) (migrated to Firebase Admin SDK to resolve Firestore write permissions issues)
+- [x] Firebase Admin SDK configuration (`lib/firebase-admin.ts`)
 - [ ] TypeScript types matching the mobile app's Firestore schema (reports, users, notifications)
 
 ### Core Functionality
@@ -188,4 +195,5 @@
 | `react-leaflet` | ✅ | ✅ | — |
 | `tailwindcss` v4 | ✅ | ✅ | Styling works |
 | Chart library | ❌ | — | Using custom SVG charts currently |
-| `firebase-admin` | ❌ | — | May be needed for Cloud Functions |
+| `firebase-admin` | ✅ | ✅ | Used in server-side authentication service (auth.service.ts) to bypass client security rules |
+| `@opentelemetry/api` | ✅ | ✅ | Peer dependency for firebase-admin Firestore to prevent login/import network crashes |
