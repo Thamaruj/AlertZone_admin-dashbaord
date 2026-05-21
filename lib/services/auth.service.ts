@@ -96,13 +96,19 @@ export function buildClearSessionCookie(): string {
 
 function getSuperadminCredentials(): { username: string; passwordHash: string } {
   const username = process.env.SUPERADMIN_USERNAME;
-  const passwordHash = process.env.SUPERADMIN_PASSWORD_HASH;
+  let passwordHash = process.env.SUPERADMIN_PASSWORD_HASH;
 
   if (!username || !passwordHash) {
     throw new Error(
       "SUPERADMIN_USERNAME or SUPERADMIN_PASSWORD_HASH is not set in .env.local"
     );
   }
+
+  // Next.js dotenv requires escaping $ signs as \$ locally,
+  // but Vercel/system env vars are read literally (retaining backslashes).
+  // Clean up any escaped dollar signs to ensure it's a valid bcrypt hash.
+  passwordHash = passwordHash.replace(/\\\$/g, "$");
+
   return { username, passwordHash };
 }
 
