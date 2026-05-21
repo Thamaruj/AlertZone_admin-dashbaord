@@ -44,6 +44,12 @@ function StatCard({ label, value, trend, icon, color }: {
 export default function Users() {
     const [users, setUsers] = useState<User[]>(MOCK_USERS);
     const [searchQuery, setSearchQuery] = useState("");
+    const [confirmAction, setConfirmAction] = useState<{
+        type: "suspend" | "unsuspend";
+        userId: string;
+        userName: string;
+        currentStatus: UserStatus;
+    } | null>(null);
 
     const filteredUsers = useMemo(() => {
         return users.filter(user => 
@@ -68,6 +74,15 @@ export default function Users() {
     const handleStatusUpdate = (userId: string, currentStatus: UserStatus) => {
         const newStatus: UserStatus = currentStatus === "Suspended" ? "Active" : "Suspended";
         setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+    };
+
+    const handleToggleStatusClick = (userId: string, userName: string, currentStatus: UserStatus) => {
+        setConfirmAction({
+            type: currentStatus === "Suspended" ? "unsuspend" : "suspend",
+            userId,
+            userName,
+            currentStatus,
+        });
     };
 
     return (
@@ -150,20 +165,32 @@ export default function Users() {
                         <tbody className="divide-y divide-white/5">
                             {filteredUsers.length > 0 ? (
                                 filteredUsers.map((user) => (
-                                    <tr key={user.id} className="hover:bg-white/[0.03] transition-all group">
+                                    <tr key={user.id} className={`transition-all group ${
+                                        user.status === "Suspended"
+                                            ? "bg-rose-500/20 hover:bg-rose-500/30 text-rose-100"
+                                            : "hover:bg-white/[0.03]"
+                                    }`}>
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
                                                     <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm font-bold text-white group-hover:text-teal-400 transition-colors">{user.name}</p>
-                                                    <p className="text-xs text-slate-500 font-medium">{user.email}</p>
+                                                    <p className={`text-sm font-bold transition-colors ${
+                                                        user.status === "Suspended"
+                                                            ? "text-rose-100 group-hover:text-rose-200"
+                                                            : "text-white group-hover:text-teal-400"
+                                                    }`}>{user.name}</p>
+                                                    <p className={`text-xs font-medium ${
+                                                        user.status === "Suspended" ? "text-rose-300/80" : "text-slate-500"
+                                                    }`}>{user.email}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <span className="text-sm font-mono font-bold text-slate-300">{user.points}</span>
+                                            <span className={`text-sm font-mono font-bold ${
+                                                user.status === "Suspended" ? "text-rose-200" : "text-slate-300"
+                                            }`}>{user.points}</span>
                                         </td>
                                         <td className="px-8 py-5">
                                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${reputationMeta[user.reputation].bg} ${reputationMeta[user.reputation].color} ${reputationMeta[user.reputation].border}`}>
@@ -172,7 +199,7 @@ export default function Users() {
                                             </span>
                                         </td>
                                         <td className="px-8 py-5">
-                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold ${statusMeta[user.status].bg} ${statusMeta[user.status].color}`}>
+                                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-bold border border-white/5 ${statusMeta[user.status].bg} ${statusMeta[user.status].color}`}>
                                                 {user.status}
                                             </span>
                                         </td>
@@ -180,8 +207,8 @@ export default function Users() {
                                             <div className="flex items-center justify-end gap-6 text-sm font-bold">
                                                 <button className="text-blue-400 hover:text-blue-300 transition-colors cursor-pointer">Manage</button>
                                                 <button 
-                                                    onClick={() => handleStatusUpdate(user.id, user.status)}
-                                                    className={`${user.status === "Suspended" ? "text-blue-400 hover:text-blue-300" : "text-rose-500 hover:text-rose-400"} transition-colors cursor-pointer`}
+                                                    onClick={() => handleToggleStatusClick(user.id, user.name, user.status)}
+                                                    className={`${user.status === "Suspended" ? "text-blue-400 hover:text-blue-300" : "text-rose-400 hover:text-rose-300"} transition-colors cursor-pointer`}
                                                 >
                                                     {user.status === "Suspended" ? "Unsuspend" : "Suspend"}
                                                 </button>
@@ -220,6 +247,70 @@ export default function Users() {
                     </div>
                 </div>
             </div>
+
+            {/* Action Confirmation Modal */}
+            {confirmAction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setConfirmAction(null)}
+                    />
+
+                    {/* Modal */}
+                    <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up">
+                        <div className="flex items-start gap-3">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                                confirmAction.type === "suspend" ? "bg-rose-500/10" : "bg-emerald-500/10"
+                            }`}>
+                                {confirmAction.type === "suspend" ? (
+                                    <svg className="w-5 h-5 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                    </svg>
+                                ) : (
+                                    <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                )}
+                            </div>
+                            <div className="space-y-1">
+                                <h3 className="text-base font-bold text-white">
+                                    {confirmAction.type === "suspend" ? "Suspend User Account" : "Unsuspend User Account"}
+                                </h3>
+                                <p className="text-xs text-slate-400 leading-relaxed">
+                                    {confirmAction.type === "suspend"
+                                        ? `Are you sure you want to suspend the user "${confirmAction.userName}"? Suspended users will be restricted from submitting reports and posting platform updates.`
+                                        : `Are you sure you want to unsuspend the user "${confirmAction.userName}"? This user will immediately regain full access and status on the platform.`}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => setConfirmAction(null)}
+                                className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    handleStatusUpdate(confirmAction.userId, confirmAction.currentStatus);
+                                    setConfirmAction(null);
+                                }}
+                                className={`flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-lg active:scale-[0.98] ${
+                                    confirmAction.type === "suspend"
+                                        ? "bg-rose-500 hover:bg-rose-400 shadow-rose-950/30"
+                                        : "bg-emerald-500 hover:bg-emerald-400 shadow-emerald-950/30"
+                                }`}
+                            >
+                                {confirmAction.type === "suspend" ? "Suspend Account" : "Unsuspend Account"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

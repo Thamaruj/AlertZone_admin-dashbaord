@@ -32,13 +32,13 @@ function RoleBadge({ role }: { role: AdminRole }) {
 function StatusBadge({ isActive }: { isActive: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border border-white/5 ${
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-white/10 ${
         isActive
-          ? "text-teal-300 bg-teal-500/10"
-          : "text-slate-400 bg-slate-500/10"
+          ? "text-teal-300 bg-teal-500/15"
+          : "text-red-200 bg-red-500/25 border-red-500/30"
       }`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? "bg-teal-400 animate-pulse" : "bg-slate-500"}`} />
+      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActive ? "bg-teal-400 animate-pulse" : "bg-red-400 animate-pulse"}`} />
       {isActive ? "Active" : "Inactive"}
     </span>
   );
@@ -261,6 +261,15 @@ export default function AdminUserManagement() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+  // Custom action confirmation states
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "deactivate" | "activate" | "delete";
+    userId: string;
+    username: string;
+    currentActive?: boolean;
+  } | null>(null);
+  const [isIrreversibleChecked, setIsIrreversibleChecked] = useState(false);
 
   const fetchAdmins = useCallback(async () => {
     setLoading(true);
@@ -281,14 +290,23 @@ export default function AdminUserManagement() {
     fetchAdmins();
   }, [fetchAdmins]);
 
-  const toggleActive = async (userId: string, current: boolean) => {
+  const handleToggleActiveClick = (userId: string, username: string, currentActive: boolean) => {
+    setConfirmAction({
+      type: currentActive ? "deactivate" : "activate",
+      userId,
+      username,
+      currentActive,
+    });
+  };
+
+  const executeToggleActive = async (userId: string, currentActive: boolean) => {
     setActionLoading(userId);
     try {
       const res = await fetch(`/api/admin-users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ isActive: !current }),
+        body: JSON.stringify({ isActive: !currentActive }),
       });
       if (!res.ok) throw new Error("Failed to update admin user");
       await fetchAdmins();
@@ -296,11 +314,20 @@ export default function AdminUserManagement() {
       console.error(err);
     } finally {
       setActionLoading(null);
+      setConfirmAction(null);
     }
   };
 
-  const deleteAdmin = async (userId: string, username: string) => {
-    if (!confirm(`Remove admin account "${username}"? This cannot be undone.`)) return;
+  const handleDeleteClick = (userId: string, username: string) => {
+    setIsIrreversibleChecked(false);
+    setConfirmAction({
+      type: "delete",
+      userId,
+      username,
+    });
+  };
+
+  const executeDelete = async (userId: string) => {
     setActionLoading(userId);
     try {
       const res = await fetch(`/api/admin-users/${userId}`, {
@@ -313,6 +340,7 @@ export default function AdminUserManagement() {
       console.error(err);
     } finally {
       setActionLoading(null);
+      setConfirmAction(null);
     }
   };
 
@@ -353,7 +381,7 @@ export default function AdminUserManagement() {
               Superadmin account: <span className="font-mono text-white">{currentUser?.username}</span>
             </p>
             <p className="text-[11px] text-slate-400 mt-0.5">
-              The superadmin account is configured via environment variables and cannot be listed or modified here.
+              The superadmin account cannot be modified here.
             </p>
           </div>
         </div>
@@ -418,23 +446,23 @@ export default function AdminUserManagement() {
                       .slice(0, 2);
 
                     return (
-                      <tr key={admin.id} className="hover:bg-white/3 transition-colors group">
+                      <tr key={admin.id} className={`transition-colors group border-b border-white/5 ${admin.isActive ? "hover:bg-white/3" : "bg-red-500/20 hover:bg-red-500/30 text-red-100"}`}>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2.5">
                             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
                               {initials}
                             </div>
-                            <span className="font-medium text-slate-200">{admin.displayName}</span>
+                            <span className={`font-semibold ${admin.isActive ? "text-slate-200" : "text-red-100 font-bold"}`}>{admin.displayName}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 font-mono text-slate-400">{admin.username}</td>
+                        <td className={`px-5 py-3.5 font-mono font-semibold ${admin.isActive ? "text-slate-400" : "text-red-200"}`}>{admin.username}</td>
                         <td className="px-5 py-3.5">
                           <RoleBadge role={admin.role} />
                         </td>
                         <td className="px-5 py-3.5">
                           <StatusBadge isActive={admin.isActive} />
                         </td>
-                        <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">
+                        <td className={`px-5 py-3.5 font-mono text-[11px] ${admin.isActive ? "text-slate-400" : "text-red-300"}`}>
                           {admin.createdAt
                             ? new Date(admin.createdAt).toLocaleDateString()
                             : "—"}
@@ -443,7 +471,7 @@ export default function AdminUserManagement() {
                           <div className="flex items-center gap-1">
                             {/* Toggle active */}
                             <button
-                              onClick={() => toggleActive(admin.id, admin.isActive)}
+                              onClick={() => handleToggleActiveClick(admin.id, admin.username, admin.isActive)}
                               disabled={actionLoading === admin.id}
                               title={admin.isActive ? "Deactivate" : "Activate"}
                               className={`p-1.5 rounded-lg transition-all duration-150 ${
@@ -470,7 +498,7 @@ export default function AdminUserManagement() {
 
                             {/* Delete */}
                             <button
-                              onClick={() => deleteAdmin(admin.id, admin.username)}
+                              onClick={() => handleDeleteClick(admin.id, admin.username)}
                               disabled={actionLoading === admin.id}
                               title="Delete admin"
                               className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-50"
@@ -491,12 +519,111 @@ export default function AdminUserManagement() {
         </div>
       </div>
 
-      {/* Create Modal */}
-      {showCreateModal && (
-        <CreateAdminModal
-          onClose={() => setShowCreateModal(false)}
-          onCreated={fetchAdmins}
-        />
+      {/* Action Confirmation Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setConfirmAction(null)}
+          />
+
+          {/* Modal */}
+          <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up">
+            <div className="flex items-start gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                confirmAction.type === "delete"
+                  ? "bg-red-500/10"
+                  : confirmAction.type === "activate"
+                  ? "bg-teal-500/10"
+                  : "bg-yellow-500/10"
+              }`}>
+                {confirmAction.type === "delete" ? (
+                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                ) : confirmAction.type === "activate" ? (
+                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                )}
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-white">
+                  {confirmAction.type === "delete"
+                    ? "Delete Admin Account"
+                    : confirmAction.type === "activate"
+                    ? "Activate Admin Account"
+                    : "Deactivate Admin Account"}
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  {confirmAction.type === "delete"
+                    ? `Are you sure you want to permanently delete the admin account "${confirmAction.username}"?`
+                    : confirmAction.type === "activate"
+                    ? `Are you sure you want to activate the admin account "${confirmAction.username}"? This user will immediately be allowed to access the admin portal.`
+                    : `Are you sure you want to deactivate the admin account "${confirmAction.username}"? This user will be blocked from logging into the admin portal.`}
+                </p>
+              </div>
+            </div>
+
+            {confirmAction.type === "delete" && (
+              <div className="space-y-3 p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
+                <p className="text-xs text-red-400 font-medium leading-relaxed">
+                  ⚠️ This action is irreversible. The account and its associated database permissions will be permanently removed.
+                </p>
+                <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isIrreversibleChecked}
+                    onChange={(e) => setIsIrreversibleChecked(e.target.checked)}
+                    className="mt-0.5 rounded border-white/10 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                  />
+                  <span className="text-[11px] text-slate-300 leading-tight">
+                    I understand that this action is irreversible and permanent. Please confirm to proceed.
+                  </span>
+                </label>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setConfirmAction(null)}
+                className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirmAction.type === "delete") {
+                    executeDelete(confirmAction.userId);
+                  } else {
+                    executeToggleActive(confirmAction.userId, confirmAction.currentActive ?? true);
+                  }
+                }}
+                disabled={confirmAction.type === "delete" && !isIrreversibleChecked}
+                className={`flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                  confirmAction.type === "delete"
+                    ? "bg-red-500 hover:bg-red-400 shadow-red-950/30"
+                    : confirmAction.type === "activate"
+                    ? "bg-teal-500 hover:bg-teal-400 shadow-teal-950/30"
+                    : "bg-yellow-500 hover:bg-yellow-400 shadow-yellow-950/30"
+                }`}
+              >
+                {confirmAction.type === "delete"
+                  ? "Permanently Delete"
+                  : confirmAction.type === "activate"
+                  ? "Activate Account"
+                  : "Deactivate Account"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -4,19 +4,7 @@
 
 import bcrypt from "bcryptjs";
 import { SignJWT, jwtVerify } from "jose";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  addDoc,
-  doc,
-  updateDoc,
-  deleteDoc,
-  serverTimestamp,
-  Timestamp,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { adminDb, admin } from "@/lib/firebase-admin";
 import type {
   AdminSession,
   AdminUser,
@@ -150,9 +138,11 @@ async function validateFirestoreAdmin(
   password: string
 ): Promise<AdminSession | null> {
   try {
-    const col = collection(db, ADMIN_USERS_COLLECTION);
-    const q = query(col, where("username", "==", username.toLowerCase()));
-    const snap = await getDocs(q);
+    const snap = await adminDb
+      .collection(ADMIN_USERS_COLLECTION)
+      .where("username", "==", username.toLowerCase())
+      .limit(1)
+      .get();
 
     if (snap.empty) return null;
 
@@ -165,7 +155,7 @@ async function validateFirestoreAdmin(
     if (!match) return null;
 
     // Update lastLoginAt (non-blocking)
-    updateDoc(docSnap.ref, { lastLoginAt: serverTimestamp() }).catch(
+    docSnap.ref.update({ lastLoginAt: admin.firestore.FieldValue.serverTimestamp() }).catch(
       console.error
     );
 
@@ -220,7 +210,7 @@ export async function hashPassword(plain: string): Promise<string> {
 
 export async function listAdminUsers(): Promise<AdminUser[]> {
   try {
-    const snap = await getDocs(collection(db, ADMIN_USERS_COLLECTION));
+    const snap = await adminDb.collection(ADMIN_USERS_COLLECTION).get();
     return snap.docs.map((d) => {
       const data = d.data();
       return {
@@ -231,12 +221,14 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
         role: data.role,
         isActive: data.isActive,
         createdAt:
-          data.createdAt instanceof Timestamp
+          data.createdAt && typeof data.createdAt.toDate === "function"
             ? data.createdAt.toDate()
-            : new Date(data.createdAt),
+            : data.createdAt
+            ? new Date(data.createdAt)
+            : new Date(),
         createdBy: data.createdBy,
         lastLoginAt:
-          data.lastLoginAt instanceof Timestamp
+          data.lastLoginAt && typeof data.lastLoginAt.toDate === "function"
             ? data.lastLoginAt.toDate()
             : data.lastLoginAt
             ? new Date(data.lastLoginAt)
@@ -254,22 +246,25 @@ export async function createAdminUser(
   createdBy: string
 ): Promise<AdminUser> {
   // Check username uniqueness
-  const col = collection(db, ADMIN_USERS_COLLECTION);
-  const q = query(col, where("username", "==", payload.username.toLowerCase()));
-  const existing = await getDocs(q);
-  if (!existing.empty) {
+  const snap = await adminDb
+    .collection(ADMIN_USERS_COLLECTION)
+    .where("username", "==", payload.username.toLowerCase())
+    .limit(1)
+    .get();
+  
+  if (!snap.empty) {
     throw new Error(`Username "${payload.username}" is already taken`);
   }
 
   const passwordHash = await hashPassword(payload.password);
 
-  const docRef = await addDoc(col, {
+  const docRef = await adminDb.collection(ADMIN_USERS_COLLECTION).add({
     username: payload.username.toLowerCase().trim(),
     displayName: payload.displayName.trim(),
     passwordHash,
     role: payload.role,
     isActive: true,
-    createdAt: serverTimestamp(),
+    createdAt: admin.firestore.FieldValue.serverTimestamp(),
     createdBy,
   });
 
@@ -289,11 +284,11 @@ export async function updateAdminUser(
   userId: string,
   updates: Partial<Pick<AdminUser, "isActive" | "displayName" | "role">>
 ): Promise<void> {
-  await updateDoc(doc(db, ADMIN_USERS_COLLECTION, userId), updates);
+  await adminDb.collection(ADMIN_USERS_COLLECTION).doc(userId).update(updates);
 }
 
 export async function deleteAdminUser(userId: string): Promise<void> {
-  await deleteDoc(doc(db, ADMIN_USERS_COLLECTION, userId));
+  await adminDb.collection(ADMIN_USERS_COLLECTION).doc(userId).delete();
 }
 
 // Re-export cookie name for use in API routes
