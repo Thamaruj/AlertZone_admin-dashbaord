@@ -40,7 +40,7 @@ export interface LoginResponse {
 export interface LoginRequest {
   username: string;
   password: string;
-  keepLoggedIn: boolean;
+  keepLoggedIn?: boolean;
 }
 
 /** Payload for creating a new admin user (superadmin only) */

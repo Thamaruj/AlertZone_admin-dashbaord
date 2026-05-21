@@ -59,7 +59,7 @@
 ### Admin Login (`Adminlogin.tsx`)
 - [x] Login form — real auth via `/api/auth/login` (username + password)
 - [x] Server-side credential validation (superadmin from `.env.local`, other admins from Firestore)
-- [x] Session persistence via HttpOnly JWT cookie (8h or 30-day "keep me logged in")
+- [x] Session persistence via HttpOnly JWT cookie (8-hour standard duration)
 - [x] AuthContext provider wraps the app — all components can use `useAuth()`
 - [x] Superadmin hardcoded in `.env.local` (SUPERADMIN_USERNAME, SUPERADMIN_PASSWORD_HASH)
 - [x] Additional admins stored in Firestore `adminUsers` collection with bcrypt hashes

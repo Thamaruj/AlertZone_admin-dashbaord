@@ -9,7 +9,6 @@ export default function AdminLogin() {
   const { login, signingIn } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -35,7 +34,7 @@ export default function AdminLogin() {
       return;
     }
 
-    const errorMsg = await login({ username: username.trim(), password, keepLoggedIn });
+    const errorMsg = await login({ username: username.trim(), password, keepLoggedIn: false });
     if (errorMsg) {
       setError(errorMsg);
     }
@@ -189,31 +188,7 @@ export default function AdminLogin() {
                 </div>
               </div>
 
-              {/* Keep me logged in */}
-              <div className="flex items-center gap-2.5">
-                <button
-                  type="button"
-                  id="keep-logged-in"
-                  onClick={() => setKeepLoggedIn(!keepLoggedIn)}
-                  className={`w-4 h-4 rounded flex items-center justify-center cursor-pointer transition-all duration-200 flex-shrink-0 ${
-                    keepLoggedIn
-                      ? "bg-teal-500 border-teal-500"
-                      : "bg-white/5 border border-slate-600 hover:border-teal-500/50"
-                  }`}
-                >
-                  {keepLoggedIn && (
-                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                </button>
-                <span
-                  onClick={() => setKeepLoggedIn(!keepLoggedIn)}
-                  className="text-xs text-slate-400 cursor-pointer select-none hover:text-slate-300 transition-colors"
-                >
-                  Keep me logged in on this device (30 days)
-                </span>
-              </div>
+
 
               {/* Submit Button */}
               <div className="pt-1">

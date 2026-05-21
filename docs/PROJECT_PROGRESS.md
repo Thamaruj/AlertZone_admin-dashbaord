@@ -103,6 +103,8 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 - **`scripts/hash-password.mjs`** — utility to generate bcrypt hashes for `.env.local`.
 - **Environment Variable Bug Fix**: Resolved a critical issue where Next.js failed to load or incorrectly expanded the `SUPERADMIN_PASSWORD_HASH` because bcrypt hashes contain `$` symbols which Next.js interprets as environment variable expansions. Fixed by escaping all `$` signs with `\$` in `.env.local` and updating `scripts/hash-password.mjs` to automatically escape hashes in its output.
 - **Vercel/Production Compatibility Fix**: In production environments (like Vercel), environment variables are injected directly by the platform and do not undergo Next.js's local dotenv parser expansion, meaning they are read literally (retaining backslashes if they were escaped, or standard if unescaped). Updated `lib/services/auth.service.ts` to automatically unescape dollar signs in the password hash at runtime, ensuring the hash works correctly regardless of how it is defined in Vercel or local environments.
+- **Logout Confirmation**: Added a premium-styled custom modal prompting for confirmation before logging out, replacing the immediate sign out action.
+- **Removed "Keep me logged in"**: Cleaned up the login interface by removing the "keep me logged in" checkbox and defaulting all session lifetimes to the standard 8-hour duration.
 
 **Default superadmin credentials (change before production):**
 - Username: `superadmin`
