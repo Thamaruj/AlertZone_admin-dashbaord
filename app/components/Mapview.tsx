@@ -180,6 +180,22 @@ function GoogleMapContainer({
     ];
 
     // Initialize Map
+    const handleZoomIn = () => {
+        if (!mapRef.current) return;
+        const currentZoom = mapRef.current.getZoom();
+        if (typeof currentZoom === "number") {
+            mapRef.current.setZoom(currentZoom + 1);
+        }
+    };
+
+    const handleZoomOut = () => {
+        if (!mapRef.current) return;
+        const currentZoom = mapRef.current.getZoom();
+        if (typeof currentZoom === "number") {
+            mapRef.current.setZoom(currentZoom - 1);
+        }
+    };
+
     useEffect(() => {
         if (!googleLoaded || !containerRef.current) return;
 
@@ -193,10 +209,7 @@ function GoogleMapContainer({
             zoom: 13,
             styles: darkThemeStyles,
             disableDefaultUI: true,
-            zoomControl: true,
-            zoomControlOptions: {
-                position: google.maps.ControlPosition.RIGHT_TOP,
-            },
+            zoomControl: false,
         });
 
         mapRef.current = map;
@@ -385,6 +398,26 @@ function GoogleMapContainer({
                     <p className="text-xs uppercase tracking-widest text-slate-500">Loading Google Maps...</p>
                 </div>
             )}
+
+            {googleLoaded && (
+                <div className="absolute top-4 right-4 flex flex-col gap-1.5 z-20">
+                    <button
+                        onClick={handleZoomIn}
+                        className="w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-xl font-bold text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md select-none"
+                        title="Zoom In"
+                    >
+                        ＋
+                    </button>
+                    <button
+                        onClick={handleZoomOut}
+                        className="w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-xl font-bold text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md select-none"
+                        title="Zoom Out"
+                    >
+                        －
+                    </button>
+                </div>
+            )}
+
             <div ref={containerRef} className="w-full h-full" />
         </div>
     );
@@ -397,6 +430,7 @@ export default function MapView() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedProvince, setSelectedProvince] = useState<string>("All");
     const [selectedDistrict, setSelectedDistrict] = useState<string>("All");
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [loading] = useState(false);
 
     // Reset district when province changes
@@ -426,7 +460,7 @@ export default function MapView() {
     }, [selectedReport, filteredReports]);
 
     return (
-        <div className="h-auto md:flex-1 w-full flex flex-col md:flex-row gap-4 md:gap-0 animate-slide-up" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+        <div className="h-full w-full flex flex-col md:flex-row md:overflow-hidden relative animate-slide-up" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
 
             <style jsx global>{`
                 /* Google Maps Overrides and Professional Font Enforcements */
@@ -469,19 +503,55 @@ export default function MapView() {
                 .gm-ui-hover-effect span {
                     margin: 0 !important;
                 }
+
+                /* Premium Scrollbar Styling */
+                .custom-scrollbar::-webkit-scrollbar {
+                    width: 5px;
+                    height: 5px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-track {
+                    background: rgba(255, 255, 255, 0.02);
+                    border-radius: 10px;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb {
+                    background: rgba(20, 184, 166, 0.2);
+                    border-radius: 10px;
+                    transition: background 0.2s;
+                }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+                    background: rgba(20, 184, 166, 0.4);
+                }
+                .custom-scrollbar {
+                    scrollbar-width: thin;
+                    scrollbar-color: rgba(20, 184, 166, 0.2) rgba(255, 255, 255, 0.02);
+                }
             `}</style>
 
             {/* ── Left Sidebar: Report List ── */}
-            <div className="w-full md:w-96 h-[320px] md:h-full flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-none overflow-hidden shadow-2xl z-[1000] flex-shrink-0">
+            <div className={`w-full md:w-96 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-none overflow-hidden shadow-2xl z-[1000] flex-shrink-0 transition-all duration-300 ease-in-out ${
+                isSidebarCollapsed 
+                    ? 'h-0 opacity-0 pointer-events-none -translate-y-full md:h-full md:w-0 md:opacity-0 md:pointer-events-none md:-translate-x-full md:translate-y-0' 
+                    : 'h-[320px] md:h-full md:w-96 md:opacity-100 md:translate-x-0 md:translate-y-0'
+            }`}>
                 <div className="p-4 border-b border-white/5 space-y-4">
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-lg font-bold text-white tracking-tight">Active Reports</h2>
-                            <p className="text-[10px] text-teal-400 font-bold uppercase tracking-widest mt-1">Live from Firebase</p>
                         </div>
-                        {loading && (
-                            <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                        )}
+                        <div className="flex items-center gap-2">
+                            {loading && (
+                                <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                            )}
+                            <button
+                                onClick={() => setIsSidebarCollapsed(true)}
+                                className="p-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg border border-white/5 hover:border-white/10 transition-all active:scale-95 cursor-pointer flex items-center justify-center"
+                                title="Collapse Sidebar"
+                            >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="relative">
@@ -599,6 +669,18 @@ export default function MapView() {
                     )}
                 </div>
             </div>
+
+            {isSidebarCollapsed && (
+                <button
+                    onClick={() => setIsSidebarCollapsed(false)}
+                    className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md z-[1001] animate-in fade-in zoom-in-95 duration-200"
+                    title="Expand Sidebar"
+                >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            )}
 
             {/* ── Main Map Area ── */}
             <div className="flex-1 min-h-[400px] bg-[#0d1f2d] md:rounded-none rounded-2xl overflow-hidden md:border-none border border-white/10 relative z-10 shadow-inner">

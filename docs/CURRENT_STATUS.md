@@ -42,6 +42,9 @@
 - [x] Map custom style — premium dark-mode styling configuration for Google Maps
 - [x] Interactive filters — Province and District cascading dropdowns with coordinate centering
 - [x] Map markers & overlays — custom category markers and popups with selection synchronization
+- [x] Collapsible sidebar — slide collapse on desktop and mobile
+- [x] Custom zoom controls — premium glassmorphic "+" and "-" buttons overriding API defaults
+- [x] Premium scrollbars — styled custom scrollbars for reports navigation
 - [x] Users management page — user list with search and filters
 - [x] Analytics page — multiple chart types and data visualizations
 - [x] Notifications page — notification list with read/unread status
