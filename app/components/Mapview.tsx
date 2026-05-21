@@ -3,6 +3,57 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { MOCK_REPORTS as reports_data, Report } from "@/app/data/mockData";
 
+// ─── geoBoundaries Land-Clipped GeoJSON Loader ────────────────────────────────
+// Files are served locally from /public/geojson/ — no CORS, no Git-LFS issues.
+// ADM1 shapeNames end with " Province", ADM2 end with " District".
+const GEO_ADM1_URL = "/geojson/lka-adm1.geojson";
+const GEO_ADM2_URL = "/geojson/lka-adm2.geojson";
+
+let _adm1Cache: any = null;
+let _adm2Cache: any = null;
+let _adm1Promise: Promise<any> | null = null;
+let _adm2Promise: Promise<any> | null = null;
+
+function loadADM1(): Promise<any> {
+    if (_adm1Cache) return Promise.resolve(_adm1Cache);
+    if (!_adm1Promise) {
+        _adm1Promise = fetch(GEO_ADM1_URL)
+            .then((r) => r.json())
+            .then((data) => { _adm1Cache = data; return data; });
+    }
+    return _adm1Promise;
+}
+
+function loadADM2(): Promise<any> {
+    if (_adm2Cache) return Promise.resolve(_adm2Cache);
+    if (!_adm2Promise) {
+        _adm2Promise = fetch(GEO_ADM2_URL)
+            .then((r) => r.json())
+            .then((data) => { _adm2Cache = data; return data; });
+    }
+    return _adm2Promise;
+}
+
+// Spelling aliases: our key → geoBoundaries shapeName (without suffix)
+const NAME_ALIASES: Record<string, string> = {
+    "Moneragala": "Monaragala",   // geoBoundaries spells it without the 'e'
+};
+
+/**
+ * Match a geoBoundaries shapeName (e.g. "Western Province" / "Colombo District")
+ * against our region key (e.g. "Western" / "Colombo").
+ * Strips the trailing " Province" or " District" before comparing.
+ */
+function matchesRegion(shapeName: string, regionKey: string): boolean {
+    const strip = (s: string) =>
+        s.trim().toLowerCase()
+         .replace(/ province$/, "")
+         .replace(/ district$/, "");
+    const normalizedShape = strip(shapeName);
+    const key = (NAME_ALIASES[regionKey] ?? regionKey).trim().toLowerCase();
+    return normalizedShape === key;
+}
+
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
     "Road & Traffic": { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
     "Water and Drainage": { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
@@ -317,44 +368,35 @@ function GoogleMapContainer({
                 clickable: false,
             });
 
-            const encodedName = encodeURIComponent(
-                isDistrict
-                    ? `${regionName} District, Sri Lanka`
-                    : `${regionName} Province, Sri Lanka`
-            );
+            // Load land-clipped geoBoundaries GeoJSON (cached after first fetch)
+            const loader = isDistrict ? loadADM2 : loadADM1;
 
-            fetch(
-                `https://nominatim.openstreetmap.org/search?q=${encodedName}&format=geojson&polygon_geojson=1&limit=1`,
-                { headers: { "Accept-Language": "en" } }
-            )
-                .then((res) => res.json())
-                .then((data) => {
-                    if (data.features && data.features.length > 0) {
-                        const feature = data.features[0];
-                        if (
-                            feature.geometry &&
-                            (feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon")
-                        ) {
-                            dataLayer.addGeoJson({
-                                type: "FeatureCollection",
-                                features: [feature],
-                            });
-                            highlightLayerRef.current = dataLayer;
+            loader()
+                .then((geojson) => {
+                    const feature = geojson.features.find((f: any) =>
+                        matchesRegion(f.properties?.shapeName ?? "", regionName!)
+                    );
 
-                            const bounds = new google.maps.LatLngBounds();
-                            const coords = feature.geometry.type === "Polygon"
+                    if (feature) {
+                        dataLayer.addGeoJson({
+                            type: "FeatureCollection",
+                            features: [feature],
+                        });
+                        highlightLayerRef.current = dataLayer;
+
+                        // Fit map to the land polygon's actual bounds
+                        const bounds = new google.maps.LatLngBounds();
+                        const coords =
+                            feature.geometry.type === "Polygon"
                                 ? [feature.geometry.coordinates[0]]
                                 : feature.geometry.coordinates.map((p: any) => p[0]);
-                            coords.forEach((ring: any) => {
-                                ring.forEach(([lng, lat]: [number, number]) => {
-                                    bounds.extend({ lat, lng });
-                                });
+                        coords.forEach((ring: any) => {
+                            ring.forEach(([lng, lat]: [number, number]) => {
+                                bounds.extend({ lat, lng });
                             });
-                            if (!selectedReport) {
-                                mapRef.current.fitBounds(bounds, { padding: 40 });
-                            }
-                        } else {
-                            dataLayer.setMap(null);
+                        });
+                        if (!selectedReport) {
+                            mapRef.current.fitBounds(bounds, { padding: 40 });
                         }
                     } else {
                         dataLayer.setMap(null);

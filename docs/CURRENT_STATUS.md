@@ -92,7 +92,7 @@
 ### Map View (`Mapview.tsx`)
 - [x] Google Maps renders mock report pins around Colombo and other Sri Lankan regions
 - [x] Cascade filtering — selects province to dynamically load districts and center map
-- [x] Province/District boundary highlighting via OpenStreetMap Nominatim GeoJSON — exact polygon overlaid on Google Maps Data Layer (no more approximation circles)
+- [x] Province/District boundary highlighting via local geoBoundaries land-clipped GeoJSON — exact polygon overlaid on Google Maps Data Layer (no more approximation circles, land-clipped to avoid highlighting portions of the sea, and uses spelling aliases to match database records)
 - [x] Map auto-fits bounds to the selected province/district polygon
 - [x] Marker categories, InfoWindows, and selection sync fully integrated with dashboard details panel overlay
 - [x] Sidebar collapse frees full map width (flex-1 layout fix)
