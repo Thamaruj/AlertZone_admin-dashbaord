@@ -13,7 +13,7 @@ export type User = {
     avatar: string;
 };
 
-export type ReportCategory = "Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety";
+export type ReportCategory = "Road & Traffic" | "Water and Drainage" | "Waste & Environment" | "Social Security" | "Bridge & Structural" | "Other";
 export type ReportStatus = "Reported" | "In Progress" | "Solved" | "Closed";
 export type ReportPriority = "Low" | "Medium" | "High" | "Critical";
 
@@ -71,7 +71,7 @@ export const MOCK_USERS: User[] = [];
 export const MOCK_REPORTS: Report[] = [
     {
         id: "REP-001",
-        category: "Hazard",
+        category: "Road & Traffic",
         location: "Albert Crescent, Colombo 07",
         coordinates: { lat: 6.9123, lng: 79.8645 },
         time: "2 hours ago",
@@ -91,7 +91,7 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-002",
-        category: "Waste",
+        category: "Waste & Environment",
         location: "Galle Road, Colombo 03 (Kollupitiya)",
         coordinates: { lat: 6.9185, lng: 79.8492 },
         time: "4 hours ago",
@@ -113,7 +113,7 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-003",
-        category: "Roads",
+        category: "Road & Traffic",
         location: "R. A. De Mel Mawatha, Colombo 04",
         coordinates: { lat: 6.8965, lng: 79.8558 },
         time: "1 day ago",
@@ -133,13 +133,13 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-004",
-        category: "Lighting",
+        category: "Social Security",
         location: "Baseline Road, Colombo 09 (Dematagoda)",
         coordinates: { lat: 6.9348, lng: 79.8762 },
         time: "2 days ago",
         status: "Reported",
         priority: "Low",
-        description: "Three streetlights in a row are flickering and dim, making the walkway dark.",
+        description: "Suspicious activity and poor lighting near the park making residents feel unsafe at night.",
         images: [],
         reporter: {
             name: "Dilini Cooray",
@@ -153,7 +153,7 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-005",
-        category: "Water",
+        category: "Water and Drainage",
         location: "Parliament Road, Rajagiriya",
         coordinates: { lat: 6.9082, lng: 79.8974 },
         time: "3 days ago",
@@ -173,13 +173,13 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-006",
-        category: "Roads",
+        category: "Bridge & Structural",
         location: "Peradeniya Road, Kandy",
         coordinates: { lat: 7.2842, lng: 80.6253 },
         time: "1 hour ago",
         status: "Reported",
         priority: "Critical",
-        description: "Landslide debris blocking the road near the Peradeniya bridge.",
+        description: "Cracks visible on the Peradeniya bridge abutment, structural inspection urgently needed.",
         images: [],
         reporter: {
             name: "Suresh Kandy",
@@ -193,7 +193,7 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-007",
-        category: "Safety",
+        category: "Bridge & Structural",
         location: "Lighthouse Street, Galle Fort",
         coordinates: { lat: 6.0267, lng: 80.2170 },
         time: "5 hours ago",
@@ -213,13 +213,13 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-008",
-        category: "Lighting",
+        category: "Social Security",
         location: "Hospital Road, Jaffna",
         coordinates: { lat: 9.6615, lng: 80.0145 },
         time: "1 day ago",
         status: "Solved",
         priority: "High",
-        description: "All main streetlights along Hospital Road have been successfully replaced with LEDs.",
+        description: "Public safety improvement: new security cameras installed along Hospital Road after vandalism reports.",
         images: [],
         reporter: {
             name: "Siva Jaffna",
@@ -233,7 +233,7 @@ export const MOCK_REPORTS: Report[] = [
     },
     {
         id: "REP-009",
-        category: "Waste",
+        category: "Waste & Environment",
         location: "Nilaveli Road, Trincomalee",
         coordinates: { lat: 8.5874, lng: 81.2152 },
         time: "3 days ago",
@@ -271,12 +271,12 @@ export const BAR_DATA: BarData[] = [
 ];
 
 export const INCIDENT_BY_CATEGORY: IncidentByCategory[] = [
-    { name: "Hazard", reported: 25, inProgress: 15, solved: 40, closed: 10, color: "bg-rose-500" },
-    { name: "Lighting", reported: 30, inProgress: 20, solved: 65, closed: 15, color: "bg-yellow-500" },
-    { name: "Waste", reported: 45, inProgress: 35, solved: 80, closed: 20, color: "bg-green-500" },
-    { name: "Roads", reported: 20, inProgress: 25, solved: 50, closed: 12, color: "bg-blue-500" },
-    { name: "Water", reported: 15, inProgress: 10, solved: 35, closed: 8, color: "bg-sky-500" },
-    { name: "Safety", reported: 10, inProgress: 5, solved: 20, closed: 5, color: "bg-violet-500" }
+    { name: "Road & Traffic", reported: 45, inProgress: 25, solved: 80, closed: 20, color: "bg-blue-500" },
+    { name: "Water and Drainage", reported: 20, inProgress: 15, solved: 45, closed: 10, color: "bg-sky-500" },
+    { name: "Waste & Environment", reported: 55, inProgress: 35, solved: 90, closed: 25, color: "bg-green-500" },
+    { name: "Social Security", reported: 18, inProgress: 10, solved: 30, closed: 8, color: "bg-violet-500" },
+    { name: "Bridge & Structural", reported: 12, inProgress: 8, solved: 22, closed: 6, color: "bg-orange-500" },
+    { name: "Other", reported: 10, inProgress: 5, solved: 18, closed: 5, color: "bg-slate-400" }
 ];
 
 export const DAILY_ACTIVITY: DailyActivity[] = [

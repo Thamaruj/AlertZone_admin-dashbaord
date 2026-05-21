@@ -4,12 +4,12 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { MOCK_REPORTS as reports_data, Report } from "@/app/data/mockData";
 
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
-    Hazard: { color: "text-rose-400", bg: "bg-rose-500/10", icon: "⚠️" },
-    Lighting: { color: "text-yellow-400", bg: "bg-yellow-500/10", icon: "💡" },
-    Waste: { color: "text-green-400", bg: "bg-green-500/10", icon: "🗑️" },
-    Roads: { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
-    Water: { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
-    Safety: { color: "text-violet-400", bg: "bg-violet-500/10", icon: "🛡️" },
+    "Road & Traffic": { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
+    "Water and Drainage": { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
+    "Waste & Environment": { color: "text-green-400", bg: "bg-green-500/10", icon: "♻️" },
+    "Social Security": { color: "text-violet-400", bg: "bg-violet-500/10", icon: "🛡️" },
+    "Bridge & Structural": { color: "text-orange-400", bg: "bg-orange-500/10", icon: "🌉" },
+    "Other": { color: "text-slate-400", bg: "bg-slate-500/10", icon: "📍" },
 };
 
 const statusMeta: Record<Report["status"], { color: string; bg: string; dot: string }> = {
@@ -38,23 +38,77 @@ const sriLankaRegions: Record<string, string[]> = {
     "Sabaragamuwa": ["Ratnapura", "Kegalle"]
 };
 
+interface RegionGeoinfo {
+    lat: number;
+    lng: number;
+    zoom: number;
+    radius: number;
+}
+
+const provinceGeoinfo: Record<string, RegionGeoinfo> = {
+    "Western": { lat: 6.9000, lng: 79.9500, zoom: 10, radius: 40000 },
+    "Central": { lat: 7.3500, lng: 80.6500, zoom: 10, radius: 45000 },
+    "Southern": { lat: 6.1000, lng: 80.7000, zoom: 10, radius: 40000 },
+    "Northern": { lat: 9.3000, lng: 80.4000, zoom: 9.5, radius: 60000 },
+    "Eastern": { lat: 7.8000, lng: 81.5000, zoom: 9.5, radius: 65000 },
+    "North Western": { lat: 7.8000, lng: 80.1000, zoom: 10, radius: 45000 },
+    "North Central": { lat: 8.3300, lng: 80.4900, zoom: 9.5, radius: 55000 },
+    "Uva": { lat: 7.0800, lng: 81.3400, zoom: 10, radius: 45000 },
+    "Sabaragamuwa": { lat: 6.7000, lng: 80.5000, zoom: 10, radius: 40000 }
+};
+
+const districtGeoinfo: Record<string, RegionGeoinfo> = {
+    "Colombo": { lat: 6.9355, lng: 79.8487, zoom: 12, radius: 15000 },
+    "Gampaha": { lat: 7.0899, lng: 79.9994, zoom: 12, radius: 18000 },
+    "Kalutara": { lat: 6.5793, lng: 79.9648, zoom: 12, radius: 20000 },
+    "Kandy": { lat: 7.2906, lng: 80.6336, zoom: 12, radius: 22000 },
+    "Matale": { lat: 7.4698, lng: 80.6217, zoom: 12, radius: 25000 },
+    "Nuwara Eliya": { lat: 6.9708, lng: 80.7829, zoom: 12, radius: 20000 },
+    "Galle": { lat: 6.0461, lng: 80.2103, zoom: 12, radius: 20000 },
+    "Matara": { lat: 5.9485, lng: 80.5353, zoom: 12, radius: 18000 },
+    "Hambantota": { lat: 6.1234, lng: 81.1205, zoom: 11.5, radius: 25000 },
+    "Jaffna": { lat: 9.6685, lng: 80.0074, zoom: 12, radius: 18000 },
+    "Kilinochchi": { lat: 9.3834, lng: 80.4002, zoom: 12, radius: 20000 },
+    "Mannar": { lat: 8.9778, lng: 79.9093, zoom: 11.5, radius: 25000 },
+    "Vavuniya": { lat: 8.7514, lng: 80.4971, zoom: 12, radius: 18000 },
+    "Mullaitivu": { lat: 9.2236, lng: 80.7909, zoom: 11.5, radius: 25000 },
+    "Batticaloa": { lat: 7.7102, lng: 81.6924, zoom: 12, radius: 22000 },
+    "Ampara": { lat: 7.2975, lng: 81.6820, zoom: 11.5, radius: 30000 },
+    "Trincomalee": { lat: 8.5778, lng: 81.2289, zoom: 12, radius: 22000 },
+    "Kurunegala": { lat: 7.4839, lng: 80.3683, zoom: 11.5, radius: 30000 },
+    "Puttalam": { lat: 8.0362, lng: 79.8283, zoom: 11.5, radius: 30000 },
+    "Anuradhapura": { lat: 8.3122, lng: 80.4131, zoom: 11, radius: 35000 },
+    "Polonnaruwa": { lat: 7.9329, lng: 81.0082, zoom: 11.5, radius: 25000 },
+    "Badulla": { lat: 6.9802, lng: 81.0577, zoom: 11.5, radius: 25000 },
+    "Moneragala": { lat: 6.8695, lng: 81.3454, zoom: 11, radius: 35000 },
+    "Ratnapura": { lat: 6.6931, lng: 80.3995, zoom: 11.5, radius: 25000 },
+    "Kegalle": { lat: 7.2515, lng: 80.3464, zoom: 12, radius: 20000 }
+};
+
 // Google Maps subcomponent
 function GoogleMapContainer({
     reports,
     selectedReport,
     setSelectedReport,
     mapCenter,
+    isSidebarCollapsed,
+    selectedProvince,
+    selectedDistrict,
 }: {
     reports: Report[];
     selectedReport: Report | null;
     setSelectedReport: (report: Report | null) => void;
     mapCenter: [number, number];
+    isSidebarCollapsed: boolean;
+    selectedProvince: string;
+    selectedDistrict: string;
 }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [googleLoaded, setGoogleLoaded] = useState(false);
     const mapRef = useRef<any>(null);
     const markersRef = useRef<{ id: string; overlay: any; latlng: any; report: Report }[]>([]);
     const activeInfoWindowRef = useRef<any>(null);
+    const highlightLayerRef = useRef<any>(null);
 
     // Dynamic Google Maps Script Loader
     useEffect(() => {
@@ -66,13 +120,11 @@ function GoogleMapContainer({
             return;
         }
 
-        // If already loaded globally
         if ((window as any).google && (window as any).google.maps) {
             setGoogleLoaded(true);
             return;
         }
 
-        // Check if script tag is already injected by another render instance
         const scriptId = "google-maps-script";
         let script = document.getElementById(scriptId) as HTMLScriptElement;
         if (!script) {
@@ -86,7 +138,6 @@ function GoogleMapContainer({
             };
             document.head.appendChild(script);
         } else {
-            // Script tag exists, poll until window.google.maps is available
             const interval = setInterval(() => {
                 if ((window as any).google && (window as any).google.maps) {
                     setGoogleLoaded(true);
@@ -97,7 +148,6 @@ function GoogleMapContainer({
         }
     }, []);
 
-    // Custom Dark Mode Map Styles for Google Maps
     const darkThemeStyles = [
         { elementType: "geometry", stylers: [{ color: "#0d1f2d" }] },
         { elementType: "labels.text.stroke", stylers: [{ color: "#0d1f2d" }] },
@@ -179,7 +229,6 @@ function GoogleMapContainer({
         },
     ];
 
-    // Initialize Map
     const handleZoomIn = () => {
         if (!mapRef.current) return;
         const currentZoom = mapRef.current.getZoom();
@@ -215,9 +264,28 @@ function GoogleMapContainer({
         mapRef.current = map;
     }, [googleLoaded]);
 
-    // Handle selectedReport changes (Pan and Zoom)
     useEffect(() => {
         if (!googleLoaded || !mapRef.current) return;
+        const google = (window as any).google;
+
+        if (highlightLayerRef.current) {
+            highlightLayerRef.current.setMap(null);
+            highlightLayerRef.current = null;
+        }
+
+        let geoInfo: RegionGeoinfo | null = null;
+        let regionName: string | null = null;
+        let isDistrict = false;
+
+        if (selectedDistrict && selectedDistrict !== "All") {
+            geoInfo = districtGeoinfo[selectedDistrict];
+            regionName = selectedDistrict;
+            isDistrict = true;
+        } else if (selectedProvince && selectedProvince !== "All") {
+            geoInfo = provinceGeoinfo[selectedProvince];
+            regionName = selectedProvince;
+            isDistrict = false;
+        }
 
         if (selectedReport) {
             mapRef.current.panTo({
@@ -227,25 +295,109 @@ function GoogleMapContainer({
             if (mapRef.current.getZoom() < 14) {
                 mapRef.current.setZoom(14);
             }
+        } else if (geoInfo) {
+            mapRef.current.panTo({ lat: geoInfo.lat, lng: geoInfo.lng });
+            mapRef.current.setZoom(geoInfo.zoom);
+        } else {
+            mapRef.current.panTo({ lat: mapCenter[0], lng: mapCenter[1] });
+            if (mapCenter[0] === 6.9271 && mapCenter[1] === 79.8612) {
+                mapRef.current.setZoom(12);
+            }
         }
-    }, [selectedReport, googleLoaded]);
 
-    // Handle mapCenter changes (from filtering)
+        if (regionName && geoInfo) {
+            const dataLayer = new google.maps.Data({ map: mapRef.current });
+
+            dataLayer.setStyle({
+                fillColor: "#14b8a6",
+                fillOpacity: 0.15,
+                strokeColor: "#2dd4bf",
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                clickable: false,
+            });
+
+            const encodedName = encodeURIComponent(
+                isDistrict
+                    ? `${regionName} District, Sri Lanka`
+                    : `${regionName} Province, Sri Lanka`
+            );
+
+            fetch(
+                `https://nominatim.openstreetmap.org/search?q=${encodedName}&format=geojson&polygon_geojson=1&limit=1`,
+                { headers: { "Accept-Language": "en" } }
+            )
+                .then((res) => res.json())
+                .then((data) => {
+                    if (data.features && data.features.length > 0) {
+                        const feature = data.features[0];
+                        if (
+                            feature.geometry &&
+                            (feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon")
+                        ) {
+                            dataLayer.addGeoJson({
+                                type: "FeatureCollection",
+                                features: [feature],
+                            });
+                            highlightLayerRef.current = dataLayer;
+
+                            const bounds = new google.maps.LatLngBounds();
+                            const coords = feature.geometry.type === "Polygon"
+                                ? [feature.geometry.coordinates[0]]
+                                : feature.geometry.coordinates.map((p: any) => p[0]);
+                            coords.forEach((ring: any) => {
+                                ring.forEach(([lng, lat]: [number, number]) => {
+                                    bounds.extend({ lat, lng });
+                                });
+                            });
+                            if (!selectedReport) {
+                                mapRef.current.fitBounds(bounds, { padding: 40 });
+                            }
+                        } else {
+                            dataLayer.setMap(null);
+                        }
+                    } else {
+                        dataLayer.setMap(null);
+                    }
+                })
+                .catch(() => {
+                    dataLayer.setMap(null);
+                });
+
+            highlightLayerRef.current = dataLayer;
+        }
+
+        return () => {
+            if (highlightLayerRef.current) {
+                highlightLayerRef.current.setMap(null);
+                highlightLayerRef.current = null;
+            }
+        };
+    }, [googleLoaded, selectedReport, selectedProvince, selectedDistrict, mapCenter]);
+
     useEffect(() => {
-        if (!googleLoaded || !mapRef.current || selectedReport) return;
-        mapRef.current.panTo({
-            lat: mapCenter[0],
-            lng: mapCenter[1]
-        });
-    }, [mapCenter, googleLoaded, selectedReport]);
+        if (!googleLoaded || !mapRef.current) return;
+        
+        const timer = setTimeout(() => {
+            const google = (window as any).google;
+            if (google && google.maps) {
+                google.maps.event.trigger(mapRef.current, "resize");
+            }
+            
+            const centerTarget = selectedReport 
+                ? { lat: selectedReport.coordinates.lat, lng: selectedReport.coordinates.lng }
+                : { lat: mapCenter[0], lng: mapCenter[1] };
+                
+            mapRef.current.panTo(centerTarget);
+        }, 320);
 
-    // Render / Update Markers dynamically
+        return () => clearTimeout(timer);
+    }, [isSidebarCollapsed, googleLoaded, selectedReport, mapCenter]);
+
     useEffect(() => {
         if (!googleLoaded || !mapRef.current) return;
 
         const google = (window as any).google;
-
-        // Clear existing overlays
         markersRef.current.forEach((item) => item.overlay.setMap(null));
         markersRef.current = [];
 
@@ -254,7 +406,6 @@ function GoogleMapContainer({
             activeInfoWindowRef.current = null;
         }
 
-        // Define CustomHTMLOverlay dynamically inside useEffect so it has direct scope of the loaded google instance
         class CustomHTMLOverlay extends google.maps.OverlayView {
             private latlng: any;
             private html: string;
@@ -276,12 +427,7 @@ function GoogleMapContainer({
                 div.style.zIndex = "1000";
                 div.style.fontFamily = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
                 div.innerHTML = this.html;
-
-                div.addEventListener("click", (e) => {
-                    e.stopPropagation();
-                    this.onClick();
-                });
-
+                div.addEventListener("click", (e) => { e.stopPropagation(); this.onClick(); });
                 this.div = div;
                 const panes = this.getPanes();
                 panes?.overlayMouseTarget.appendChild(div);
@@ -292,8 +438,8 @@ function GoogleMapContainer({
                 const overlayProjection = this.getProjection();
                 const position = overlayProjection.fromLatLngToDivPixel(this.latlng);
                 if (position) {
-                    this.div.style.left = (position.x - 20) + "px"; // center it
-                    this.div.style.top = (position.y - 20) + "px";  // center it
+                    this.div.style.left = (position.x - 20) + "px";
+                    this.div.style.top = (position.y - 20) + "px";
                 }
             }
 
@@ -308,7 +454,6 @@ function GoogleMapContainer({
         reports.forEach((report) => {
             const isSelected = selectedReport?.id === report.id;
             const categoryInfo = categoryMeta[report.category] || { icon: "📍", color: "", bg: "" };
-
             const markerHtml = `
                 <div class="relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${
                     isSelected
@@ -318,62 +463,27 @@ function GoogleMapContainer({
                     <span class="text-lg">${categoryInfo.icon}</span>
                 </div>
             `;
-
             const latlng = new google.maps.LatLng(report.coordinates.lat, report.coordinates.lng);
-
-            // Handler for click
             const handleMarkerClick = () => {
                 setSelectedReport(report);
-
-                if (activeInfoWindowRef.current) {
-                    activeInfoWindowRef.current.close();
-                }
-
+                if (activeInfoWindowRef.current) activeInfoWindowRef.current.close();
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div class="p-2 min-w-[150px]" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs font-bold text-white">${report.id}</span>
-                            </div>
-                            <p class="text-[11px] text-slate-300 mb-2">${report.location}</p>
-                            <button class="w-full py-1.5 bg-teal-500 rounded text-[10px] font-bold text-white uppercase tracking-widest pointer-events-none">Details View</button>
-                        </div>
-                    `,
+                    content: `<div class="p-2 min-w-[150px]"><div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-white">${report.id}</span></div><p class="text-[11px] text-slate-300 mb-2">${report.location}</p></div>`,
                     pixelOffset: new google.maps.Size(0, -20),
                 });
-
-                infoWindow.open({
-                    map: mapRef.current,
-                    shouldFocus: false,
-                });
+                infoWindow.open({ map: mapRef.current, shouldFocus: false });
                 infoWindow.setPosition(latlng);
                 activeInfoWindowRef.current = infoWindow;
             };
-
             const overlay = new CustomHTMLOverlay(latlng, markerHtml, handleMarkerClick);
             overlay.setMap(mapRef.current);
-
             markersRef.current.push({ id: report.id, overlay, latlng, report });
-
-            // If selected report, trigger InfoWindow popup automatically
             if (isSelected) {
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div class="p-2 min-w-[150px]" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs font-bold text-white">${report.id}</span>
-                            </div>
-                            <p class="text-[11px] text-slate-300 mb-2">${report.location}</p>
-                            <button class="w-full py-1.5 bg-teal-500 rounded text-[10px] font-bold text-white uppercase tracking-widest pointer-events-none">Details View</button>
-                        </div>
-                    `,
+                    content: `<div class="p-2 min-w-[150px]"><div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-white">${report.id}</span></div><p class="text-[11px] text-slate-300 mb-2">${report.location}</p></div>`,
                     pixelOffset: new google.maps.Size(0, -20),
                 });
-
-                infoWindow.open({
-                    map: mapRef.current,
-                    shouldFocus: false,
-                });
+                infoWindow.open({ map: mapRef.current, shouldFocus: false });
                 infoWindow.setPosition(latlng);
                 activeInfoWindowRef.current = infoWindow;
             }
@@ -382,10 +492,9 @@ function GoogleMapContainer({
 
     if (!process.env.NEXT_PUBLIC_MAPS_API_Key) {
         return (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-[#0d1f2d] text-slate-400 p-6 text-center border border-white/5" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+            <div className="w-full h-full flex flex-col items-center justify-center bg-[#0d1f2d] text-slate-400 p-6 text-center border border-white/5">
                 <span className="text-3xl mb-2">⚠️</span>
                 <p className="text-sm font-bold uppercase tracking-wider text-slate-200">Google Maps API Key Missing</p>
-                <p className="text-xs text-slate-500 mt-1 max-w-md">Please specify NEXT_PUBLIC_MAPS_API_Key in your .env.local configuration file.</p>
             </div>
         );
     }
@@ -393,31 +502,17 @@ function GoogleMapContainer({
     return (
         <div className="w-full h-full relative">
             {!googleLoaded && (
-                <div className="absolute inset-0 bg-[#0d1f2d] flex flex-col items-center justify-center text-slate-400 z-10" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+                <div className="absolute inset-0 bg-[#0d1f2d] flex flex-col items-center justify-center text-slate-400 z-10">
                     <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mb-3" />
                     <p className="text-xs uppercase tracking-widest text-slate-500">Loading Google Maps...</p>
                 </div>
             )}
-
             {googleLoaded && (
                 <div className="absolute top-4 right-4 flex flex-col gap-1.5 z-20">
-                    <button
-                        onClick={handleZoomIn}
-                        className="w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-xl font-bold text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md select-none"
-                        title="Zoom In"
-                    >
-                        ＋
-                    </button>
-                    <button
-                        onClick={handleZoomOut}
-                        className="w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-xl font-bold text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md select-none"
-                        title="Zoom Out"
-                    >
-                        －
-                    </button>
+                    <button onClick={handleZoomIn} className="w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-xl font-bold text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md">＋</button>
+                    <button onClick={handleZoomOut} className="w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-xl font-bold text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md">－</button>
                 </div>
             )}
-
             <div ref={containerRef} className="w-full h-full" />
         </div>
     );
@@ -433,10 +528,14 @@ export default function MapView() {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [loading] = useState(false);
 
-    // Reset district when province changes
     useEffect(() => {
         setSelectedDistrict("All");
+        setSelectedReport(null);
     }, [selectedProvince]);
+
+    useEffect(() => {
+        setSelectedReport(null);
+    }, [selectedDistrict]);
 
     const filteredReports = useMemo(() => {
         return reports.filter(r => {
@@ -450,109 +549,53 @@ export default function MapView() {
     }, [reports, filter, searchQuery, selectedProvince, selectedDistrict]);
 
     const mapCenter: [number, number] = useMemo(() => {
-        if (selectedReport) {
-            return [selectedReport.coordinates.lat, selectedReport.coordinates.lng];
+        if (selectedReport) return [selectedReport.coordinates.lat, selectedReport.coordinates.lng];
+        if (selectedDistrict !== "All") {
+            const geo = districtGeoinfo[selectedDistrict];
+            if (geo) return [geo.lat, geo.lng];
         }
-        if (filteredReports.length > 0) {
-            return [filteredReports[0].coordinates.lat, filteredReports[0].coordinates.lng];
+        if (selectedProvince !== "All") {
+            const geo = provinceGeoinfo[selectedProvince];
+            if (geo) return [geo.lat, geo.lng];
         }
-        return [6.9271, 79.8612]; // Default Colombo
-    }, [selectedReport, filteredReports]);
+        return [6.9271, 79.8612];
+    }, [selectedReport, selectedProvince, selectedDistrict, filteredReports]);
 
     return (
         <div className="h-full w-full flex flex-col md:flex-row md:overflow-hidden relative animate-slide-up" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
-
             <style jsx global>{`
-                /* Google Maps Overrides and Professional Font Enforcements */
-                .gm-style, .gm-style-iw-c, .gm-style-iw-d, .custom-google-marker, .custom-google-marker * {
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-                }
-                .custom-google-marker {
-                    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                }
-                .custom-google-marker:hover {
-                    transform: scale(1.15);
-                    z-index: 9999 !important;
-                }
-                .gm-style .gm-style-iw-c {
-                    background-color: #0f2233 !important;
-                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
-                    border-radius: 12px !important;
-                    padding: 0 !important;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.5) !important;
-                }
-                .gm-style .gm-style-iw-tc::after {
-                    background: #0f2233 !important;
-                }
-                .gm-style .gm-style-iw-d {
-                    overflow: hidden !important;
-                    max-height: none !important;
-                }
-                .gm-ui-hover-effect {
-                    top: 4px !important;
-                    right: 4px !important;
-                    color: white !important;
-                    background: rgba(255,255,255,0.05) !important;
-                    border-radius: 50% !important;
-                    width: 20px !important;
-                    height: 20px !important;
-                    display: flex !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                }
-                .gm-ui-hover-effect span {
-                    margin: 0 !important;
-                }
-
-                /* Premium Scrollbar Styling */
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 5px;
-                    height: 5px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: rgba(255, 255, 255, 0.02);
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: rgba(20, 184, 166, 0.2);
-                    border-radius: 10px;
-                    transition: background 0.2s;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: rgba(20, 184, 166, 0.4);
-                }
-                .custom-scrollbar {
-                    scrollbar-width: thin;
-                    scrollbar-color: rgba(20, 184, 166, 0.2) rgba(255, 255, 255, 0.02);
-                }
+                .gm-style, .gm-style-iw-c, .gm-style-iw-d, .custom-google-marker, .custom-google-marker * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important; }
+                .custom-google-marker:hover { transform: scale(1.15); z-index: 9999 !important; }
+                .gm-style .gm-style-iw-c { background-color: #0f2233 !important; border: 1px solid rgba(255, 255, 255, 0.1) !important; border-radius: 12px !important; }
+                .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.02); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.2); border-radius: 10px; }
             `}</style>
-
-            {/* ── Left Sidebar: Report List ── */}
-            <div className={`w-full md:w-96 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-none overflow-hidden shadow-2xl z-[1000] flex-shrink-0 transition-all duration-300 ease-in-out ${
+            
+            <div className={`flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-none overflow-hidden shadow-2xl z-[1000] flex-shrink-0 transition-all duration-300 ease-in-out ${
                 isSidebarCollapsed 
-                    ? 'h-0 opacity-0 pointer-events-none -translate-y-full md:h-full md:w-0 md:opacity-0 md:pointer-events-none md:-translate-x-full md:translate-y-0' 
-                    : 'h-[320px] md:h-full md:w-96 md:opacity-100 md:translate-x-0 md:translate-y-0'
+                    ? 'h-0 opacity-0 pointer-events-none -translate-y-full md:h-full md:w-0 md:min-w-0 md:opacity-0 md:pointer-events-none md:-translate-x-full md:translate-y-0' 
+                    : 'h-[320px] md:h-full w-full md:w-96 md:opacity-100 md:translate-x-0 md:translate-y-0'
             }`}>
-                <div className="p-4 border-b border-white/5 space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div>
+                <div className="w-full md:w-[384px] h-full flex flex-col flex-shrink-0">
+                    <div className="p-4 border-b border-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
                             <h2 className="text-lg font-bold text-white tracking-tight">Active Reports</h2>
+                            <div className="flex items-center gap-2">
+                                {loading && (
+                                    <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+                                )}
+                                <button
+                                    onClick={() => setIsSidebarCollapsed(true)}
+                                    className="p-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg border border-white/5 hover:border-white/10 transition-all active:scale-95 cursor-pointer flex items-center justify-center"
+                                    title="Collapse Sidebar"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {loading && (
-                                <div className="w-4 h-4 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
-                            )}
-                            <button
-                                onClick={() => setIsSidebarCollapsed(true)}
-                                className="p-1.5 bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white rounded-lg border border-white/5 hover:border-white/10 transition-all active:scale-95 cursor-pointer flex items-center justify-center"
-                                title="Collapse Sidebar"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
 
                     <div className="relative">
                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -668,6 +711,7 @@ export default function MapView() {
                         </div>
                     )}
                 </div>
+                </div>
             </div>
 
             {isSidebarCollapsed && (
@@ -690,10 +734,15 @@ export default function MapView() {
                     selectedReport={selectedReport}
                     setSelectedReport={setSelectedReport}
                     mapCenter={mapCenter}
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    selectedProvince={selectedProvince}
+                    selectedDistrict={selectedDistrict}
                 />
 
                 {/* Info BarHUD */}
-                <div className="absolute top-4 left-4 px-3 py-1.5 bg-black/50 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-mono text-slate-300 flex items-center gap-3 shadow-lg pointer-events-none z-[1000]">
+                <div className={`absolute top-4 ${
+                    isSidebarCollapsed ? 'left-16' : 'left-4'
+                } px-3 py-1.5 bg-black/50 backdrop-blur-md border border-white/10 rounded-full text-[9px] font-mono text-slate-300 flex items-center gap-3 shadow-lg pointer-events-none z-[1000] transition-all duration-300`}>
                     <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" /> MAP HUB</span>
                     <span className="w-px h-2 bg-white/20" />
                     <span>GOOGLE MAPS API</span>

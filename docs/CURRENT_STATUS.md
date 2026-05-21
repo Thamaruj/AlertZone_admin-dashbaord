@@ -84,7 +84,7 @@
 ### Reports Management (`Reportsmanagement.tsx`)
 - [ ] Reports table — uses mock data types that **don't match** the mobile app's Firestore schema
 - [ ] Status values are wrong: `"Reported" | "In Progress" | "Solved" | "Closed"` instead of `"PENDING" | "ASSIGNED" | "FIXING" | "RESOLVED" | "REJECTED"`
-- [ ] Category values are wrong: `"Hazard" | "Lighting" | "Waste" | "Roads" | "Water" | "Safety"` instead of mobile app categories
+- [ ] Category values are updated to match planned integration: `"Road & Traffic" | "Water and Drainage" | "Waste & Environment" | "Social Security" | "Bridge & Structural" | "Other"` (still mock, not Firestore-wired)
 - [ ] No Firebase queries
 - [ ] No status update functionality
 - [ ] No notification creation on status change
@@ -92,7 +92,10 @@
 ### Map View (`Mapview.tsx`)
 - [x] Google Maps renders mock report pins around Colombo and other Sri Lankan regions
 - [x] Cascade filtering — selects province to dynamically load districts and center map
+- [x] Province/District boundary highlighting via OpenStreetMap Nominatim GeoJSON — exact polygon overlaid on Google Maps Data Layer (no more approximation circles)
+- [x] Map auto-fits bounds to the selected province/district polygon
 - [x] Marker categories, InfoWindows, and selection sync fully integrated with dashboard details panel overlay
+- [x] Sidebar collapse frees full map width (flex-1 layout fix)
 - [ ] No Firestore data subscription
 - [ ] No category/status filters wired to real data
 
