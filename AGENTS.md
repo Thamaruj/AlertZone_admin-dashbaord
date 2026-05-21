@@ -86,19 +86,21 @@ The **Admin Dashboard** is the operations center where local authority admins ma
 - **Write TypeScript** with proper types from `lib/types/`.
 
 ### Before EVERY Commit (MANDATORY)
-
-> **⚠️ Non-negotiable**: Before running `git commit`, you MUST update these two files to reflect what was changed:
-
-1. **Update `docs/CURRENT_STATUS.md`** — mark completed items, update status columns, and add notes about what changed.
-2. **Update `docs/PROJECT_PROGRESS.md`** — add a dated entry describing what was done.
-
-These files are the single source of truth for the project's state. Committing without updating them creates confusion for all team members.
-
-### After Completing Work
-
-1. **Verify** the two files above are updated (they should already be from the pre-commit step).
-2. **Commit with a descriptive message** — format: `feat: <what was done>` or `fix: <what was fixed>`.
-3. **Do not break existing features** — if you change auth flow or navigation, verify the app still loads.
+ 
+ > **⚠️ Non-negotiable**: Before running `git commit`, you MUST:
+ 
+ 1. **Update `docs/CURRENT_STATUS.md`** — mark completed items, update status columns, and add notes about what changed.
+ 2. **Update `docs/PROJECT_PROGRESS.md`** — add a dated entry describing what was done.
+ 3. **Ask the user for approval** — Ask the user for explicit confirmation before committing any code changes or pushing them to GitHub. Always preview which files will be committed, show a brief summary of changes, and display the proposed commit message first.
+ 
+ These files are the single source of truth for the project's state. Committing without updating them creates confusion for all team members.
+ 
+ ### After Completing Work
+ 
+ 1. **Verify** the two files above are updated.
+ 2. **Obtain user approval** before running git commit and push commands.
+ 3. **Commit with a descriptive message** — format: `feat: <what was done>` or `fix: <what was fixed>`.
+ 4. **Do not break existing features** — if you change auth flow or navigation, verify the app still loads.
 
 ### Commit Message Convention
 
