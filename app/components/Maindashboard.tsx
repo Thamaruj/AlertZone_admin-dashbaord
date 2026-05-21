@@ -20,12 +20,12 @@ type NavItem = { label: string; icon: React.ReactNode; id: string };
 // ─── Category / Status Meta ───────────────────────────────────────────────────
 
 const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
-    Hazard: { color: "text-rose-400", bg: "bg-rose-500/10", icon: "⚠️" },
-    Lighting: { color: "text-yellow-400", bg: "bg-yellow-500/10", icon: "💡" },
-    Waste: { color: "text-green-400", bg: "bg-green-500/10", icon: "🗑️" },
-    Roads: { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
-    Water: { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
-    Safety: { color: "text-violet-400", bg: "bg-violet-500/10", icon: "🛡️" },
+    "Road & Traffic": { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
+    "Water and Drainage": { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
+    "Waste & Environment": { color: "text-green-400", bg: "bg-green-500/10", icon: "♻️" },
+    "Social Security": { color: "text-violet-400", bg: "bg-violet-500/10", icon: "🛡️" },
+    "Bridge & Structural": { color: "text-orange-400", bg: "bg-orange-500/10", icon: "🌉" },
+    "Other": { color: "text-slate-400", bg: "bg-slate-500/10", icon: "📍" },
 };
 
 const statusMeta: Record<Report["status"], { color: string; bg: string; dot: string }> = {

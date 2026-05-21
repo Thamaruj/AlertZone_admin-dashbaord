@@ -123,6 +123,35 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 - Username: `superadmin`
 - Password: `admin1234`
 
+- **[2026-05-21] Google Maps Migration, Collapsible Sidebar & Custom Controls:**
+    - Replaced the Leaflet map completely to exclusively run Google Maps JavaScript API with custom premium dark mode themes.
+    - Uninstalled `leaflet`, `@types/leaflet`, and `react-leaflet` to clean up codebase dependencies.
+    - Implemented dynamic cascading Sri Lankan Province and District dropdown filters on the reports list sidebar.
+    - Added a collapsible sidebar toggle mechanism (sliding left on desktop, up on mobile) allowing the map to take full width when collapsed.
+    - Replaced default Google Maps zoom controls with custom premium glassmorphic zoom buttons.
+    - Styled custom rounded teal scrollbars for scrollable lists inside the map sidebar.
+    - Removed the "Live from Firebase" sub-text element.
+    - Added automatic map centering logic to pan/re-center on filtered items and active marker selections.
+    - Applied clean, professional sans-serif typography across all map overlay elements, custom HTML markers, and InfoWindows.
+    - Expanded `MOCK_REPORTS` in `app/data/mockData.ts` to include realistic coordinates, provinces, and districts spanning multiple Sri Lankan regions (Western, Central, Southern, Northern, Eastern) to verify cascading filters.
+    - Successfully compiled and tested Next.js production build without any linting, TS compiler, or peer-dependency regressions.
+
+---
+
+- **[2026-05-21] Map Boundary Highlighting, Sidebar Fix & Report Category Overhaul:**
+    - **Report Categories Renamed**: Updated `ReportCategory` type and all category metadata across `mockData.ts`, `Mapview.tsx`, `Reportsmanagement.tsx`, and `Maindashboard.tsx` to use the final agreed categories: `Road & Traffic`, `Water and Drainage`, `Waste & Environment`, `Social Security`, `Bridge & Structural`, `Other`. Updated mock report entries and `INCIDENT_BY_CATEGORY` data to use new categories.
+    - **Exact Province/District Polygon Highlighting**: Replaced the approximate circle overlay with a proper `google.maps.Data` layer that fetches real GeoJSON polygon boundaries from the OpenStreetMap Nominatim API. When a province or district is selected, the exact administrative boundary is drawn on the map with a teal fill/stroke. Map also auto-fits bounds to the polygon via `fitBounds()`.
+    - **Sidebar Collapse Layout Fix**: Fixed the sidebar collapse so the Google Maps area (`flex-1`) correctly expands to fill the freed space when the sidebar is collapsed. Removed fixed `w-full md:w-96` from the outer container; width is now fully conditional on the `isSidebarCollapsed` state, allowing the map to take full available width on desktop.
+
+---
+
+- **[2026-05-21] Switch to Local geoBoundaries Land-Clipped GeoJSON for Boundary Highlighting:**
+    - **Land-Clipped Boundaries**: Replaced the Nominatim API boundary highlighting with high-quality local GeoJSON files from geoBoundaries (LKA ADM1 for provinces, LKA ADM2 for districts) to avoid highlighting parts of the sea for coastal districts and provinces.
+    - **Offline Local Serving**: Saved the GeoJSON files directly into the project at `public/geojson/lka-adm1.geojson` and `public/geojson/lka-adm2.geojson` to solve performance, rate limiting, and CORS issues.
+    - **LFS Text Pointer Resolving**: Addressed a bug where loading files from GitHub raw fetched LFS text pointers instead of the actual JSON data, by serving and loading files locally via standard Next.js pathing (`/geojson/lka-adm1.geojson`).
+    - **Name & Suffix Normalization**: Updated `matchesRegion` comparison logic to dynamically strip " Province" and " District" suffixes from geoBoundaries features to match dropdown filter names.
+    - **Spelling Alias Support**: Implemented a spelling normalization mapping to reconcile spelling discrepancies between the dropdowns and geoBoundaries (e.g., translating "Moneragala" to "Monaragala").
+
 ---
 
 *Last Updated: 2026-05-21*
