@@ -123,6 +123,15 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 - Username: `superadmin`
 - Password: `admin1234`
 
+- **[2026-05-21] Google Maps Migration & Regional Filters:**
+    - Replaced the Leaflet map completely to exclusively run Google Maps JavaScript API with custom premium dark mode themes.
+    - Uninstalled `leaflet`, `@types/leaflet`, and `react-leaflet` to clean up codebase dependencies.
+    - Implemented dynamic cascading Sri Lankan Province and District dropdown filters on the reports list sidebar.
+    - Added automatic map centering logic to pan/re-center on filtered items and active marker selections.
+    - Applied clean, professional sans-serif typography across all map overlay elements, custom HTML markers, and InfoWindows.
+    - Expanded `MOCK_REPORTS` in `app/data/mockData.ts` to include realistic coordinates, provinces, and districts spanning multiple Sri Lankan regions (Western, Central, Southern, Northern, Eastern) to verify cascading filters.
+    - Successfully compiled and tested Next.js production build without any linting, TS compiler, or peer-dependency regressions.
+
 ---
 
 *Last Updated: 2026-05-21*

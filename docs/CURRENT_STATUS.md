@@ -17,7 +17,7 @@
 | Phase 4: User Management (Live) | 🔴 Not Started | UI exists with mock data |
 | Phase 5: Notifications System | 🔴 Not Started | UI exists with mock notifications |
 | Phase 6: Analytics (Live) | 🔴 Not Started | UI exists with hardcoded chart data |
-| Phase 7: Map View (Live) | 🔴 Not Started | Leaflet map renders but no real data |
+| Phase 7: Map View (Live) | 🟡 Partially Done | Google Maps integration complete with Sri Lankan Province/District filters |
 | Phase 8: Push Notifications (FCM) | 🔴 Not Started | Not implemented |
 
 ---
@@ -38,7 +38,10 @@
 - [x] Main dashboard layout — sidebar nav + topbar + content area
 - [x] Dashboard overview — stat cards, donut chart, bar chart, line chart, recent reports table
 - [x] Reports management page — table with filters, search, detail view
-- [x] Map view — Leaflet integration with dynamic import (SSR-safe)
+- [x] Map view — Google Maps API integration with dynamic script loader (SSR-safe)
+- [x] Map custom style — premium dark-mode styling configuration for Google Maps
+- [x] Interactive filters — Province and District cascading dropdowns with coordinate centering
+- [x] Map markers & overlays — custom category markers and popups with selection synchronization
 - [x] Users management page — user list with search and filters
 - [x] Analytics page — multiple chart types and data visualizations
 - [x] Notifications page — notification list with read/unread status
@@ -58,9 +61,9 @@
 ### Dashboard Overview (`Maindashboard.tsx`)
 - [ ] Stat cards — all values hardcoded (`1,284`, `432`, `215`, `537`, `100`)
 - [ ] Donut chart — hardcoded values
-- [ ] Bar chart — reads from `BAR_DATA` (empty array in mockData.ts)
-- [ ] Line chart — reads from `MONTHLY_DATA` (empty array in mockData.ts)
-- [ ] Recent reports table — reads from `MOCK_REPORTS` (empty array)
+- [x] Bar chart — reads from `BAR_DATA` (populated in mockData.ts)
+- [x] Line chart — reads from `MONTHLY_DATA` (populated in mockData.ts)
+- [x] Recent reports table — reads from `MOCK_REPORTS` (populated in mockData.ts)
 - [ ] User profile in topbar — hardcoded "Alex Morgan / Super Admin"
 
 ### Admin Login (`Adminlogin.tsx`)
@@ -84,7 +87,9 @@
 - [ ] No notification creation on status change
 
 ### Map View (`Mapview.tsx`)
-- [ ] Leaflet map renders but with no real report pins
+- [x] Google Maps renders mock report pins around Colombo and other Sri Lankan regions
+- [x] Cascade filtering — selects province to dynamically load districts and center map
+- [x] Marker categories, InfoWindows, and selection sync fully integrated with dashboard details panel overlay
 - [ ] No Firestore data subscription
 - [ ] No category/status filters wired to real data
 
@@ -133,11 +138,13 @@
 - [ ] Date range filtering
 
 ### Map
-- [ ] Real report pins from Firestore
-- [ ] Color-coded pins by status/category
-- [ ] Pin click → report detail popup
+- [x] Integrate Google Maps JavaScript API with a custom premium dark styling configuration
+- [x] Support custom marker overlays utilizing categories and selection sync with dashboard details panel
+- [x] Cascading Province and District filters targeting Sri Lankan regions
+- [x] Center panning on active elements and selection updates
+- [ ] Real report pins from Firestore (live subscription)
 - [ ] Marker clustering for dense areas
-- [ ] Real-time updates on map
+- [ ] Real-time updates on map (live subscription)
 
 ### Notifications
 - [ ] Create Firestore notifications on status change
@@ -191,8 +198,8 @@
 | `firebase` v12 | ✅ | 🟡 Partially | SDK init only, no actual queries |
 | `next` v16 | ✅ | ✅ | App Router working |
 | `react` v19 | ✅ | ✅ | — |
-| `leaflet` | ✅ | ✅ | Map renders (no real data) |
-| `react-leaflet` | ✅ | ✅ | — |
+| `leaflet` | ❌ | ❌ | Removed (replaced with Google Maps) |
+| `react-leaflet` | ❌ | ❌ | Removed (replaced with Google Maps) |
 | `tailwindcss` v4 | ✅ | ✅ | Styling works |
 | Chart library | ❌ | — | Using custom SVG charts currently |
 | `firebase-admin` | ✅ | ✅ | Used in server-side authentication service (auth.service.ts) to bypass client security rules |
