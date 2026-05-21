@@ -78,29 +78,34 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
-## 🔲 Upcoming Phases
+### Phase 4: Admin Authentication — Hardcoded Credentials System
+- **Status:** ✅ Completed — 2026-05-21
 
-### Phase 3: Foundation (Types, Services, Hooks)
-- **Status:** 🔴 Not Started
-- Create TypeScript types matching mobile app's Firestore schema.
-- Build service layer for all Firebase operations.
-- Create custom React hooks.
-- Set up Auth Context.
+**What was implemented:**
+- Replaced fake `setTimeout` login with a real, secure authentication system.
+- **Superadmin** credentials stored server-side in `.env.local` (`SUPERADMIN_USERNAME`, `SUPERADMIN_PASSWORD_HASH`).
+- **Additional admins** stored in Firestore `adminUsers` collection with `bcryptjs` password hashing.
+- **JWT session cookies** (`jose`) — HttpOnly, SameSite=Lax. 8-hour default, 30-day "keep me logged in".
+- **`lib/services/auth.service.ts`** — server-side only service: credential validation, JWT creation/verification, admin CRUD.
+- **API routes**:
+  - `POST /api/auth/login` — validates credentials, sets cookie
+  - `POST /api/auth/logout` — clears cookie
+  - `GET /api/auth/session` — restores session on page load
+  - `GET/POST /api/admin-users` — list / create admin users (superadmin only)
+  - `PATCH/DELETE /api/admin-users/[id]` — update / delete (superadmin only)
+- **`lib/context/AuthContext.tsx`** — React context provider exposing `user`, `isSuperAdmin`, `login`, `logout`.
+- **`lib/hooks/useAuth.ts`** — convenience re-export.
+- **`lib/types/auth.ts`** — `AdminUser`, `AdminSession`, `AdminRole` types.
+- **`lib/constants/auth.ts`** — role metadata, cookie name, session durations.
+- **Updated `Adminlogin.tsx`** — removed email field and fake auth; real error messages.
+- **Updated `Maindashboard.tsx`** — real user display (name + role badge) from context; logout button in sidebar; "Admin Users" tab visible only to superadmin.
+- **New `AdminUserManagement.tsx`** — table of Firestore admin accounts; create/deactivate/delete modal; superadmin-only.
+- **`scripts/hash-password.mjs`** — utility to generate bcrypt hashes for `.env.local`.
 
-### Phase 4: Admin Authentication
-- **Status:** 🔴 Not Started
-- Wire login to Firebase Auth with admin role verification.
-- Add session persistence.
-
-### Phase 5: Reports Management — Firestore Integration
-- **Status:** 🔴 Not Started
-- Replace all mock data with real Firestore queries.
-- Implement status updates with notification creation.
-
-### Phase 6-10: Remaining Features
-- Dashboard overview, User management, Map, Analytics, Notifications, Polish.
-- See `IMPLEMENTATION_PLAN.md` for full details.
+**Default superadmin credentials (change before production):**
+- Username: `superadmin`
+- Password: `admin1234`
 
 ---
 
-*Last Updated: 2026-05-20*
+*Last Updated: 2026-05-21*
