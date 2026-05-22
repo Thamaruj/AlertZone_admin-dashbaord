@@ -82,6 +82,11 @@
 - [x] Role-based access: `admin` and `superadmin` roles
 - [x] Username-only login (email removed — can be added later)
 - [x] Real error messages for wrong credentials
+- [x] Clear error message when deactivated/suspended admin accounts attempt to log in ("Your account has been deactivated. Kindly contact the administration.")
+- [x] Real-time admin account deactivation tracking via Firestore client listener in AuthContext
+- [x] Forced logout with 2-minute countdown timer and blur overlay on deactivation
+- [x] Superadmin active admin warning popup: alerts superadmin if they attempt to deactivate an admin who has been active in the last 20 seconds
+- [x] Superadmin active admin deletion block: prevents deletion of admin accounts that are active or online, requiring deactivation and logout first.
 - [ ] "Forgot password" — not implemented (hardcoded credentials don't support reset)
 
 ### Reports Management (`Reportsmanagement.tsx`)
