@@ -218,6 +218,15 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Implemented a two-step confirmation modal for status changes to prevent accidental state mutations and explicitly inform the admin that a notification will be pushed to the citizen.
     - Refined the UI detail panel to render dynamic storage image arrays and parse timestamp formatting directly from Firestore server timestamps.
 
+- **[2026-05-22] Reports Management UI Polish & Map Integration:**
+    - Adjusted the Reports List card hierarchy to prominently display the "Type of Incident" (e.g., Road & Traffic Incident) as the main title, pushing the Incident ID to the bottom of the card information cluster.
+    - Expanded the location metadata display to show the full `{Province}, {District}, {Local Government Area}` string instead of just the area, applied across both list views and the minimap overlay.
+    - Created a new `MiniMap.tsx` component that dynamically loads the Google Maps API and renders an interactive map view inside the report details modal, perfectly centering on the report's coordinates using the standard native red Google map marker.
+    - Upgraded the "Status Timeline & Notes" history view to dynamically pull color styles from `statusStyleMeta`, ensuring that each log entry visually reflects the severity/color of its respective status (e.g., Teal for Resolved, Orange for Reported).
+    - Extracted the comprehensive user profile view from `Users.tsx` into a reusable `UserDetailsModal.tsx` component. Integrated it into the Reports view, so clicking a reporter's detail card instantly fetches their profile via a new `/api/users/[id]` GET endpoint and opens their full user statistics and history.
+    - Rewrote the geographical location reverse-lookup algorithm to be more highly fault-tolerant. It now aggressively scans both the address string and the local area string to reliably deduce the Province, District, and Local Government Area, drastically reducing empty map labels. It also actively provides a UI fallback instead of silently failing when data is purely GPS coordinates.
+    - Added the user's actual profile avatar image directly into the "Reporter Details" card immediately when opening the report detail modal, replacing the previous initials placeholder and giving the view a more personalized feel.
+
 ---
 
 *Last Updated: 2026-05-22*

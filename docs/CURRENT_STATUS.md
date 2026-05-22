@@ -60,6 +60,15 @@
 - [x] Sidebar Navigation Refinements — styled vertical nav tabs, removed glowing effect from left-top brand badge, and updated label to "Admin Dashboard"
 - [x] Premium Custom Scrollbars — added smooth custom scrollbars globally for Webkit and Firefox browsers
 
+### Reports Management (Live)
+- [x] Real-time Firebase Firestore data synchronization for reports
+- [x] Full UI detail modal with dynamic timeline styles matching report statuses
+- [x] Real status updates push to Firestore and log the `statusHistory` automatically
+- [x] Automatic user notification generation within Firestore when an admin changes a report status
+- [x] Robust reverse geographical lookup for locations mapping suburbs and GPS directly to formal Provinces and Districts, falling back gracefully if only coordinates are provided
+- [x] User avatars embedded directly into reporter cards, fetched instantly upon opening the modal
+- [x] Reporter ID removed from UI for cleaner layout
+
 ---
 
 ## What Uses MOCK DATA (UI exists, not wired to Firebase) 🟡
@@ -88,14 +97,6 @@
 - [x] Superadmin active admin warning popup: alerts superadmin if they attempt to deactivate an admin who has been active in the last 20 seconds
 - [x] Superadmin active admin deletion block: prevents deletion of admin accounts that are active or online, requiring deactivation and logout first.
 - [ ] "Forgot password" — not implemented (hardcoded credentials don't support reset)
-
-### Reports Management (`Reportsmanagement.tsx`)
-- [x] Reports table — uses mock data types that **don't match** the mobile app's Firestore schema
-- [x] Status values are wrong: `"Reported" | "In Progress" | "Solved" | "Closed"` instead of `"PENDING" | "ASSIGNED" | "FIXING" | "RESOLVED" | "REJECTED"`
-- [x] Category values are updated to match planned integration: `"Road & Traffic" | "Water and Drainage" | "Waste & Environment" | "Social Security" | "Bridge & Structural" | "Other"` (still mock, not Firestore-wired)
-- [x] No Firebase queries
-- [x] No status update functionality
-- [x] No notification creation on status change
 
 ### Map View (`Mapview.tsx`)
 - [x] Google Maps renders mock report pins around Colombo and other Sri Lankan regions
@@ -141,7 +142,7 @@
 - [x] User management — read users, suspend/activate
 - [ ] Report archival (soft-delete with `isArchived`)
 - [ ] Report assignment (`assignedTo` field)
-- [ ] Resolution notes (`resolutionNote` field)
+- [x] Resolution notes (`resolutionNote` field)
 
 ### Analytics & Data
 - [ ] Real-time stats aggregation from Firestore

@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { useReports } from "@/lib/hooks/useReports";
 import { Report, ReportStatus } from "@/lib/types/report";
+import { UserProfile } from "@/lib/types/user";
 import { categoryStyleMeta } from "@/lib/constants/categories";
 import { statusStyleMeta } from "@/lib/constants/statuses";
+import { sriLankaGeographics } from "@/lib/constants/sriLankaRegions";
+import MiniMap from "./MiniMap";
+import UserDetailsModal from "./UserDetailsModal";
 
 export default function ReportsManagement() {
     const { reports, loading, changeStatus } = useReports("All");
@@ -14,6 +18,11 @@ export default function ReportsManagement() {
     const [statusReason, setStatusReason] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+
+    // User details modal state
+    const [selectedReporter, setSelectedReporter] = useState<UserProfile | null>(null);
+    const [fetchingReporter, setFetchingReporter] = useState(false);
+    const [showReporterModal, setShowReporterModal] = useState(false);
 
     const filteredReports = selectedTab === "All"
         ? reports
@@ -52,11 +61,74 @@ export default function ReportsManagement() {
         }
     };
 
+    const fetchReporterProfile = async (uid: string) => {
+        if (!uid) return;
+        setFetchingReporter(true);
+        try {
+            const res = await fetch(`/api/users/${uid}`);
+            if (!res.ok) throw new Error("Failed to fetch user");
+            const data = await res.json();
+            setSelectedReporter(data.user);
+        } catch (error) {
+            console.error("Error fetching reporter profile:", error);
+        } finally {
+            setFetchingReporter(false);
+        }
+    };
+
+    const handleReporterClick = () => {
+        if (selectedReporter) {
+            setShowReporterModal(true);
+        }
+    };
+
+    const resolveLocation = (location: any) => {
+        if (!location) return { province: "Unknown Province", district: "Unknown District", lga: "Unknown Area" };
+        if (location.province && location.district && location.localGovernmentArea) {
+            return {
+                province: location.province,
+                district: location.district,
+                lga: location.localGovernmentArea
+            };
+        }
+        
+        const areaStr = (location.area || "").toLowerCase().trim();
+        const addressStr = (location.address || "").toLowerCase().trim();
+        
+        for (const [province, districts] of Object.entries(sriLankaGeographics)) {
+            for (const [district, lgas] of Object.entries(districts)) {
+                if ((areaStr && district.toLowerCase() === areaStr) || addressStr.includes(district.toLowerCase())) {
+                    return { province, district, lga: location.area || district };
+                }
+                
+                for (const lga of lgas) {
+                    const cleanLga = lga.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").toLowerCase().trim();
+                    if (areaStr && cleanLga.includes(areaStr)) {
+                        return { province, district, lga };
+                    }
+                    if (addressStr && addressStr.includes(cleanLga)) {
+                        return { province, district, lga };
+                    }
+                    if (areaStr && areaStr.includes(cleanLga)) {
+                        return { province, district, lga };
+                    }
+                }
+            }
+        }
+        
+        return {
+            province: location.province || "Unknown Province",
+            district: location.district || "Unknown District",
+            lga: location.localGovernmentArea || location.area || "Unknown Area"
+        };
+    };
+
     const openDetails = (report: Report) => {
         setSelectedReport(report);
         setTempStatus(report.status);
-        setStatusReason("");
-        setShowConfirm(false);
+        setSelectedReporter(null);
+        setShowReporterModal(false);
+        fetchReporterProfile(report.uid);
     };
 
     const formatDate = (dateValue: any) => {
@@ -135,19 +207,24 @@ export default function ReportsManagement() {
                                             {cat.icon}
                                         </div>
                                         <div className="space-y-1">
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-sm font-bold text-white tracking-tight">{report.id}</span>
-                                            </div>
-                                            <h3 className="text-sm font-semibold text-slate-200">{report.category} Incident</h3>
+                                            <h3 className="text-sm font-bold text-white">{report.category} Incident</h3>
                                             <div className="flex items-center gap-3 text-[11px] text-slate-400">
                                                 <span className="flex items-center gap-1">
-                                                    <svg className="w-3 h-3 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                                    {report.location?.area || "Unknown Area"}
+                                                    <svg className="w-3 h-3 text-teal-500/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                                    <span className="truncate max-w-[200px] md:max-w-[300px]">
+                                                        {(() => {
+                                                            const loc = resolveLocation(report.location);
+                                                            return [loc.province, loc.district, loc.lga].filter(Boolean).join(", ");
+                                                        })()}
+                                                    </span>
                                                 </span>
                                                 <span className="flex items-center gap-1">
                                                     <svg className="w-3 h-3 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                                                     {formatDate(report.createdAt)}
                                                 </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-slate-500 font-mono">Incident ID: {report.id}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -188,13 +265,19 @@ export default function ReportsManagement() {
 
                         {/* Header */}
                         <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between bg-white/2 flex-shrink-0">
-                            <div className="flex items-center gap-3">
-                                <div className={`w-10 h-10 rounded-xl ${(categoryStyleMeta[selectedReport.category] || categoryStyleMeta["Other"]).bg} flex items-center justify-center text-xl`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`w-12 h-12 rounded-xl ${(categoryStyleMeta[selectedReport.category] || categoryStyleMeta["Other"]).bg} flex items-center justify-center text-2xl border border-white/5 shadow-inner`}>
                                     {(categoryStyleMeta[selectedReport.category] || categoryStyleMeta["Other"]).icon}
                                 </div>
-                                <div>
-                                    <h2 className="text-white font-bold tracking-tight">{selectedReport.id} Details</h2>
-                                    <p className="text-[11px] text-slate-400">View evidence, location, and manage notes</p>
+                                <div className="space-y-1">
+                                    <h2 className="text-xl text-white font-bold tracking-tight">{selectedReport.category} Incident</h2>
+                                    <p className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                                        <svg className="w-3.5 h-3.5 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                        {(() => {
+                                            const loc = resolveLocation(selectedReport.location);
+                                            return [loc.province, loc.district, loc.lga].filter(Boolean).join(", ");
+                                        })()}
+                                    </p>
                                 </div>
                             </div>
                             <button
@@ -240,21 +323,12 @@ export default function ReportsManagement() {
 
                                 {/* Mini Map Placeholder */}
                                 <div className="relative h-full min-h-[240px] bg-slate-900 rounded-2xl overflow-hidden border border-white/10 group/map">
-                                    <div className="absolute inset-0 bg-[#0d1f2d] flex items-center justify-center">
-                                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#2dd4bf 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }} />
-                                        <div className="relative text-center">
-                                            <div className="inline-flex p-3 bg-teal-500/10 rounded-full animate-bounce">
-                                                <svg className="w-8 h-8 text-teal-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" /></svg>
-                                            </div>
-                                            {selectedReport.location && (
-                                                <p className="text-[11px] text-teal-400/80 font-mono mt-2 uppercase tracking-widest">
-                                                    {selectedReport.location.latitude?.toFixed(4) || "0.0000"}, {selectedReport.location.longitude?.toFixed(4) || "0.0000"}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="absolute top-4 left-4 p-2 bg-[#0f2233]/90 backdrop-blur-md rounded-lg border border-white/10 text-[10px] text-slate-200">
-                                        {selectedReport.location?.area || "Unknown Area"}
+                                    <MiniMap report={selectedReport} />
+                                    <div className="absolute top-4 left-4 p-2 bg-[#0f2233]/90 backdrop-blur-md rounded-lg border border-white/10 text-[10px] text-slate-200 z-[1000] max-w-[280px]">
+                                        {(() => {
+                                            const loc = resolveLocation(selectedReport.location);
+                                            return [loc.province, loc.district, loc.lga].filter(Boolean).join(", ");
+                                        })()}
                                     </div>
                                 </div>
                             </div>
@@ -262,18 +336,32 @@ export default function ReportsManagement() {
                             {/* Citizen Details & Management */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                                 {/* Reporter Card */}
-                                <div className="p-5 bg-white/2 border border-white/5 rounded-2xl space-y-4 flex flex-col justify-between">
-                                    <div>
-                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3">Reporter Details</p>
+                                <div 
+                                    onClick={handleReporterClick}
+                                    className="p-5 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl space-y-4 flex flex-col justify-between cursor-pointer transition-all group relative overflow-hidden"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-br from-teal-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                    <div className="relative z-10">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center justify-between">
+                                            Reporter Details
+                                            {fetchingReporter && <span className="text-teal-400 normal-case tracking-normal">Loading...</span>}
+                                        </p>
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold">
-                                                {selectedReport.authorName ? selectedReport.authorName.split(' ').map(n => n[0]).join('').substring(0, 2) : '?'}
-                                            </div>
+                                            {selectedReporter?.avatarUrl ? (
+                                                <img src={selectedReporter.avatarUrl} alt="Reporter" className="w-10 h-10 rounded-full object-cover border border-white/10" />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow-inner">
+                                                    {selectedReport.authorName ? selectedReport.authorName.split(' ').map(n => n[0]).join('').substring(0, 2) : '?'}
+                                                </div>
+                                            )}
                                             <div>
-                                                <p className="text-sm font-semibold text-slate-200">{selectedReport.authorName || "Anonymous"}</p>
-                                                <p className="text-[10px] text-slate-400">Upvotes: {selectedReport.upvoteCount || 0}</p>
+                                                <p className="text-sm font-bold text-slate-200 group-hover:text-teal-400 transition-colors">{selectedReport.authorName}</p>
                                             </div>
                                         </div>
+                                    </div>
+                                    <div className="pt-3 border-t border-white/5 relative z-10 flex items-center justify-between">
+                                        <span className="text-[10px] text-teal-400 font-semibold group-hover:underline">View Full Profile</span>
+                                        <svg className="w-4 h-4 text-slate-400 group-hover:text-teal-400 transition-colors transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
                                     </div>
                                 </div>
 
@@ -364,10 +452,12 @@ export default function ReportsManagement() {
                                         <p className="text-xs text-slate-500 italic">No history available for this report.</p>
                                     )}
                                     {/* Reversing history to show latest first */}
-                                    {selectedReport.statusHistory?.slice().reverse().map((entry, idx) => (
+                                    {selectedReport.statusHistory?.slice().reverse().map((entry, idx) => {
+                                        const stColor = statusStyleMeta[entry.status]?.color || "text-teal-400";
+                                        return (
                                         <div key={idx} className="p-4 border rounded-2xl space-y-2 relative transition-all bg-white/3 border-white/5">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-bold text-teal-400">Status changed to {entry.status}</span>
+                                                <span className={`text-[10px] font-bold ${stColor}`}>Status changed to {entry.status}</span>
                                                 <div className="flex items-center gap-3">
                                                     <span className="text-[9px] text-slate-500 font-mono">{formatDate(entry.changedAt)}</span>
                                                 </div>
@@ -376,7 +466,8 @@ export default function ReportsManagement() {
                                                 <p className="text-[11px] text-slate-300 leading-relaxed italic">Note: "{entry.note}"</p>
                                             )}
                                         </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
@@ -389,6 +480,14 @@ export default function ReportsManagement() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* User Details Modal */}
+            {showReporterModal && selectedReporter && (
+                <UserDetailsModal 
+                    user={selectedReporter} 
+                    onClose={() => setShowReporterModal(false)} 
+                />
             )}
         </div>
     );
