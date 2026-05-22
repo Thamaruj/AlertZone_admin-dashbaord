@@ -199,6 +199,10 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - **Superadmin Warnings**:
       - Updated `AdminUserManagement.tsx` to warn the superadmin if they attempt to deactivate an admin currently active (heartbeat within 20 seconds) with: *"(admin name) is currently active on his account. Do you want to continue?"*.
       - Styled the confirmation button as a high-visibility red alert button reading *"Yes, Continue"*.
+    - **Active Admin Deletion Block**:
+      - Implemented a deletion block in `AdminUserManagement.tsx` that prevents deleting admin accounts that are active or online.
+      - If the target admin is active (`isActive === true`) or online (heartbeat within 20 seconds), the delete confirmation modal is replaced with a warning state displaying: *"(admin name) is active. You cannot delete the account when he's active. Please deactivate and once logged out try deleting."*
+      - Replaces confirmation inputs and delete actions with a single "OK" close button.
     - **Validation**:
       - Verified type safety across the workspace by successfully passing `npx tsc --noEmit`.
 

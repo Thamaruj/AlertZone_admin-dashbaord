@@ -348,12 +348,13 @@ export default function AdminUserManagement() {
   };
 
   const targetAdmin = confirmAction ? admins.find((a) => a.id === confirmAction.userId) : null;
-  const isTargetActive =
-    confirmAction?.type === "deactivate" && targetAdmin
+  const isTargetOnline =
+    targetAdmin
       ? targetAdmin.lastActiveAt
         ? Date.now() - new Date(targetAdmin.lastActiveAt).getTime() < 20000
         : false
       : false;
+  const isTargetActive = targetAdmin ? targetAdmin.isActive : false;
 
   return (
     <>
@@ -539,117 +540,143 @@ export default function AdminUserManagement() {
       )}
 
       {/* Action Confirmation Modal */}
-      {confirmAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setConfirmAction(null)}
-          />
+      {confirmAction && (() => {
+        // Dynamic Title
+        let modalTitle = "";
+        if (confirmAction.type === "delete") {
+          modalTitle = (isTargetActive || isTargetOnline) ? "Cannot Delete Active Admin" : "Delete Admin Account";
+        } else if (confirmAction.type === "activate") {
+          modalTitle = "Activate Admin Account";
+        } else { // deactivate
+          modalTitle = isTargetOnline ? "Warning: Active User" : "Deactivate Admin Account";
+        }
 
-          {/* Modal */}
-          <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up">
-            <div className="flex items-start gap-3">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                confirmAction.type === "delete" || isTargetActive
-                  ? "bg-red-500/10"
-                  : confirmAction.type === "activate"
-                  ? "bg-teal-500/10"
-                  : "bg-yellow-500/10"
-              }`}>
-                {confirmAction.type === "delete" || isTargetActive ? (
-                  <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                ) : confirmAction.type === "activate" ? (
-                  <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+        // Dynamic Description
+        let modalDesc = "";
+        if (confirmAction.type === "delete") {
+          modalDesc = (isTargetActive || isTargetOnline)
+            ? `${confirmAction.displayName} is active. You cannot delete the account when he's active. Please deactivate and once logged out try deleting.`
+            : `Are you sure you want to permanently delete the admin account "${confirmAction.username}"?`;
+        } else if (confirmAction.type === "activate") {
+          modalDesc = `Are you sure you want to activate the admin account "${confirmAction.username}"? This user will immediately be allowed to access the admin portal.`;
+        } else { // deactivate
+          modalDesc = isTargetOnline
+            ? `${confirmAction.displayName} is currently active on his account. Do you want to continue?`
+            : `Are you sure you want to deactivate the admin account "${confirmAction.username}"? This user will be blocked from logging into the admin portal.`;
+        }
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setConfirmAction(null)}
+            />
+
+            {/* Modal */}
+            <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up">
+              <div className="flex items-start gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+                  confirmAction.type === "delete" || isTargetOnline
+                    ? "bg-red-500/10"
+                    : confirmAction.type === "activate"
+                    ? "bg-teal-500/10"
+                    : "bg-yellow-500/10"
+                }`}>
+                  {confirmAction.type === "delete" || isTargetOnline ? (
+                    <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  ) : confirmAction.type === "activate" ? (
+                    <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-bold text-white">
+                    {modalTitle}
+                  </h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    {modalDesc}
+                  </p>
+                </div>
+              </div>
+
+              {confirmAction.type === "delete" && !(isTargetActive || isTargetOnline) && (
+                <div className="space-y-3 p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
+                  <p className="text-xs text-red-400 font-medium leading-relaxed">
+                    ⚠️ This action is irreversible. The account and its associated database permissions will be permanently removed.
+                  </p>
+                  <label className="flex items-start gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={isIrreversibleChecked}
+                      onChange={(e) => setIsIrreversibleChecked(e.target.checked)}
+                      className="mt-0.5 rounded border-white/10 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-offset-0 focus:ring-offset-transparent"
+                    />
+                    <span className="text-[11px] text-slate-300 leading-tight">
+                      I understand that this action is irreversible and permanent. Please confirm to proceed.
+                    </span>
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                {confirmAction.type === "delete" && (isTargetActive || isTargetOnline) ? (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmAction(null)}
+                    className="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-slate-700 hover:bg-slate-600 transition-all shadow-lg active:scale-[0.98]"
+                  >
+                    OK
+                  </button>
                 ) : (
-                  <svg className="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmAction(null)}
+                      className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirmAction.type === "delete") {
+                          executeDelete(confirmAction.userId);
+                        } else {
+                          executeToggleActive(confirmAction.userId, confirmAction.currentActive ?? true);
+                        }
+                      }}
+                      disabled={confirmAction.type === "delete" && !isIrreversibleChecked}
+                      className={`flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                        confirmAction.type === "delete" || (confirmAction.type === "deactivate" && isTargetOnline)
+                          ? "bg-red-500 hover:bg-red-400 shadow-red-950/30"
+                          : confirmAction.type === "activate"
+                          ? "bg-teal-500 hover:bg-teal-400 shadow-teal-950/30"
+                          : "bg-yellow-500 hover:bg-yellow-400 shadow-yellow-950/30"
+                      }`}
+                    >
+                      {confirmAction.type === "delete"
+                        ? "Permanently Delete"
+                        : confirmAction.type === "activate"
+                        ? "Activate Account"
+                        : isTargetOnline
+                        ? "Yes, Continue"
+                        : "Deactivate Account"}
+                    </button>
+                  </>
                 )}
               </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-white">
-                  {confirmAction.type === "delete"
-                    ? "Delete Admin Account"
-                    : confirmAction.type === "activate"
-                    ? "Activate Admin Account"
-                    : isTargetActive
-                    ? "Warning: Active User"
-                    : "Deactivate Admin Account"}
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  {confirmAction.type === "delete"
-                    ? `Are you sure you want to permanently delete the admin account "${confirmAction.username}"?`
-                    : confirmAction.type === "activate"
-                    ? `Are you sure you want to activate the admin account "${confirmAction.username}"? This user will immediately be allowed to access the admin portal.`
-                    : isTargetActive
-                    ? `${confirmAction.displayName} is currently active on his account. Do you want to continue?`
-                    : `Are you sure you want to deactivate the admin account "${confirmAction.username}"? This user will be blocked from logging into the admin portal.`}
-                </p>
-              </div>
-            </div>
-
-            {confirmAction.type === "delete" && (
-              <div className="space-y-3 p-3 bg-red-500/5 border border-red-500/20 rounded-lg">
-                <p className="text-xs text-red-400 font-medium leading-relaxed">
-                  ⚠️ This action is irreversible. The account and its associated database permissions will be permanently removed.
-                </p>
-                <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={isIrreversibleChecked}
-                    onChange={(e) => setIsIrreversibleChecked(e.target.checked)}
-                    className="mt-0.5 rounded border-white/10 bg-white/5 text-red-500 focus:ring-red-500 focus:ring-offset-0 focus:ring-offset-transparent"
-                  />
-                  <span className="text-[11px] text-slate-300 leading-tight">
-                    I understand that this action is irreversible and permanent. Please confirm to proceed.
-                  </span>
-                </label>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setConfirmAction(null)}
-                className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirmAction.type === "delete") {
-                    executeDelete(confirmAction.userId);
-                  } else {
-                    executeToggleActive(confirmAction.userId, confirmAction.currentActive ?? true);
-                  }
-                }}
-                disabled={confirmAction.type === "delete" && !isIrreversibleChecked}
-                className={`flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
-                  confirmAction.type === "delete" || isTargetActive
-                    ? "bg-red-500 hover:bg-red-400 shadow-red-950/30"
-                    : confirmAction.type === "activate"
-                    ? "bg-teal-500 hover:bg-teal-400 shadow-teal-950/30"
-                    : "bg-yellow-500 hover:bg-yellow-400 shadow-yellow-950/30"
-                }`}
-              >
-                {confirmAction.type === "delete"
-                  ? "Permanently Delete"
-                  : confirmAction.type === "activate"
-                  ? "Activate Account"
-                  : isTargetActive
-                  ? "Yes, Continue"
-                  : "Deactivate Account"}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </>
   );
 }
