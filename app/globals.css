@@ -1,37 +1,36 @@
 @import "tailwindcss";
 
-/* ─── Premium Custom Scrollbars ────────────────────────────────────────── */
+/* ─── Modern Premium Custom Scrollbars ────────────────────────────────────── */
 
 /* Webkit browser scrollbars (Chrome, Safari, Edge, Opera) */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(15, 34, 51, 0.3); /* Subtle dark slate background */
-  border-radius: 9999px;
+  background: transparent; /* Trackless transparent channel to blend seamlessly */
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-  transition: background-color 0.3s ease;
+  background: rgba(255, 255, 255, 0.08); /* Subtle glassmorphic handle */
+  border-radius: 99px;
+  border: 1px solid transparent;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(45, 212, 191, 0.4); /* Teal-400 hover */
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  background: rgba(45, 212, 191, 0.45); /* Elegant glowing teal handle on hover */
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(45, 212, 191, 0.7); /* Vibrant teal handle on click/drag */
 }
 
 /* Thin variant for scrollable dashboard elements like sidebar, modal lists */
 .custom-scrollbar::-webkit-scrollbar,
 .premium-sidebar-scroll::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track,
@@ -41,18 +40,18 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb,
 .premium-sidebar-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 99px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover,
 .premium-sidebar-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(45, 212, 191, 0.3);
+  background: rgba(45, 212, 191, 0.35);
 }
 
 /* Firefox scrollbar styles */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) rgba(15, 34, 51, 0.3);
+  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
