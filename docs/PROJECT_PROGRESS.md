@@ -208,4 +208,16 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+- **[2026-05-22] Reports Management Firestore Integration:**
+    - Completed Phase 3: Reports Management integration with live Firestore data.
+    - Replaced hardcoded mock data in `Reportsmanagement.tsx` with real-time Firestore subscriptions via a custom `useReports` hook.
+    - Established strict type definitions mapping to the mobile app's schema in `lib/types/report.ts`.
+    - Created shared UI styling constants for categories (`categories.ts`) and statuses (`statuses.ts`) mapping directly to the mobile app design system.
+    - Implemented `report.service.ts` using the Firebase v12 client SDK to handle filtered snapshot listeners and status mutation logic.
+    - Integrated status mutation functionality with automatic `statusHistory` timeline appending and system-generated citizen notifications within the same transaction/update flow.
+    - Implemented a two-step confirmation modal for status changes to prevent accidental state mutations and explicitly inform the admin that a notification will be pushed to the citizen.
+    - Refined the UI detail panel to render dynamic storage image arrays and parse timestamp formatting directly from Firestore server timestamps.
+
+---
+
 *Last Updated: 2026-05-22*
