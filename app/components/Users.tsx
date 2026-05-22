@@ -76,6 +76,9 @@ export default function Users() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    // Overall stats unaffected by active filters
+    const [overallStats, setOverallStats] = useState<{ total: number; active: number; elite: number }>({ total: 0, active: 0, elite: 0 });
+
     // Filters
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedStatus, setSelectedStatus] = useState("all");
@@ -125,6 +128,9 @@ export default function Users() {
             }
             const data = await res.json();
             setUsers(data.users || []);
+            if (data.stats) {
+                setOverallStats(data.stats);
+            }
             setCurrentPage(1); // Reset page on filter changes
         } catch (err: any) {
             setError(err.message || "An error occurred while fetching users");
@@ -206,6 +212,15 @@ export default function Users() {
                 prev.map((u) => (u.uid === userId ? { ...u, status: newStatus } : u))
             );
 
+            // Update overall stats locally to keep the active status card in sync
+            setOverallStats((prev) => {
+                const activeDiff = newStatus === "active" ? 1 : -1;
+                return {
+                    ...prev,
+                    active: prev.active + activeDiff,
+                };
+            });
+
             // Update modal state if active
             if (selectedUser?.uid === userId) {
                 setSelectedUser((prev) => prev ? { ...prev, status: newStatus } : null);
@@ -228,26 +243,33 @@ export default function Users() {
         });
     };
 
-    // Pagination computations
+    // Filter users locally to ensure instant UI sync when status changes (especially for 'active' / 'suspended' filters)
+    const filteredLocalUsers = useMemo(() => {
+        return users.filter((user) => {
+            // Apply selected status filter locally
+            if (selectedStatus !== "all" && (user.status || "active") !== selectedStatus) {
+                return false;
+            }
+            return true;
+        });
+    }, [users, selectedStatus]);
+
+    // Pagination computations based on filtered local users
     const paginatedUsers = useMemo(() => {
         const startIndex = (currentPage - 1) * itemsPerPage;
-        return users.slice(startIndex, startIndex + itemsPerPage);
-    }, [users, currentPage]);
+        return filteredLocalUsers.slice(startIndex, startIndex + itemsPerPage);
+    }, [filteredLocalUsers, currentPage]);
 
-    const totalPages = Math.ceil(users.length / itemsPerPage) || 1;
+    const totalPages = Math.ceil(filteredLocalUsers.length / itemsPerPage) || 1;
 
-    // Stats calculations for top cards
+    // Stats calculations for top cards (showing overall database stats unaffected by filters)
     const stats = useMemo(() => {
-        const total = users.length;
-        const active = users.filter((u) => u.status === "active").length;
-        const elite = users.filter((u) => (u.contributionPoints || 0) > 500).length;
-
         return {
-            total: new Intl.NumberFormat().format(total),
-            active: new Intl.NumberFormat().format(active),
-            elite: new Intl.NumberFormat().format(elite),
+            total: new Intl.NumberFormat().format(overallStats.total),
+            active: new Intl.NumberFormat().format(overallStats.active),
+            elite: new Intl.NumberFormat().format(overallStats.elite),
         };
-    }, [users]);
+    }, [overallStats]);
 
     // Category formatter helper
     const getCategoryDetails = (catId: string) => {
@@ -293,66 +315,90 @@ export default function Users() {
             <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-slide-up stagger-2">
                 {/* Advanced Filtering Controls */}
                 <div className="p-6 border-b border-white/5 flex flex-col gap-4 lg:flex-row lg:items-center justify-between">
-                    {/* Left: Search input */}
-                    <div className="relative flex-1 max-w-md group">
-                        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-teal-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input 
-                            type="text"
-                            placeholder="Search by name, email, phone, NIC, LGA, address..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all font-medium"
-                        />
+                    {/* Left: Search input & Refresh */}
+                    <div className="flex items-center gap-3 flex-1 max-w-md w-full">
+                        <div className="relative flex-1 group">
+                            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-500 group-focus-within:text-teal-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input 
+                                type="text"
+                                placeholder="Search by name, email, phone, NIC, LGA, address..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-medium"
+                            />
+                        </div>
+                        <button
+                            onClick={fetchUsers}
+                            disabled={loading}
+                            className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-400 hover:text-teal-400 hover:bg-white/10 hover:border-teal-500/30 transition-all duration-200 disabled:opacity-50 cursor-pointer flex-shrink-0 uppercase tracking-wider"
+                        >
+                            {loading ? "Refreshing..." : "Refresh"}
+                        </button>
                     </div>
 
                     {/* Right: Sri Lanka Province/District/Status Filters */}
                     <div className="flex flex-wrap items-center gap-3">
                         {/* Province dropdown */}
-                        <div className="flex flex-col">
+                        <div className="relative group">
                             <select
                                 value={selectedProvince}
                                 onChange={handleProvinceChange}
-                                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 min-w-[130px] font-medium"
+                                className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all min-w-[150px] font-semibold cursor-pointer"
                             >
-                                <option value="all" className="bg-[#0f2233] text-white">All Provinces</option>
+                                <option value="all" className="bg-[#0b1a26] text-slate-300">All Provinces</option>
                                 {Object.keys(sriLankaRegions).map(province => (
-                                    <option key={province} value={province} className="bg-[#0f2233] text-white">
-                                        {province}
+                                    <option key={province} value={province} className="bg-[#0b1a26] text-slate-300">
+                                        {province} Province
                                     </option>
                                 ))}
                             </select>
+                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
                         </div>
 
                         {/* District dropdown (cascading) */}
-                        <div className="flex flex-col">
+                        <div className="relative group">
                             <select
                                 value={selectedDistrict}
                                 onChange={(e) => setSelectedDistrict(e.target.value)}
                                 disabled={selectedProvince === "all"}
-                                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 min-w-[130px] font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all min-w-[150px] font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-white/10"
                             >
-                                <option value="all" className="bg-[#0f2233] text-white">All Districts</option>
+                                <option value="all" className="bg-[#0b1a26] text-slate-300">All Districts</option>
                                 {selectedProvince !== "all" && sriLankaRegions[selectedProvince]?.map(district => (
-                                    <option key={district} value={district} className="bg-[#0f2233] text-white">
+                                    <option key={district} value={district} className="bg-[#0b1a26] text-slate-300">
                                         {district}
                                     </option>
                                 ))}
                             </select>
+                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors group-disabled:opacity-40">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
                         </div>
 
                         {/* Status dropdown */}
-                        <div className="flex flex-col">
+                        <div className="relative group">
                             <select
                                 value={selectedStatus}
                                 onChange={(e) => setSelectedStatus(e.target.value)}
-                                className="bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 min-w-[120px] font-medium"
+                                className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all min-w-[140px] font-semibold cursor-pointer"
                             >
-                                <option value="all" className="bg-[#0f2233] text-white">All Statuses</option>
-                                <option value="active" className="bg-[#0f2233] text-white">Active</option>
-                                <option value="suspended" className="bg-[#0f2233] text-white">Suspended</option>
+                                <option value="all" className="bg-[#0b1a26] text-slate-300">All Statuses</option>
+                                <option value="active" className="bg-[#0b1a26] text-emerald-400 font-semibold">Active Only</option>
+                                <option value="suspended" className="bg-[#0b1a26] text-rose-400 font-semibold">Suspended Only</option>
                             </select>
+                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -389,10 +435,10 @@ export default function Users() {
                                 paginatedUsers.map((user) => (
                                     <tr 
                                         key={user.uid} 
-                                        className={`transition-all group hover:bg-white/[0.03] ${
+                                        className={`transition-all group border-b border-white/5 ${
                                             user.status === "suspended"
-                                                ? "bg-rose-500/5 text-rose-100/90 border-rose-950/20"
-                                                : ""
+                                                ? "bg-rose-950/25 text-rose-200/90 hover:bg-rose-950/35 shadow-[inset_4px_0_0_0_#ef4444]"
+                                                : "hover:bg-white/[0.03]"
                                         }`}
                                     >
                                         {/* User Identity Column */}
@@ -559,7 +605,7 @@ export default function Users() {
                     />
 
                     {/* Modal Container */}
-                    <div className="relative w-full max-w-4xl bg-[#0b1a26]/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-50 animate-slide-up">
+                    <div className="relative w-full max-w-5xl bg-[#0b1a26]/95 border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh] z-50 animate-slide-up">
                         {/* Modal Header */}
                         <div className="p-6 border-b border-white/10 flex items-center justify-between bg-white/[0.02]">
                             <div className="flex items-center gap-4">
@@ -593,10 +639,10 @@ export default function Users() {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 overflow-y-auto space-y-6 flex-1">
+                        <div className="p-6 overflow-y-auto custom-scrollbar space-y-6 flex-1">
                             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
                                 {/* Left Column: Profile Card */}
-                                <div className="md:col-span-5 space-y-4">
+                                <div className="md:col-span-4 space-y-4">
                                     <div className="bg-white/[0.03] border border-white/5 rounded-xl p-5 space-y-4">
                                         <h3 className="text-sm font-bold text-teal-400 uppercase tracking-wider border-b border-white/5 pb-2">Profile & Identity</h3>
                                         <div className="space-y-3 text-xs">
@@ -675,7 +721,7 @@ export default function Users() {
                                 </div>
 
                                 {/* Right Column: Reports History */}
-                                <div className="md:col-span-7 space-y-6">
+                                <div className="md:col-span-8 space-y-6">
                                     {/* Reports Status Summary Cards */}
                                     <div className="space-y-2">
                                         <h3 className="text-sm font-bold text-slate-300 flex items-center justify-between">
@@ -721,7 +767,7 @@ export default function Users() {
                                                 <p className="text-xs text-slate-500">This citizen has not submitted any reports yet.</p>
                                             </div>
                                         ) : (
-                                            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                                            <div className="space-y-3 max-h-[420px] overflow-y-auto custom-scrollbar pr-1">
                                                 {userReports.map((report) => {
                                                     const cat = getCategoryDetails(report.categoryId);
                                                     const rStatus = reportStatusMeta[report.status] || {

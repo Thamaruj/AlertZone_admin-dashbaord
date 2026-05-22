@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-21
+> **Last Updated:** 2026-05-22
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -51,6 +51,14 @@
 - [x] User-submitted reports breakdown — displays live statistics (Pending, Assigned, Fixing, Resolved, Rejected) of citizen-submitted reports
 - [x] Scrollable report submissions timeline — lists all reports submitted by a citizen dynamically
 - [x] Citizen status updates — live suspend/unsuspend toggling in Firestore via server API routes
+- [x] Glassmorphic Filter Dropdowns — customized design replacing native chevrons and adding custom focus/hover border glow rings
+- [x] Refresh Button — premium text-based button ("Refresh") to manually trigger user list updates
+- [x] Suspended Row Contrast — clearly calls out suspended users with a dark red background (`bg-rose-950/25`) and a solid red left-border accent (`shadow-[inset_4px_0_0_0_#ef4444]`)
+- [x] Immediate Filter Sync — client-side filter computation removes suspended users instantly from the view when filtered by active status
+- [x] Modal Size & Layout Adjustments — increased width to `max-w-5xl` and height to `max-h-[95vh]`, with optimized column distribution (`md:col-span-4` / `md:col-span-8`) and custom scrollbars
+- [x] Filter-Independent Overview Stats — Total, Active, and Elite stats card counters remain unaffected by province, district, status, or keyword filters
+- [x] Sidebar Navigation Refinements — styled vertical nav tabs, removed glowing effect from left-top brand badge, and updated label to "Admin Dashboard"
+- [x] Premium Custom Scrollbars — added smooth custom scrollbars globally for Webkit and Firefox browsers
 
 ---
 

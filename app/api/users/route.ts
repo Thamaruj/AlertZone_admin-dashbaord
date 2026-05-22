@@ -26,8 +26,46 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const province = searchParams.get("province") || undefined;
     const district = searchParams.get("district") || undefined;
 
-    const users = await listCitizenUsers({ search, status, province, district });
-    return NextResponse.json({ users });
+    // Fetch all users to calculate overall database stats
+    const allUsers = await listCitizenUsers({});
+    
+    const stats = {
+      total: allUsers.length,
+      active: allUsers.filter((u) => (u.status || "active") === "active").length,
+      elite: allUsers.filter((u) => (u.contributionPoints || 0) > 500).length,
+    };
+
+    // Filter the dataset in-memory to match query options
+    let filteredUsers = [...allUsers];
+
+    if (status && status !== "all") {
+      const statusLower = status.toLowerCase();
+      filteredUsers = filteredUsers.filter(u => u.status?.toLowerCase() === statusLower);
+    }
+
+    if (province && province !== "all") {
+      const provLower = province.toLowerCase();
+      filteredUsers = filteredUsers.filter(u => u.province?.toLowerCase() === provLower);
+    }
+
+    if (district && district !== "all") {
+      const distLower = district.toLowerCase();
+      filteredUsers = filteredUsers.filter(u => u.district?.toLowerCase() === distLower);
+    }
+
+    if (search) {
+      const searchLower = search.toLowerCase().trim();
+      filteredUsers = filteredUsers.filter(u => 
+        (u.fullName || "").toLowerCase().includes(searchLower) ||
+        (u.email || "").toLowerCase().includes(searchLower) ||
+        (u.phoneNumber || "").toLowerCase().includes(searchLower) ||
+        (u.nic || "").toLowerCase().includes(searchLower) ||
+        (u.address || "").toLowerCase().includes(searchLower) ||
+        (u.localGovernmentArea || "").toLowerCase().includes(searchLower)
+      );
+    }
+
+    return NextResponse.json({ users: filteredUsers, stats });
   } catch (error) {
     console.error("❌ GET /api/users error:", error);
     return NextResponse.json({ error: "Could not fetch citizen users" }, { status: 500 });

@@ -261,19 +261,34 @@ function StatCard({ icon, label, value, trend, trendType }: {
     );
 }
 
-// ─── Nav Link ─────────────────────────────────────────────────────────────────
-
 function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; onClick: () => void }) {
     return (
         <button
             onClick={onClick}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 text-left ${active
-                ? "bg-teal-500/15 text-teal-400 border border-teal-500/20"
-                : "text-slate-300 hover:bg-white/5 hover:text-slate-300"
-                }`}
+            className={`group relative w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide uppercase transition-all duration-300 text-left outline-none border cursor-pointer ${
+                active
+                    ? "bg-gradient-to-r from-teal-500/10 to-teal-500/[0.01] border-teal-500/25 text-teal-300 shadow-[0_4px_12px_rgba(45,212,191,0.03)]"
+                    : "border-transparent text-slate-400 hover:bg-white/[0.02] hover:border-white/5 hover:text-slate-200"
+            }`}
         >
-            <span className="w-4 h-4 flex-shrink-0">{item.icon}</span>
-            <span>{item.label}</span>
+            {/* Left indicator bar */}
+            <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.75 rounded-r-full bg-gradient-to-b from-teal-400 to-cyan-500 transition-all duration-300 ${
+                active ? "h-6 opacity-100 shadow-[0_0_10px_rgba(45,212,191,0.6)]" : "h-0 opacity-0"
+            }`} />
+            
+            {/* Icon container */}
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
+                active 
+                    ? "bg-teal-500/15 border border-teal-500/30 text-teal-400 scale-105" 
+                    : "bg-white/5 border border-white/5 text-slate-500 group-hover:bg-white/10 group-hover:text-slate-300 group-hover:border-white/10"
+            }`}>
+                {item.icon}
+            </div>
+
+            {/* Label */}
+            <span className={`transition-all duration-300 ${
+                active ? "translate-x-0.5 text-white" : "group-hover:translate-x-1"
+            }`}>{item.label}</span>
         </button>
     );
 }
@@ -534,22 +549,47 @@ export default function AdminDashboard() {
             )}
 
             {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
-            <aside className={`fixed md:relative z-30 h-full w-56 flex-shrink-0 bg-[#0f2233] md:bg-[#0f2233]/80 backdrop-blur-xl border-r border-white/5 flex flex-col transition-transform duration-300 md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+            <aside className={`fixed md:relative z-30 h-full w-56 flex-shrink-0 bg-[#0f2233] md:bg-[#0f2233]/90 backdrop-blur-2xl border-r border-white/10 flex flex-col transition-transform duration-300 md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 {/* Brand */}
-                <div className="px-4 py-5 flex items-center gap-2.5 border-b border-white/5">
-                    <Image src={logo1} alt="AlertZone Logo" width={28} height={28} className="object-contain drop-shadow-md" />
-                    <span className="text-white font-bold text-sm tracking-wide">AlertZone</span>
+                <div className="px-5 py-6 flex items-center gap-3 border-b border-white/5 bg-white/[0.01]">
+                    <div className="p-1.5 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+                        <Image src={logo1} alt="AlertZone Logo" width={22} height={22} className="object-contain" />
+                    </div>
+                    <div className="flex flex-col">
+                        <span className="text-white font-extrabold text-sm tracking-wider uppercase font-sans">AlertZone</span>
+                        <span className="text-[9px] text-teal-400/80 font-bold uppercase tracking-widest font-mono -mt-0.5">Admin Dashboard</span>
+                    </div>
                 </div>
 
-                {/* Nav */}
-                <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-                    {navItems.map((item) => (
-                        <NavLink key={item.id} item={item} active={activeNav === item.id} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
-                    ))}
+                {/* Nav divided into premium semantic groups */}
+                <nav className="flex-1 px-3 py-6 space-y-6 overflow-y-auto premium-sidebar-scroll">
+                    {/* Main Section */}
+                    <div className="space-y-1.5">
+                        <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">Overview</span>
+                        {navItems.filter(item => ["dashboard", "map"].includes(item.id)).map((item) => (
+                            <NavLink key={item.id} item={item} active={activeNav === item.id} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
+                        ))}
+                    </div>
+
+                    {/* Operations / Management */}
+                    <div className="space-y-1.5">
+                        <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">Management</span>
+                        {navItems.filter(item => ["reports", "users", "notifications", "analytics"].includes(item.id)).map((item) => (
+                            <NavLink key={item.id} item={item} active={activeNav === item.id} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
+                        ))}
+                    </div>
+
+                    {/* System Section */}
+                    <div className="space-y-1.5">
+                        <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">System</span>
+                        {navItems.filter(item => ["admin-users", "settings"].includes(item.id)).map((item) => (
+                            <NavLink key={item.id} item={item} active={activeNav === item.id} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
+                        ))}
+                    </div>
                 </nav>
 
                 {/* Logout button at bottom of sidebar */}
-                <div className="px-3 py-4 border-t border-white/5">
+                <div className="px-3 py-4 border-t border-white/5 bg-white/[0.01]">
                     <button
                         id="sidebar-logout-btn"
                         onClick={() => setShowLogoutConfirm(true)}

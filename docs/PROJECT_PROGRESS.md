@@ -165,6 +165,17 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Integrated live **Suspend/Unsuspend** actions. Confirming in the modal triggers a PATCH request to the Firestore admin API, toggling user active status dynamically.
     - Verified compilation and successfully passed production builds using `npm run build` with zero compiler errors.
 
+- **[2026-05-22] User Management UI/UX Refinement & Navigation Sidebar Overhaul:**
+    - **Custom Glassmorphic Dropdowns**: Styled the Province, District, and Status filters on the User Management page to override default native selectors, adding a custom right-aligned SVG chevron, focus glow outlines, border ring accents, and premium dark options list styling.
+    - **Text-Based Refresh**: Created a text-based "Refresh" button next to the search input with smooth transitions and status text updates ("Refreshing...") to manually trigger list updates.
+    - **Suspended Rows Redesign**: Enhanced visibility of suspended rows by replacing the light pink tint with a high-contrast dark red background (`bg-rose-950/25`), red text highlights, and a solid red left-border accent bar using inset shadows (`shadow-[inset_4px_0_0_0_#ef4444]`).
+    - **Immediate Filter Sync**: Implemented client-side filtering logic via a new `filteredLocalUsers` memo to instantly remove users from the paginated table view when they are suspended if the "Active" filter is currently active.
+    - **Modal Adjustments & Scrollbars**: Slightly increased the citizen profile modal width to `max-w-5xl` and maximum height to `max-h-[95vh]`, updating column distributions from `md:col-span-5` / `md:col-span-7` to `md:col-span-4` / `md:col-span-8` to maximize horizontal reading space for report lists, and attached custom thin scrollbar hooks.
+    - **Filter-Independent Stats Overview**: Refactored the backend `/api/users` endpoint to return global user counters (Total, Active, Elite Contributors) so that top-row statistics remain unaffected by province, district, status, or keyword filters on the list.
+    - **Sidebar Header and Badge Refinement**: Refined navigation button visuals, removed the glowing effect from the top-left logo container badge, and updated the subtext label from "Control Center" to "Admin Dashboard".
+    - **Premium Custom Scrollbars**: Injected global custom scrollbar rules inside `globals.css` to render thin, modern scroll tracks and teal-glowing handles on hover for all Webkit and Firefox browsers.
+    - **Verified Compilation**: Completed local build checks confirming zero TypeScript compile warnings or regressions.
+
 ---
 
 *Last Updated: 2026-05-22*
