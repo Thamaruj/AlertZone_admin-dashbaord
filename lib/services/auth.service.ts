@@ -243,6 +243,12 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
             : data.lastLoginAt
             ? new Date(data.lastLoginAt)
             : undefined,
+        lastActiveAt:
+          data.lastActiveAt && typeof data.lastActiveAt.toDate === "function"
+            ? data.lastActiveAt.toDate()
+            : data.lastActiveAt
+            ? new Date(data.lastActiveAt)
+            : undefined,
       } as AdminUser;
     });
   } catch (error) {

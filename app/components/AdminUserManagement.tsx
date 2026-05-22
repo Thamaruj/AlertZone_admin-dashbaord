@@ -267,6 +267,7 @@ export default function AdminUserManagement() {
     type: "deactivate" | "activate" | "delete";
     userId: string;
     username: string;
+    displayName: string;
     currentActive?: boolean;
   } | null>(null);
   const [isIrreversibleChecked, setIsIrreversibleChecked] = useState(false);
@@ -290,11 +291,12 @@ export default function AdminUserManagement() {
     fetchAdmins();
   }, [fetchAdmins]);
 
-  const handleToggleActiveClick = (userId: string, username: string, currentActive: boolean) => {
+  const handleToggleActiveClick = (userId: string, username: string, displayName: string, currentActive: boolean) => {
     setConfirmAction({
       type: currentActive ? "deactivate" : "activate",
       userId,
       username,
+      displayName,
       currentActive,
     });
   };
@@ -318,12 +320,13 @@ export default function AdminUserManagement() {
     }
   };
 
-  const handleDeleteClick = (userId: string, username: string) => {
+  const handleDeleteClick = (userId: string, username: string, displayName: string) => {
     setIsIrreversibleChecked(false);
     setConfirmAction({
       type: "delete",
       userId,
       username,
+      displayName,
     });
   };
 
@@ -343,6 +346,14 @@ export default function AdminUserManagement() {
       setConfirmAction(null);
     }
   };
+
+  const targetAdmin = confirmAction ? admins.find((a) => a.id === confirmAction.userId) : null;
+  const isTargetActive =
+    confirmAction?.type === "deactivate" && targetAdmin
+      ? targetAdmin.lastActiveAt
+        ? Date.now() - new Date(targetAdmin.lastActiveAt).getTime() < 20000
+        : false
+      : false;
 
   return (
     <>
@@ -471,7 +482,7 @@ export default function AdminUserManagement() {
                           <div className="flex items-center gap-1">
                             {/* Toggle active */}
                             <button
-                              onClick={() => handleToggleActiveClick(admin.id, admin.username, admin.isActive)}
+                              onClick={() => handleToggleActiveClick(admin.id, admin.username, admin.displayName, admin.isActive)}
                               disabled={actionLoading === admin.id}
                               title={admin.isActive ? "Deactivate" : "Activate"}
                               className={`p-1.5 rounded-lg transition-all duration-150 ${
@@ -498,7 +509,7 @@ export default function AdminUserManagement() {
 
                             {/* Delete */}
                             <button
-                              onClick={() => handleDeleteClick(admin.id, admin.username)}
+                              onClick={() => handleDeleteClick(admin.id, admin.username, admin.displayName)}
                               disabled={actionLoading === admin.id}
                               title="Delete admin"
                               className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-50"
@@ -540,15 +551,15 @@ export default function AdminUserManagement() {
           <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up">
             <div className="flex items-start gap-3">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                confirmAction.type === "delete"
+                confirmAction.type === "delete" || isTargetActive
                   ? "bg-red-500/10"
                   : confirmAction.type === "activate"
                   ? "bg-teal-500/10"
                   : "bg-yellow-500/10"
               }`}>
-                {confirmAction.type === "delete" ? (
+                {confirmAction.type === "delete" || isTargetActive ? (
                   <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 ) : confirmAction.type === "activate" ? (
                   <svg className="w-5 h-5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -566,6 +577,8 @@ export default function AdminUserManagement() {
                     ? "Delete Admin Account"
                     : confirmAction.type === "activate"
                     ? "Activate Admin Account"
+                    : isTargetActive
+                    ? "Warning: Active User"
                     : "Deactivate Admin Account"}
                 </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
@@ -573,6 +586,8 @@ export default function AdminUserManagement() {
                     ? `Are you sure you want to permanently delete the admin account "${confirmAction.username}"?`
                     : confirmAction.type === "activate"
                     ? `Are you sure you want to activate the admin account "${confirmAction.username}"? This user will immediately be allowed to access the admin portal.`
+                    : isTargetActive
+                    ? `${confirmAction.displayName} is currently active on his account. Do you want to continue?`
                     : `Are you sure you want to deactivate the admin account "${confirmAction.username}"? This user will be blocked from logging into the admin portal.`}
                 </p>
               </div>
@@ -616,7 +631,7 @@ export default function AdminUserManagement() {
                 }}
                 disabled={confirmAction.type === "delete" && !isIrreversibleChecked}
                 className={`flex-1 py-2 rounded-lg text-sm font-semibold text-white transition-all shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
-                  confirmAction.type === "delete"
+                  confirmAction.type === "delete" || isTargetActive
                     ? "bg-red-500 hover:bg-red-400 shadow-red-950/30"
                     : confirmAction.type === "activate"
                     ? "bg-teal-500 hover:bg-teal-400 shadow-teal-950/30"
@@ -627,6 +642,8 @@ export default function AdminUserManagement() {
                   ? "Permanently Delete"
                   : confirmAction.type === "activate"
                   ? "Activate Account"
+                  : isTargetActive
+                  ? "Yes, Continue"
                   : "Deactivate Account"}
               </button>
             </div>

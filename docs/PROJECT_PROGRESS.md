@@ -182,6 +182,26 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Added the custom error message: `"Your account has been deactivated. Kindly contact the administration."`
     - Verified that standard logins, invalid credential handling, and TypeScript compilation still function correctly.
 
+- **[2026-05-22] Real-Time Admin Deactivation Alert & Forced Logout:**
+    - **How the Presence System Works**:
+      - **Client Heartbeat**: Standard admin clients send a recurring POST request to `/api/auth/heartbeat` every 15 seconds.
+      - **Last Active Timestamp**: The backend updates the admin's `lastActiveAt` field in Firestore with the current server timestamp.
+      - **Online Detection**: An admin is considered **online/active** if `Date.now() - lastActiveAt` is less than **20 seconds**. If the difference is larger (or `lastActiveAt` is missing), the admin is considered offline.
+      - **Deactivation Verification**: The heartbeat response returns `isActive` to the client. If a superadmin deactivates them, the next heartbeat detects `isActive: false`, blocks the screen with a blurred full-screen modal, and starts a 2-minute forced logout countdown.
+    - **Types**: Added optional `lastActiveAt?: Date` to `AdminUser` interface in [auth.ts](file:///e:/AlertZone_New/alertzone-admin-dashboard/lib/types/auth.ts).
+    - **Service & API Endpoints**:
+      - Updated `listAdminUsers` mapper in `auth.service.ts` to parse `lastActiveAt` Firestore timestamp fields into JS Dates.
+      - Implemented `POST /api/auth/heartbeat` API route to validate the session and update the active admin's `lastActiveAt` field in Firestore with server timestamps.
+      - Modified `GET /api/auth/session` to check the database status on page reload and clear session cookies if deactivated.
+    - **Real-Time Client Presence Hook & Overlay**:
+      - Modified `AuthContext.tsx` to automatically send client heartbeats every 15 seconds.
+      - If deactivated, instantly blocks user interactions with a full-screen blurred modal stating: *"Your account has been deactivated. Please contact the administrator to activate."* and launches a 2-minute countdown timer that automatically calls `logout` when it reaches `0:00`.
+    - **Superadmin Warnings**:
+      - Updated `AdminUserManagement.tsx` to warn the superadmin if they attempt to deactivate an admin currently active (heartbeat within 20 seconds) with: *"(admin name) is currently active on his account. Do you want to continue?"*.
+      - Styled the confirmation button as a high-visibility red alert button reading *"Yes, Continue"*.
+    - **Validation**:
+      - Verified type safety across the workspace by successfully passing `npx tsc --noEmit`.
+
 ---
 
 *Last Updated: 2026-05-22*

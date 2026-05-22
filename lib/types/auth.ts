@@ -16,6 +16,7 @@ export interface AdminUser {
   createdAt: Date;
   createdBy: string; // username of the superadmin who created this account
   lastLoginAt?: Date;
+  lastActiveAt?: Date;
 }
 
 /** Stored in the JWT session cookie */
