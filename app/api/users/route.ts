@@ -25,6 +25,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const status = searchParams.get("status") || undefined;
     const province = searchParams.get("province") || undefined;
     const district = searchParams.get("district") || undefined;
+    const lga = searchParams.get("lga") || undefined;
 
     // Fetch all users to calculate overall database stats
     const allUsers = await listCitizenUsers({});
@@ -51,6 +52,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     if (district && district !== "all") {
       const distLower = district.toLowerCase();
       filteredUsers = filteredUsers.filter(u => u.district?.toLowerCase() === distLower);
+    }
+
+    if (lga && lga !== "all") {
+      const lgaLower = lga.toLowerCase();
+      filteredUsers = filteredUsers.filter(u => u.localGovernmentArea?.toLowerCase() === lgaLower);
     }
 
     if (search) {
