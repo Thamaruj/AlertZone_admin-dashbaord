@@ -16,6 +16,9 @@ export interface ReportLocation {
   latitude: number;
   longitude: number;
   area: string; // District or local area name
+  province?: string;
+  district?: string;
+  localGovernmentArea?: string;
 }
 
 export interface StatusHistoryEntry {
