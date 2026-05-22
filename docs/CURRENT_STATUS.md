@@ -82,6 +82,7 @@
 - [x] Role-based access: `admin` and `superadmin` roles
 - [x] Username-only login (email removed — can be added later)
 - [x] Real error messages for wrong credentials
+- [x] Clear error message when deactivated/suspended admin accounts attempt to log in ("Your account has been deactivated. Kindly contact the administration.")
 - [ ] "Forgot password" — not implemented (hardcoded credentials don't support reset)
 
 ### Reports Management (`Reportsmanagement.tsx`)

@@ -136,7 +136,7 @@ async function validateSuperadmin(
 async function validateFirestoreAdmin(
   username: string,
   password: string
-): Promise<AdminSession | null> {
+): Promise<{ session: AdminSession | null; error?: string }> {
   try {
     const snap = await adminDb
       .collection(ADMIN_USERS_COLLECTION)
@@ -144,15 +144,22 @@ async function validateFirestoreAdmin(
       .limit(1)
       .get();
 
-    if (snap.empty) return null;
+    if (snap.empty) return { session: null };
 
     const docSnap = snap.docs[0];
     const data = docSnap.data() as Omit<AdminUser, "id">;
 
-    if (!data.isActive) return null;
-
+    // Verify password first to prevent username/status enumeration
     const match = await bcrypt.compare(password, data.passwordHash);
-    if (!match) return null;
+    if (!match) return { session: null };
+
+    // Check account status if password is correct
+    if (!data.isActive) {
+      return {
+        session: null,
+        error: "Your account has been deactivated. Kindly contact the administration.",
+      };
+    }
 
     // Update lastLoginAt (non-blocking)
     docSnap.ref.update({ lastLoginAt: admin.firestore.FieldValue.serverTimestamp() }).catch(
@@ -160,15 +167,17 @@ async function validateFirestoreAdmin(
     );
 
     return {
-      id: docSnap.id,
-      username: data.username,
-      displayName: data.displayName,
-      role: data.role,
-      isActive: data.isActive,
+      session: {
+        id: docSnap.id,
+        username: data.username,
+        displayName: data.displayName,
+        role: data.role,
+        isActive: data.isActive,
+      },
     };
   } catch (error) {
     console.error("❌ validateFirestoreAdmin error:", error);
-    return null;
+    return { session: null };
   }
 }
 
@@ -194,8 +203,9 @@ export async function validateAdminCredentials(
   }
 
   // 3. Check Firestore admin users
-  const firestoreSession = await validateFirestoreAdmin(username, password);
+  const { session: firestoreSession, error: firestoreError } = await validateFirestoreAdmin(username, password);
   if (firestoreSession) return { session: firestoreSession };
+  if (firestoreError) return { session: null, error: firestoreError };
 
   return { session: null, error: "Invalid credentials" };
 }

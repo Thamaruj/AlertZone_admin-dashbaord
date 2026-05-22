@@ -176,6 +176,12 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - **Premium Custom Scrollbars**: Injected global custom scrollbar rules inside `globals.css` to render thin, modern scroll tracks and teal-glowing handles on hover for all Webkit and Firefox browsers.
     - **Verified Compilation**: Completed local build checks confirming zero TypeScript compile warnings or regressions.
 
+- **[2026-05-22] Suspended Admin Account Login Error Message:**
+    - Modified backend validation service (`validateFirestoreAdmin` and `validateAdminCredentials`) in [auth.service.ts](file:///e:/AlertZone_New/alertzone-admin-dashboard/lib/services/auth.service.ts) to display a deactivated message when suspended admin accounts try to log in.
+    - Verified the password first to maintain security and prevent username/deactivation status probing.
+    - Added the custom error message: `"Your account has been deactivated. Kindly contact the administration."`
+    - Verified that standard logins, invalid credential handling, and TypeScript compilation still function correctly.
+
 ---
 
 *Last Updated: 2026-05-22*
