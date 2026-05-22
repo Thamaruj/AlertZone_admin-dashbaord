@@ -152,6 +152,19 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - **Name & Suffix Normalization**: Updated `matchesRegion` comparison logic to dynamically strip " Province" and " District" suffixes from geoBoundaries features to match dropdown filter names.
     - **Spelling Alias Support**: Implemented a spelling normalization mapping to reconcile spelling discrepancies between the dropdowns and geoBoundaries (e.g., translating "Moneragala" to "Monaragala").
 
+- **[2026-05-22] Live User Management Integration:**
+    - Integrated the frontend **User Management** page ([Users.tsx](file:///e:/AlertZone_New/alertzone-admin-dashboard/app/components/Users.tsx)) to pull live citizen profiles from the Firestore `users` collection.
+    - Implemented Sri Lankan Province, District, and Status cascading filtering. Selecting a Province filters the District options, and the list updates dynamically with a debounced search query.
+    - Replaced the mock table columns with the following:
+        1. **User Identity**: Avatar/Initial, Full Name, Email, and **NIC** (National Identity Card).
+        2. **Contact Details**: Phone, **Province**, **District**, **Local Government Area**, and **Address**.
+        3. **Gamification Details**: Level, Points, Reports Validated.
+        4. **Join Date**: Formatted date string from Firestore metadata.
+        5. **Status Badge & Actions**: Active/Suspended badge and dynamic trigger buttons.
+    - Developed a comprehensive **User Detail Modal** showing detailed profile records, a status-wise breakdown of their submitted reports (Pending, Assigned, Fixing, Resolved, Rejected), and a scrollable list of their complete reports history.
+    - Integrated live **Suspend/Unsuspend** actions. Confirming in the modal triggers a PATCH request to the Firestore admin API, toggling user active status dynamically.
+    - Verified compilation and successfully passed production builds using `npm run build` with zero compiler errors.
+
 ---
 
-*Last Updated: 2026-05-21*
+*Last Updated: 2026-05-22*

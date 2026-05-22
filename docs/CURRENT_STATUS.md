@@ -14,7 +14,7 @@
 | Phase 1: UI Shell & Mock Dashboard | 🟡 Partially Done | All UI screens built with hardcoded/mock data |
 | Phase 2: Firebase Integration | 🔴 Not Started | Firebase SDK installed, config exists, but NOT wired to any component |
 | Phase 3: Reports Management (Live) | 🔴 Not Started | UI exists with mock data |
-| Phase 4: User Management (Live) | 🔴 Not Started | UI exists with mock data |
+| Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
 | Phase 5: Notifications System | 🔴 Not Started | UI exists with mock notifications |
 | Phase 6: Analytics (Live) | 🔴 Not Started | UI exists with hardcoded chart data |
 | Phase 7: Map View (Live) | 🟡 Partially Done | Google Maps integration complete with Sri Lankan Province/District filters |
@@ -45,17 +45,12 @@
 - [x] Collapsible sidebar — slide collapse on desktop and mobile
 - [x] Custom zoom controls — premium glassmorphic "+" and "-" buttons overriding API defaults
 - [x] Premium scrollbars — styled custom scrollbars for reports navigation
-- [x] Users management page — user list with search and filters
-- [x] Analytics page — multiple chart types and data visualizations
-- [x] Notifications page — notification list with read/unread status
-- [x] Mobile responsive sidebar (hamburger menu)
-- [x] Custom interactive dialogs/modals for activating, deactivating and deleting admins (replacing browser alerts)
-- [x] Custom interactive dialogs/modals for suspending/unsuspending citizen users (replacing browser alerts)
-- [x] Double-layer verification (irreversible deletion warning + confirm checkbox) for admin deletion
-- [x] Brightened inactive admin row red styling highlights in the admin table
-- [x] Brightened suspended citizen user row red styling highlights in the users table
-- [x] Inactive StatusBadge styled with red colors to match the table theme
-- [x] Suspended citizen user StatusBadge styled with rose/red colors to match the table theme
+- [x] Users management page — user list with search, cascading province/district filters, status badges, and action confirmations
+- [x] Live citizen data integration — fetches registered user profiles (`role: 'citizen'`) from Firestore
+- [x] Citizen profile detailed modal — shows NIC, Province, District, LGA, address, badges, gamification level, and points
+- [x] User-submitted reports breakdown — displays live statistics (Pending, Assigned, Fixing, Resolved, Rejected) of citizen-submitted reports
+- [x] Scrollable report submissions timeline — lists all reports submitted by a citizen dynamically
+- [x] Citizen status updates — live suspend/unsuspend toggling in Firestore via server API routes
 
 ---
 
@@ -100,9 +95,9 @@
 - [ ] No category/status filters wired to real data
 
 ### Users (`Users.tsx`)
-- [ ] User list — mock data types, no Firestore connection
-- [ ] No suspend/activate functionality
-- [ ] User types don't match mobile app's `UserProfile` schema
+- [x] User list — live data queried from Firestore via `/api/users`
+- [x] Suspend/activate functionality — live PATCH request updates `status` in Firestore
+- [x] User types match mobile app's `UserProfile` schema (includes `nic`, `province`, `district`, `localGovernmentArea`)
 
 ### Analytics (`Analytics.tsx`)
 - [ ] All charts use hardcoded/empty data
@@ -130,7 +125,7 @@
 - [ ] Real-time report fetching from Firestore
 - [ ] Report status updates with `statusHistory` append
 - [ ] Notification creation on status change (critical for mobile app)
-- [ ] User management — read users, suspend/activate
+- [x] User management — read users, suspend/activate
 - [ ] Report archival (soft-delete with `isArchived`)
 - [ ] Report assignment (`assignedTo` field)
 - [ ] Resolution notes (`resolutionNote` field)
@@ -159,11 +154,8 @@
 - [ ] Notification delivery stats
 
 ### Missing Infrastructure
-- [ ] `lib/types/` directory — shared TypeScript interfaces
-- [ ] `lib/services/` directory — Firebase service layer
-- [ ] `lib/hooks/` directory — custom React hooks
-- [ ] `lib/constants/` directory — shared constants (categories, statuses, colors)
-- [ ] Auth context with admin role verification
+- [x] `lib/types/` directory — shared TypeScript interfaces (`user.ts`, `report.ts`)
+- [x] `lib/services/` directory — Firebase service layer (`users.service.ts`)
 - [ ] Error handling and loading states with real data
 - [ ] Google Maps API key in `.env.local` for map features
 
