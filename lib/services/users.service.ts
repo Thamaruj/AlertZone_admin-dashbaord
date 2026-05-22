@@ -14,6 +14,7 @@ export async function listCitizenUsers(filters: {
   status?: string;
   province?: string;
   district?: string;
+  lga?: string;
 } = {}): Promise<UserProfile[]> {
   try {
     const query = adminDb.collection("users").where("role", "==", "citizen");
@@ -41,6 +42,11 @@ export async function listCitizenUsers(filters: {
     if (filters.district && filters.district !== "all") {
       const distLower = filters.district.toLowerCase();
       users = users.filter(u => u.district?.toLowerCase() === distLower);
+    }
+
+    if (filters.lga && filters.lga !== "all") {
+      const lgaLower = filters.lga.toLowerCase();
+      users = users.filter(u => u.localGovernmentArea?.toLowerCase() === lgaLower);
     }
 
     if (filters.search) {

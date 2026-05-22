@@ -3,19 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { UserProfile } from "@/lib/types/user";
 import { Report } from "@/lib/types/report";
-
-// ─── Sri Lankan Geography Hierarchy ──────────────────────────────────────────
-const sriLankaRegions: Record<string, string[]> = {
-    "Western": ["Colombo", "Gampaha", "Kalutara"],
-    "Central": ["Kandy", "Matale", "Nuwara Eliya"],
-    "Southern": ["Galle", "Matara", "Hambantota"],
-    "Northern": ["Jaffna", "Kilinochchi", "Mannar", "Vavuniya", "Mullaitivu"],
-    "Eastern": ["Batticaloa", "Ampara", "Trincomalee"],
-    "North Western": ["Kurunegala", "Puttalam"],
-    "North Central": ["Anuradhapura", "Polonnaruwa"],
-    "Uva": ["Badulla", "Moneragala"],
-    "Sabaragamuwa": ["Ratnapura", "Kegalle"]
-};
+import { sriLankaGeographics } from "@/lib/constants/sriLankaRegions";
 
 // ─── Constants & Metadata ───────────────────────────────────────────────────
 const statusMeta: Record<"active" | "suspended", { color: string; bg: string; border: string }> = {
@@ -84,6 +72,7 @@ export default function Users() {
     const [selectedStatus, setSelectedStatus] = useState("all");
     const [selectedProvince, setSelectedProvince] = useState("all");
     const [selectedDistrict, setSelectedDistrict] = useState("all");
+    const [selectedLGA, setSelectedLGA] = useState("all");
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -121,6 +110,7 @@ export default function Users() {
             if (selectedStatus !== "all") queryParams.set("status", selectedStatus);
             if (selectedProvince !== "all") queryParams.set("province", selectedProvince);
             if (selectedDistrict !== "all") queryParams.set("district", selectedDistrict);
+            if (selectedLGA !== "all") queryParams.set("lga", selectedLGA);
 
             const res = await fetch(`/api/users?${queryParams.toString()}`);
             if (!res.ok) {
@@ -141,12 +131,19 @@ export default function Users() {
 
     useEffect(() => {
         fetchUsers();
-    }, [debouncedSearchQuery, selectedStatus, selectedProvince, selectedDistrict]);
+    }, [debouncedSearchQuery, selectedStatus, selectedProvince, selectedDistrict, selectedLGA]);
 
-    // Reset district when province changes
+    // Reset district and LGA when province changes
     const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setSelectedProvince(e.target.value);
         setSelectedDistrict("all");
+        setSelectedLGA("all");
+    };
+
+    // Reset LGA when district changes
+    const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setSelectedDistrict(e.target.value);
+        setSelectedLGA("all");
     };
 
     // Fetch reports for selected user modal
@@ -338,7 +335,7 @@ export default function Users() {
                         </button>
                     </div>
 
-                    {/* Right: Sri Lanka Province/District/Status Filters */}
+                    {/* Right: Sri Lanka Province/District/LGA/Status Filters */}
                     <div className="flex flex-wrap items-center gap-3">
                         {/* Province dropdown */}
                         <div className="relative group">
@@ -348,7 +345,7 @@ export default function Users() {
                                 className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all min-w-[150px] font-semibold cursor-pointer"
                             >
                                 <option value="all" className="bg-[#0b1a26] text-slate-300">All Provinces</option>
-                                {Object.keys(sriLankaRegions).map(province => (
+                                {Object.keys(sriLankaGeographics).map(province => (
                                     <option key={province} value={province} className="bg-[#0b1a26] text-slate-300">
                                         {province} Province
                                     </option>
@@ -365,14 +362,36 @@ export default function Users() {
                         <div className="relative group">
                             <select
                                 value={selectedDistrict}
-                                onChange={(e) => setSelectedDistrict(e.target.value)}
+                                onChange={handleDistrictChange}
                                 disabled={selectedProvince === "all"}
                                 className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all min-w-[150px] font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-white/10"
                             >
                                 <option value="all" className="bg-[#0b1a26] text-slate-300">All Districts</option>
-                                {selectedProvince !== "all" && sriLankaRegions[selectedProvince]?.map(district => (
+                                {selectedProvince !== "all" && Object.keys(sriLankaGeographics[selectedProvince] || {}).map(district => (
                                     <option key={district} value={district} className="bg-[#0b1a26] text-slate-300">
                                         {district}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors group-disabled:opacity-40">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+
+                        {/* LGA dropdown (cascading) */}
+                        <div className="relative group">
+                            <select
+                                value={selectedLGA}
+                                onChange={(e) => setSelectedLGA(e.target.value)}
+                                disabled={selectedDistrict === "all"}
+                                className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all min-w-[180px] font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-white/10"
+                            >
+                                <option value="all" className="bg-[#0b1a26] text-slate-300">All LGAs</option>
+                                {selectedProvince !== "all" && selectedDistrict !== "all" && (sriLankaGeographics[selectedProvince]?.[selectedDistrict] || []).map(lga => (
+                                    <option key={lga} value={lga} className="bg-[#0b1a26] text-slate-300">
+                                        {lga}
                                     </option>
                                 ))}
                             </select>
