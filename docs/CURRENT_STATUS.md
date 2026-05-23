@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-22
+> **Last Updated:** 2026-05-23
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -92,6 +92,7 @@
 - [x] Line chart — reads from `MONTHLY_DATA` (populated in mockData.ts)
 - [x] Recent reports table — reads from `MOCK_REPORTS` (populated in mockData.ts)
 - [ ] User profile in topbar — hardcoded "Alex Morgan / Super Admin"
+- [x] Desktop topbar removed — content area now gets full vertical space on `md+`; profile card moved to sidebar bottom above Sign Out
 
 ### Admin Login (`Adminlogin.tsx`)
 - [x] Login form — real auth via `/api/auth/login` (username + password)
