@@ -17,7 +17,7 @@
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
 | Phase 5: Notifications System | 🔴 Not Started | UI exists with mock notifications |
 | Phase 6: Analytics (Live) | 🔴 Not Started | UI exists with hardcoded chart data |
-| Phase 7: Map View (Live) | 🟡 Partially Done | Google Maps integration complete with Sri Lankan Province/District filters |
+| Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
 | Phase 8: Push Notifications (FCM) | 🔴 Not Started | Not implemented |
 
 ---
@@ -115,8 +115,8 @@
 - [x] Map auto-fits bounds to the selected province/district polygon
 - [x] Marker categories, InfoWindows, and selection sync fully integrated with dashboard details panel overlay
 - [x] Sidebar collapse frees full map width (flex-1 layout fix)
-- [ ] No Firestore data subscription
-- [ ] No category/status filters wired to real data
+- [x] Firestore data subscription (wired to real data via `useReports()`)
+- [x] Category/status filters wired to real data (replaced with Active Status and Report Type select dropdowns)
 
 ### Users (`Users.tsx`)
 - [x] User list — live data queried from Firestore via `/api/users`

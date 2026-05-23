@@ -476,6 +476,18 @@ export default function AdminDashboard() {
         return () => clearTimeout(timer);
     }, []);
 
+    // Listen to tab change events
+    useEffect(() => {
+        const handleTabChange = (e: Event) => {
+            const customEvent = e as CustomEvent<string>;
+            if (customEvent.detail) {
+                setActiveNav(customEvent.detail);
+            }
+        };
+        window.addEventListener("changeNavTab", handleTabChange);
+        return () => window.removeEventListener("changeNavTab", handleTabChange);
+    }, []);
+
     const baseNavItems: NavItem[] = [
         {
             id: "dashboard", label: "Dashboard",
