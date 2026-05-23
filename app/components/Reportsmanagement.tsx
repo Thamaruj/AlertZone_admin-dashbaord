@@ -122,7 +122,7 @@ function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
     return (
         <div 
             ref={containerRef}
-            className="absolute top-full left-0 mt-2 z-50 w-72 bg-[#091622]/95 backdrop-blur-xl border border-teal-500/20 rounded-2xl p-4 shadow-2xl shadow-black/80 ring-1 ring-white/5 animate-in fade-in slide-in-from-top-2 duration-200"
+            className="absolute top-full left-0 mt-2 z-50 w-72 bg-[#091622] border border-teal-500/20 rounded-2xl p-4 shadow-2xl shadow-black/80 ring-1 ring-white/5 animate-in fade-in slide-in-from-top-2 duration-200"
         >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
