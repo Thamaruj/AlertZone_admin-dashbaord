@@ -458,7 +458,7 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Wired the "Open Management" button in the selected report panel to fire a custom `changeNavTab` navigation event, and added an event listener in `Maindashboard.tsx` to automatically redirect the admin to the live Reports Management tab.
     - Verified the workspace successfully compiles with `npm run build`.
 
-- [2026-05-23] Map View Sidebar Card & Navigation Restructuring:
+- **[2026-05-23] Map View Sidebar Card & Navigation Restructuring:**
     - Redesigned active report incidents card layout in the `Mapview.tsx` sidebar list to show the "Report Type" (e.g., Road & Traffic Incident) as the main card title.
     - Configured reported address styling on sidebar cards and overlays to wrap naturally (`break-words`) instead of using single-line truncations, and set standard body font weighting (`font-normal text-slate-400`) to differentiate it from title styles.
     - Updated map marker InfoWindows and selected report details overlays to display the Report Type as the main title, placing the monospaced unique Incident ID directly below it.
@@ -466,7 +466,14 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Added reactive lifecycle effects inside `Reportsmanagement.tsx` to automatically listen for redirection event cues and immediately launch the targeted report's complete interactive details modal.
     - Checked all compilation flows confirming zero warnings.
 
+- **[2026-05-24] All-Country LGA Auto-Resolution:**
+    - Created [geocode-all-country.js](file:///e:/AlertZone_New/alertzone-admin-dashboard/scripts/geocode-all-country.js) to resolve coordinate center points for all **341 LGAs** across all **25 districts** in Sri Lanka using the Photon API.
+    - Implemented a config builder [rebuild-regions-config.js](file:///e:/AlertZone_New/alertzone-admin-dashboard/scripts/rebuild-regions-config.js) to append the geocoded coordinates database (`LGA_CENTERS`) and the regex-based `resolveSrilankaRegion` utility to both dashboards and mobile configs.
+    - Updated `resolveSrilankaRegion` to use regex word boundaries `\b` inside the `matches` helper, successfully resolving a critical bug where short names (e.g. `"ella"`) matched inside larger words (e.g. `"avissawella"` or `"pussellawa"`).
+    - Deduplicated the code in [Reportsmanagement.tsx](file:///e:/AlertZone_New/alertzone-admin-dashboard/app/components/Reportsmanagement.tsx) and [Mapview.tsx](file:///e:/AlertZone_New/alertzone-admin-dashboard/app/components/Mapview.tsx) by importing the central config's `resolveSrilankaRegion`.
+    - Created [count-lgas.ts](file:///e:/AlertZone_New/alertzone-admin-dashboard/scripts/count-lgas.ts) and verified that all 29 reports in the live Firestore database resolve to their correct LGAs with zero errors.
+
 ---
 
-*Last Updated: 2026-05-23*
+*Last Updated: 2026-05-24*
 

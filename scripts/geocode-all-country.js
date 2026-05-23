@@ -1,0 +1,574 @@
+// scripts/geocode-all-country.js
+const fs = require("fs");
+const path = require("path");
+const fetch = require("node-fetch");
+
+const CACHE_FILE = path.join(__dirname, "../lga-coordinates-all-cache.json");
+const OUTPUT_FILE = path.join(__dirname, "../lga-coordinates-completed-all.json");
+
+// Import the full list of provinces, districts, and LGAs
+const sriLankaGeographics = {
+  "Western": {
+    "Colombo": [
+      "Colombo Municipal Council",
+      "Dehiwala-Mount Lavinia Municipal Council",
+      "Sri Jayawardenepura Kotte Municipal Council",
+      "Kaduwela Municipal Council",
+      "Moratuwa Municipal Council",
+      "Kolonnawa Urban Council",
+      "Maharagama Urban Council",
+      "Boralesgamuwa Urban Council",
+      "Kesbewa Urban Council",
+      "Homagama Pradeshiya Sabha",
+      "Seethawaka Pradeshiya Sabha",
+      "Kotikawatta-Mulleriyawa Pradeshiya Sabha"
+    ],
+    "Gampaha": [
+      "Negombo Municipal Council",
+      "Gampaha Municipal Council",
+      "Wattala-Mabole Urban Council",
+      "Peliyagoda Urban Council",
+      "Ja-Ela Urban Council",
+      "Katunayake-Seeduwa Urban Council",
+      "Minuwangoda Urban Council",
+      "Kelaniya Pradeshiya Sabha",
+      "Wattala Pradeshiya Sabha",
+      "Biyagama Pradeshiya Sabha",
+      "Mahara Pradeshiya Sabha",
+      "Dompe Pradeshiya Sabha",
+      "Gampaha Pradeshiya Sabha",
+      "Ja-Ela Pradeshiya Sabha",
+      "Minuwangoda Pradeshiya Sabha",
+      "Mirigama Pradeshiya Sabha",
+      "Attanagalla Pradeshiya Sabha",
+      "Divulapitiya Pradeshiya Sabha"
+    ],
+    "Kalutara": [
+      "Kalutara Urban Council",
+      "Panadura Urban Council",
+      "Horana Urban Council",
+      "Beruwala Urban Council",
+      "Kalutara Pradeshiya Sabha",
+      "Panadura Pradeshiya Sabha",
+      "Horana Pradeshiya Sabha",
+      "Bandaragama Pradeshiya Sabha",
+      "Madurawela Pradeshiya Sabha",
+      "Angalawatta Pradeshiya Sabha",
+      "Bulathsinhala Pradeshiya Sabha",
+      "Dodangoda Pradeshiya Sabha",
+      "Mathugama Pradeshiya Sabha",
+      "Walallawita Pradeshiya Sabha",
+      "Beruwala Pradeshiya Sabha"
+    ]
+  },
+  "Central": {
+    "Kandy": [
+      "Kandy Municipal Council",
+      "Gampola Urban Council",
+      "Kadugannawa Urban Council",
+      "Wattegama Urban Council",
+      "Harispattuwa Pradeshiya Sabha",
+      "Akurana Pradeshiya Sabha",
+      "Pathadumbara Pradeshiya Sabha",
+      "Panvila Pradeshiya Sabha",
+      "Ududumbara Pradeshiya Sabha",
+      "Medadumbara Pradeshiya Sabha",
+      "Kundasale Pradeshiya Sabha",
+      "Kandy Gravets & Gangawata Korale Pradeshiya Sabha",
+      "Yatinuwara Pradeshiya Sabha",
+      "Udunuwara Pradeshiya Sabha",
+      "Doluwa Pradeshiya Sabha",
+      "Pathahewaheta Pradeshiya Sabha",
+      "Delthota Pradeshiya Sabha",
+      "Pasbage Korale Pradeshiya Sabha",
+      "Ganga Ihala Korale Pradeshiya Sabha",
+      "Pujapitiya Pradeshiya Sabha"
+    ],
+    "Matale": [
+      "Matale Municipal Council",
+      "Dambulla Municipal Council",
+      "Matale Pradeshiya Sabha",
+      "Dambulla Pradeshiya Sabha",
+      "Galewela Pradeshiya Sabha",
+      "Pallepola Pradeshiya Sabha",
+      "Yatawatta Pradeshiya Sabha",
+      "Rattota Pradeshiya Sabha",
+      "Ukuwela Pradeshiya Sabha",
+      "Wilgamuwa Pradeshiya Sabha",
+      "Naula Pradeshiya Sabha",
+      "Laggala-Pallegama Pradeshiya Sabha"
+    ],
+    "Nuwara Eliya": [
+      "Nuwara Eliya Municipal Council",
+      "Hatton-Dickoya Urban Council",
+      "Talawakele-Lindula Urban Council",
+      "Nuwara Eliya Pradeshiya Sabha",
+      "Ambagamuwa Pradeshiya Sabha",
+      "Kotmale Pradeshiya Sabha",
+      "Hanguranketha Pradeshiya Sabha",
+      "Walapane Pradeshiya Sabha",
+      "Norwood Pradeshiya Sabha",
+      "Maskeliya Pradeshiya Sabha",
+      "Agrapatana Pradeshiya Sabha"
+    ]
+  },
+  "Southern": {
+    "Galle": [
+      "Galle Municipal Council",
+      "Ambalangoda Urban Council",
+      "Hikkaduwa Urban Council",
+      "Galle Gravets Pradeshiya Sabha",
+      "Bope-Poddala Pradeshiya Sabha",
+      "Akmeemana Pradeshiya Sabha",
+      "Habaraduwa Pradeshiya Sabha",
+      "Imaduwa Pradeshiya Sabha",
+      "Karandeniya Pradeshiya Sabha",
+      "Bentota Pradeshiya Sabha",
+      "Balapitiya Pradeshiya Sabha",
+      "Elpitiya Pradeshiya Sabha",
+      "Niyagama Pradeshiya Sabha",
+      "Neluwa Pradeshiya Sabha",
+      "Thawalama Pradeshiya Sabha",
+      "Baddegama Pradeshiya Sabha",
+      "Yakkalamulla Pradeshiya Sabha",
+      "Ambalangoda Pradeshiya Sabha",
+      "Hikkaduwa Pradeshiya Sabha"
+    ],
+    "Matara": [
+      "Matara Municipal Council",
+      "Weligama Urban Council",
+      "Matara Four Gravets Pradeshiya Sabha",
+      "Weligama Pradeshiya Sabha",
+      "Devinuwara Pradeshiya Sabha",
+      "Dikwella Pradeshiya Sabha",
+      "Hakmana Pradeshiya Sabha",
+      "Kamburupitiya Pradeshiya Sabha",
+      "Thihagoda Pradeshiya Sabha",
+      "Malimbada Pradeshiya Sabha",
+      "Athuraliya Pradeshiya Sabha",
+      "Akuressa Pradeshiya Sabha",
+      "Pasgoda Pradeshiya Sabha",
+      "Kotapola Pradeshiya Sabha",
+      "Mulatiyana Pradeshiya Sabha",
+      "Kirinda Puhulwella Pradeshiya Sabha"
+    ],
+    "Hambantota": [
+      "Tangalle Urban Council",
+      "Hambantota Municipal Council",
+      "Tangalle Pradeshiya Sabha",
+      "Hambantota Pradeshiya Sabha",
+      "Beliatta Pradeshiya Sabha",
+      "Ambalantota Pradeshiya Sabha",
+      "Angunakolapelessa Pradeshiya Sabha",
+      "Weeraketiya Pradeshiya Sabha",
+      "Katuwana Pradeshiya Sabha",
+      "Tissamaharama Pradeshiya Sabha",
+      "Lunugamvehera Pradeshiya Sabha",
+      "Sooriyawewa Pradeshiya Sabha"
+    ]
+  },
+  "Northern": {
+    "Jaffna": [
+      "Jaffna Municipal Council",
+      "Valvettithurai Urban Council",
+      "Point Pedro Urban Council",
+      "Chavakachcheri Urban Council",
+      "Kayts Pradeshiya Sabha",
+      "Delft Pradeshiya Sabha",
+      "Karainagar Pradeshiya Sabha",
+      "Velanai Pradeshiya Sabha",
+      "Valikamam West Pradeshiya Sabha",
+      "Valikamam North Pradeshiya Sabha",
+      "Valikamam East Pradeshiya Sabha",
+      "Valikamam South Pradeshiya Sabha",
+      "Valikamam South-West Pradeshiya Sabha",
+      "Vadamaradchi South-West Pradeshiya Sabha",
+      "Point Pedro Pradeshiya Sabha",
+      "Chavakachcheri Pradeshiya Sabha",
+      "Nallur Pradeshiya Sabha"
+    ],
+    "Kilinochchi": [
+      "Karachchi Pradeshiya Sabha",
+      "Poonakary Pradeshiya Sabha",
+      "Pachchilaipalli Pradeshiya Sabha"
+    ],
+    "Mannar": [
+      "Mannar Urban Council",
+      "Mannar Pradeshiya Sabha",
+      "Nanattan Pradeshiya Sabha",
+      "Musali Pradeshiya Sabha",
+      "Manthai West Pradeshiya Sabha",
+      "Madhu Pradeshiya Sabha"
+    ],
+    "Vavuniya": [
+      "Vavuniya Urban Council",
+      "Vavuniya South Tamil Pradeshiya Sabha",
+      "Vavuniya South Sinhala Pradeshiya Sabha",
+      "Vavuniya North Pradeshiya Sabha",
+      "Vengalacheddikulam Pradeshiya Sabha"
+    ],
+    "Mullaitivu": [
+      "Maritimepattu Pradeshiya Sabha",
+      "Puthukudiyiruppu Pradeshiya Sabha",
+      "Thunukkai Pradeshiya Sabha",
+      "Manthai East Pradeshiya Sabha",
+      "Welioya Pradeshiya Sabha"
+    ]
+  },
+  "Eastern": {
+    "Batticaloa": [
+      "Batticaloa Municipal Council",
+      "Kattankudy Urban Council",
+      "Eravur Urban Council",
+      "Manmunai Pattu Pradeshiya Sabha",
+      "Manmunai North Pradeshiya Sabha",
+      "Manmunai South & Eruvil Pattu Pradeshiya Sabha",
+      "Manmunai West Pradeshiya Sabha",
+      "Manmunai South West Pradeshiya Sabha",
+      "Eravur Pattu Pradeshiya Sabha",
+      "Koralai Pattu Pradeshiya Sabha",
+      "Koralai Pattu West Pradeshiya Sabha",
+      "Koralai Pattu South Pradeshiya Sabha",
+      "Porativu Pattu Pradeshiya Sabha"
+    ],
+    "Ampara": [
+      "Kalmunai Municipal Council",
+      "Ampara Urban Council",
+      "Akkaraipattu Municipal Council",
+      "Ampara Pradeshiya Sabha",
+      "Damana Pradeshiya Sabha",
+      "Uhana Pradeshiya Sabha",
+      "Lahugala Pradeshiya Sabha",
+      "Dehiattakandiya Pradeshiya Sabha",
+      "Padiyathalawa Pradeshiya Sabha",
+      "Mahaoya Pradeshiya Sabha",
+      "Sammanthurai Pradeshiya Sabha",
+      "Kalmunai Pradeshiya Sabha",
+      "Karaitivu Pradeshiya Sabha",
+      "Nintavur Pradeshiya Sabha",
+      "Addalaichenai Pradeshiya Sabha",
+      "Alayadivembu Pradeshiya Sabha",
+      "Akkaraipattu Pradeshiya Sabha",
+      "Pottuvil Pradeshiya Sabha",
+      "Thirukkovil Pradeshiya Sabha"
+    ],
+    "Trincomalee": [
+      "Trincomalee Urban Council",
+      "Trincomalee Town & Gravets Pradeshiya Sabha",
+      "Kuchchaveli Pradeshiya Sabha",
+      "Gomarankadawala Pradeshiya Sabha",
+      "Padavi Sri Pura Pradeshiya Sabha",
+      "Morawewa Pradeshiya Sabha",
+      "Kantale Pradeshiya Sabha",
+      "Seruvila Pradeshiya Sabha",
+      "Kinniya Urban Council",
+      "Kinniya Pradeshiya Sabha",
+      "Mutur Pradeshiya Sabha",
+      "Verugal Pradeshiya Sabha"
+    ]
+  },
+  "North Western": {
+    "Kurunegala": [
+      "Kurunegala Municipal Council",
+      "Kuliyapitiya Urban Council",
+      "Kurunegala Pradeshiya Sabha",
+      "Giribawa Pradeshiya Sabha",
+      "Galgamuwa Pradeshiya Sabha",
+      "Ehetuwewa Pradeshiya Sabha",
+      "Ambanpola Pradeshiya Sabha",
+      "Kotavehera Pradeshiya Sabha",
+      "Nikaweratiya Pradeshiya Sabha",
+      "Maho Pradeshiya Sabha",
+      "Polpithigama Pradeshiya Sabha",
+      "Ibbagamuwa Pradeshiya Sabha",
+      "Ganewatta Pradeshiya Sabha",
+      "Wariyapola Pradeshiya Sabha",
+      "Kobeigane Pradeshiya Sabha",
+      "Bingiriya Pradeshiya Sabha",
+      "Panduwasnuwara Pradeshiya Sabha",
+      "Kuliyapitiya Pradeshiya Sabha",
+      "Udubaddawa Pradeshiya Sabha",
+      "Pannala Pradeshiya Sabha",
+      "Makandura Pradeshiya Sabha",
+      "Narammala Pradeshiya Sabha",
+      "Weerambugedara Pradeshiya Sabha",
+      "Mawathagama Pradeshiya Sabha",
+      "Rideegama Pradeshiya Sabha",
+      "Alawwa Pradeshiya Sabha",
+      "Polgahawela Pradeshiya Sabha"
+    ],
+    "Puttalam": [
+      "Puttalam Urban Council",
+      "Chilaw Urban Council",
+      "Kalpitiya Pradeshiya Sabha",
+      "Puttalam Pradeshiya Sabha",
+      "Vanathavilluwa Pradeshiya Sabha",
+      "Karuwalagaswewa Pradeshiya Sabha",
+      "Anamaduwa Pradeshiya Sabha",
+      "Pallama Pradeshiya Sabha",
+      "Arachchikattuwa Pradeshiya Sabha",
+      "Chilaw Pradeshiya Sabha",
+      "Madampe Pradeshiya Sabha",
+      "Mahawewa Pradeshiya Sabha",
+      "Nattandiya Pradeshiya Sabha",
+      "Dankotuwa Pradeshiya Sabha",
+      "Wennappuwa Pradeshiya Sabha"
+    ]
+  },
+  "North Central": {
+    "Anuradhapura": [
+      "Anuradhapura Municipal Council",
+      "Anuradhapura Pradeshiya Sabha",
+      "Padaviya Pradeshiya Sabha",
+      "Kebithigollewa Pradeshiya Sabha",
+      "Medawachchiya Pradeshiya Sabha",
+      "Rambewa Pradeshiya Sabha",
+      "Kahatagasdigiliya Pradeshiya Sabha",
+      "Horowpothana Pradeshiya Sabha",
+      "Galenbindunuwewa Pradeshiya Sabha",
+      "Mihintale Pradeshiya Sabha",
+      "Nuwaragam Palatha Central Pradeshiya Sabha",
+      "Nuwaragam Palatha East Pradeshiya Sabha",
+      "Vilachchiya Pradeshiya Sabha",
+      "Nachchaduwa Pradeshiya Sabha",
+      "Noctchiyagama Pradeshiya Sabha",
+      "Rajanganaya Pradeshiya Sabha",
+      "Galnewa Pradeshiya Sabha",
+      "Thalawa Pradeshiya Sabha",
+      "Ipalogama Pradeshiya Sabha",
+      "Kekirawa Pradeshiya Sabha",
+      "Thirappane Pradeshiya Sabha",
+      "Habarana Pradeshiya Sabha",
+      "Palugaswewa Pradeshiya Sabha"
+    ],
+    "Polonnaruwa": [
+      "Polonnaruwa Municipal Council",
+      "Thamankaduwa Pradeshiya Sabha",
+      "Hingurakgoda Pradeshiya Sabha",
+      "Medirigiriya Pradeshiya Sabha",
+      "Lankapura Pradeshiya Sabha",
+      "Elahera Pradeshiya Sabha",
+      "Welikanda Pradeshiya Sabha",
+      "Dimbulagala Pradeshiya Sabha"
+    ]
+  },
+  "Uva": {
+    "Badulla": [
+      "Badulla Municipal Council",
+      "Bandarawela Municipal Council",
+      "Haputale Urban Council",
+      "Badulla Pradeshiya Sabha",
+      "Soranatota Pradeshiya Sabha",
+      "Meegahakiula Pradeshiya Sabha",
+      "Kandaketiya Pradeshiya Sabha",
+      "Ridimaliyadda Pradeshiya Sabha",
+      "Mahiyanganaya Pradeshiya Sabha",
+      "Passara Pradeshiya Sabha",
+      "Lunugala Pradeshiya Sabha",
+      "Uva Paranagama Pradeshiya Sabha",
+      "Welimada Pradeshiya Sabha",
+      "Bandarawela Pradeshiya Sabha",
+      "Ella Pradeshiya Sabha",
+      "Haputale Pradeshiya Sabha",
+      "Haldummulla Pradeshiya Sabha"
+    ],
+    "Moneragala": [
+      "Moneragala Pradeshiya Sabha",
+      "Badalkumbura Pradeshiya Sabha",
+      "Wellawaya Pradeshiya Sabha",
+      "Buttala Pradeshiya Sabha",
+      "Siyambalanduwa Pradeshiya Sabha",
+      "Medagama Pradeshiya Sabha",
+      "Bibile Pradeshiya Sabha",
+      "Madulla Pradeshiya Sabha",
+      "Kataragama Pradeshiya Sabha",
+      "Thanamalwila Pradeshiya Sabha",
+      "Sevanagala Pradeshiya Sabha"
+    ]
+  },
+  "Sabaragamuwa": {
+    "Ratnapura": [
+      "Ratnapura Municipal Council",
+      "Balangoda Urban Council",
+      "Embilipitiya Urban Council",
+      "Ratnapura Pradeshiya Sabha",
+      "Imbulpe Pradeshiya Sabha",
+      "Balangoda Pradeshiya Sabha",
+      "Opanayaka Pradeshiya Sabha",
+      "Pelmadulla Pradeshiya Sabha",
+      "Elapatha Pradeshiya Sabha",
+      "Kuruvita Pradeshiya Sabha",
+      "Eheliyagoda Pradeshiya Sabha",
+      "Ayagama Pradeshiya Sabha",
+      "Kalawana Pradeshiya Sabha",
+      "Kahawatta Pradeshiya Sabha",
+      "Godakawela Pradeshiya Sabha",
+      "Weligepola Pradeshiya Sabha",
+      "Embilipitiya Pradeshiya Sabha",
+      "Kolonna Pradeshiya Sabha"
+    ],
+    "Kegalle": [
+      "Kegalle Urban Council",
+      "Kegalle Pradeshiya Sabha",
+      "Galigamuwa Pradeshiya Sabha",
+      "Warakapola Pradeshiya Sabha",
+      "Ruwanwella Pradeshiya Sabha",
+      "Yatiyanthota Pradeshiya Sabha",
+      "Dehiowita Pradeshiya Sabha",
+      "Deraniyagala Pradeshiya Sabha",
+      "Karawanella Pradeshiya Sabha",
+      "Rambukkana Pradeshiya Sabha",
+      "Mawanella Pradeshiya Sabha",
+      "Aranayaka Pradeshiya Sabha"
+    ]
+  }
+};
+
+const DISTRICT_CENTERS = {
+  "Colombo": { lat: 6.9355, lng: 79.8487 },
+  "Gampaha": { lat: 7.0899, lng: 79.9994 },
+  "Kalutara": { lat: 6.5793, lng: 79.9648 },
+  "Kandy": { lat: 7.2906, lng: 80.6336 },
+  "Matale": { lat: 7.4698, lng: 80.6217 },
+  "Nuwara Eliya": { lat: 6.9708, lng: 80.7829 },
+  "Galle": { lat: 6.0461, lng: 80.2103 },
+  "Matara": { lat: 5.9485, lng: 80.5353 },
+  "Hambantota": { lat: 6.1234, lng: 81.1205 },
+  "Jaffna": { lat: 9.6685, lng: 80.0074 },
+  "Kilinochchi": { lat: 9.3834, lng: 80.4002 },
+  "Mannar": { lat: 8.9778, lng: 79.9093 },
+  "Vavuniya": { lat: 8.7514, lng: 80.4971 },
+  "Mullaitivu": { lat: 9.2236, lng: 80.7909 },
+  "Batticaloa": { lat: 7.7102, lng: 81.6924 },
+  "Ampara": { lat: 7.2975, lng: 81.6820 },
+  "Trincomalee": { lat: 8.5778, lng: 81.2289 },
+  "Kurunegala": { lat: 7.4839, lng: 80.3683 },
+  "Puttalam": { lat: 8.0362, lng: 79.8283 },
+  "Anuradhapura": { lat: 8.3122, lng: 80.4131 },
+  "Polonnaruwa": { lat: 7.9329, lng: 81.0082 },
+  "Badulla": { lat: 6.9802, lng: 81.0577 },
+  "Moneragala": { lat: 6.8695, lng: 81.3454 },
+  "Ratnapura": { lat: 6.6931, lng: 80.3995 },
+  "Kegalle": { lat: 7.2515, lng: 80.3464 }
+};
+
+// Seed cache with any existing coords we have from previous runs
+let cache = {};
+if (fs.existsSync(CACHE_FILE)) {
+  try {
+    cache = JSON.parse(fs.readFileSync(CACHE_FILE, "utf8"));
+  } catch (err) {
+    console.error("Error reading cache:", err.message);
+  }
+}
+
+// Also import any cache from lga-coordinates-completed.json if available
+const activeCompletedPath = path.join(__dirname, "../lga-coordinates-completed.json");
+if (fs.existsSync(activeCompletedPath)) {
+  try {
+    const actCompleted = JSON.parse(fs.readFileSync(activeCompletedPath, "utf8"));
+    for (const [prov, dists] of Object.entries(actCompleted)) {
+      for (const [dist, lgas] of Object.entries(dists)) {
+        for (const [lgaName, coords] of Object.entries(lgas)) {
+          const cacheKey = `${dist} -> ${lgaName}`;
+          if (coords && typeof coords.lat === "number" && typeof coords.lng === "number" && !coords.isFallback) {
+            cache[cacheKey] = { lat: coords.lat, lng: coords.lng };
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.warn("Could not seed from lga-coordinates-completed.json:", err.message);
+  }
+}
+
+function cleanLgaName(lga) {
+  return lga
+    .replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "")
+    .replace(/Four Gravets|Gravets & Gangawata Korale|Town & Gravets/gi, "")
+    .replace(/ Tamil| Sinhala/gi, "")
+    .trim();
+}
+
+async function geocode(lga, district) {
+  const cacheKey = `${district} -> ${lga}`;
+  // Skip already resolved valid coordinates
+  if (cache[cacheKey] && !cache[cacheKey].isFallback) {
+    return cache[cacheKey];
+  }
+
+  const shortName = cleanLgaName(lga);
+  const queries = [
+    `${shortName}, ${district}, Sri Lanka`,
+    `${shortName}, Sri Lanka`,
+    `${lga}, ${district}, Sri Lanka`
+  ];
+
+  for (let q of queries) {
+    const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1`;
+    try {
+      const res = await fetch(url);
+      const data = await res.json();
+      
+      if (data && data.features && data.features.length > 0) {
+        const feat = data.features[0];
+        const [lng, lat] = feat.geometry.coordinates;
+        const coords = { lat, lng };
+        cache[cacheKey] = coords;
+        fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), "utf8");
+        console.log(`✅ Geocoded via Photon: ${cacheKey} -> ${coords.lat}, ${coords.lng}`);
+        await new Promise(r => setTimeout(r, 150)); // Fast delay since Photon is fast and unblocked
+        return coords;
+      }
+    } catch (err) {
+      console.error(`💥 Error geocoding "${q}":`, err.message);
+    }
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  // Fallback to district center
+  console.log(`⚠️ Failed geocoding for "${cacheKey}". Using district center.`);
+  const distCenter = DISTRICT_CENTERS[district] || { lat: 7.0, lng: 80.0 };
+  const fallbackCoords = { lat: distCenter.lat, lng: distCenter.lng, isFallback: true };
+  cache[cacheKey] = fallbackCoords;
+  fs.writeFileSync(CACHE_FILE, JSON.stringify(cache, null, 2), "utf8");
+  return fallbackCoords;
+}
+
+async function run() {
+  const result = {};
+  
+  const queue = [];
+  for (const [prov, dists] of Object.entries(sriLankaGeographics)) {
+    for (const [dist, lgas] of Object.entries(dists)) {
+      for (const lga of lgas) {
+        queue.push({ prov, dist, lga });
+      }
+    }
+  }
+
+  console.log(`🚀 Starting geocoding of ALL ${queue.length} LGAs in Sri Lanka...`);
+  
+  for (let i = 0; i < queue.length; i++) {
+    const item = queue[i];
+    const cacheKey = `${item.dist} -> ${item.lga}`;
+    const alreadyCached = cache[cacheKey] && !cache[cacheKey].isFallback;
+    
+    if (i % 20 === 0 || !alreadyCached) {
+      console.log(`[${i + 1}/${queue.length}] Processing: ${item.dist} -> ${item.lga}`);
+    }
+    
+    const coords = await geocode(item.lga, item.dist);
+    
+    if (!result[item.prov]) result[item.prov] = {};
+    if (!result[item.prov][item.dist]) result[item.prov][item.dist] = {};
+    result[item.prov][item.dist][item.lga] = { lat: coords.lat, lng: coords.lng };
+  }
+
+  // Generate output JSON structure
+  const formatted = JSON.stringify(result, null, 2);
+  fs.writeFileSync(OUTPUT_FILE, formatted, "utf8");
+  console.log(`🎉 Completed! All-country output saved to lga-coordinates-completed-all.json`);
+}
+
+run();

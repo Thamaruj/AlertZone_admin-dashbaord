@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-23
+> **Last Updated:** 2026-05-24
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -67,7 +67,9 @@
 - [x] Full UI detail modal with dynamic timeline styles matching report statuses
 - [x] Status updates and mutations processed securely via backend PATCH route (`/api/reports/[id]`), appending to `statusHistory` and rewarding contribution points to citizens (+10 pts) for validated fixes.
 - [x] Automatic user notification generation within Firestore on the backend when an admin changes a report status
-- [x] Robust reverse geographical lookup for locations mapping suburbs and GPS directly to formal Provinces and Districts, falling back gracefully if only coordinates are provided
+- [x] Robust reverse geographical lookup (`resolveSrilankaRegion`) mapping suburbs and GPS directly to formal Provinces, Districts, and LGAs using the centralized 341-LGA coordinates database.
+- [x] Centroid-based fallback: uses coordinates to calculate the nearest LGA center if text matching is sparse or absent.
+- [x] Regex-based boundary matching: prevents incorrect subword overlaps (such as `"ella"` matching inside `"avissawella"` or `"pussellawa"`).
 - [x] User avatars embedded directly into reporter cards, fetched instantly upon opening the modal
 - [x] Reporter ID removed from UI for cleaner layout
 - [x] Added premium text-based "Refresh" button next to "Export Data" (matching User Management theme), removing the refresh SVG icon and the "New Report" button.
