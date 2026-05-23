@@ -61,13 +61,23 @@
 - [x] Premium Custom Scrollbars — added smooth custom scrollbars globally for Webkit and Firefox browsers
 
 ### Reports Management (Live)
-- [x] Real-time Firebase Firestore data synchronization for reports
+- [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.
 - [x] Full UI detail modal with dynamic timeline styles matching report statuses
-- [x] Real status updates push to Firestore and log the `statusHistory` automatically
-- [x] Automatic user notification generation within Firestore when an admin changes a report status
+- [x] Status updates and mutations processed securely via backend PATCH route (`/api/reports/[id]`), appending to `statusHistory` and rewarding contribution points to citizens (+10 pts) for validated fixes.
+- [x] Automatic user notification generation within Firestore on the backend when an admin changes a report status
 - [x] Robust reverse geographical lookup for locations mapping suburbs and GPS directly to formal Provinces and Districts, falling back gracefully if only coordinates are provided
 - [x] User avatars embedded directly into reporter cards, fetched instantly upon opening the modal
 - [x] Reporter ID removed from UI for cleaner layout
+- [x] Added premium text-based "Refresh" button next to "Export Data" (matching User Management theme), removing the refresh SVG icon and the "New Report" button.
+- [x] Added robust client-side loading and error display states with custom "Retry" buttons if fetching fails
+- [x] Separated location details into Province and District (2-column layout) and Local Government Area (LGA) on its own full-width line below them to prevent half-seen/truncation issues inside the details modal, and added a custom Google Maps deep-link
+- [x] Renamed the 'Submitted' card to 'Date & Time' and configured it to show date and 12-hour time (with AM/PM) on separate lines for cleaner visual alignment
+- [x] Restructured list cards in the incident list view to show `Province:`, `District:`, and `LGA:` on separate lines below the title, with the incident category title on the left and the 12-hour AM/PM date and time (with calendar icon) inline directly to the right of the title.
+- [x] Changed all reports helper functions (`resolveLocation`, `getReportDateString`, `formatDate`, `getFormattedDateTime`) to hoisted function declarations to avoid client-side TDZ ReferenceErrors on initialization.
+- [x] Added a premium glassmorphic multi-filter panel containing a Date Range filter ("From Date" and "To Date" with custom glassmorphic React-based `CustomCalendar` dropdown popovers matching the dashboard's design system), Category, Province, District, and LGA cascading selectors, along with a dynamic "Clear Filters" reset button.
+- [x] Integrated auto-close on click-outside logic and quick-select buttons ("Today", "Clear") directly within the custom calendar popovers.
+- [x] Displays a live count showing `{filteredReports.length} Reports found` directly below the filter grid to dynamically update as the admin interacts with the filters.
+- [x] Replaced old incident category emojis with modern vector SVG icons across all lists and modals
 
 ---
 
