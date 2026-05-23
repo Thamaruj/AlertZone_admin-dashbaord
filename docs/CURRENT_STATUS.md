@@ -59,6 +59,7 @@
 - [x] Filter-Independent Overview Stats — Total, Active, and Elite stats card counters remain unaffected by province, district, status, or keyword filters
 - [x] Sidebar Navigation Refinements — styled vertical nav tabs, removed glowing effect from left-top brand badge, and updated label to "Admin Dashboard"
 - [x] Premium Custom Scrollbars — added smooth custom scrollbars globally for Webkit and Firefox browsers
+- [x] Map View Sidebar Card Restructuring — updated the active reports sidebar cards in `Mapview.tsx` to display Report Type (e.g., Road & Traffic Incident) as the main title, with the Incident ID displayed cleanly directly below the title.
 
 ### Reports Management (Live)
 - [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.

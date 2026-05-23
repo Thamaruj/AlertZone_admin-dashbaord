@@ -890,18 +890,23 @@ export default function MapView() {
                                          : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
                                          }`}
                                  >
-                                     <div className="flex justify-between items-start mb-2">
-                                         <div className="flex items-center gap-2">
-                                             <span className={`w-2 h-2 rounded-full ${st.dot}`} />
-                                             <span className="text-[10px] font-bold text-white tracking-tight">{report.id}</span>
-                                         </div>
-                                     </div>
-                                     <div className="flex items-center gap-3">
-                                         <div className={`w-8 h-8 rounded-lg ${cat.bg} flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition-transform`}>
+                                     <div className="flex items-start gap-3">
+                                         <div className={`w-8 h-8 rounded-lg ${cat.bg} flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition-transform flex-shrink-0`}>
                                              {cat.icon}
                                          </div>
                                          <div className="min-w-0 flex-1">
-                                             <p className="text-xs font-semibold text-slate-200 truncate">{report.resolvedLocation.address}</p>
+                                             <div className="flex items-center justify-between gap-2">
+                                                 <p className="text-xs font-bold text-white truncate">{report.category} Incident</p>
+                                                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                     <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                                                     <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">{report.status}</span>
+                                                 </div>
+                                             </div>
+                                             
+                                             <p className="text-[10px] text-slate-500 font-mono mt-0.5">Incident ID: {report.id}</p>
+                                             
+                                             <p className="text-xs font-semibold text-slate-200 truncate mt-1.5">{report.resolvedLocation.address}</p>
+                                             
                                              <div className="flex items-center gap-2 mt-0.5">
                                                  <p className="text-[10px] text-slate-400">{getFormattedDate(report.createdAt)}</p>
                                                  {report.resolvedLocation.district && (
