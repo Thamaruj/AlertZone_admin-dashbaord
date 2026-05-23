@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useReports } from "@/lib/hooks/useReports";
 import { Report, ReportStatus } from "@/lib/types/report";
 import { UserProfile } from "@/lib/types/user";
@@ -10,8 +10,211 @@ import { sriLankaGeographics } from "@/lib/constants/sriLankaRegions";
 import MiniMap from "./MiniMap";
 import UserDetailsModal from "./UserDetailsModal";
 
+interface CalendarProps {
+    value: string; // YYYY-MM-DD
+    onChange: (date: string) => void;
+    onClose: () => void;
+}
+
+function formatDateOnly(dateStr: string) {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const year = parts[0];
+    const month = parts[1];
+    const day = parts[2];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return `${months[parseInt(month, 10) - 1]} ${parseInt(day, 10)}, ${year}`;
+}
+
+function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
+    const today = new Date();
+    const initialDate = value ? new Date(value) : today;
+    const [viewDate, setViewDate] = useState(initialDate);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+
+    const monthNames = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayIndex = new Date(year, month, 1).getDay();
+    const prevMonthDays = new Date(year, month, 0).getDate();
+
+    // Click outside listener
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                onClose();
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, [onClose]);
+
+    const handlePrevMonth = () => {
+        setViewDate(new Date(year, month - 1, 1));
+    };
+
+    const handleNextMonth = () => {
+        setViewDate(new Date(year, month + 1, 1));
+    };
+
+    const handleSelectDay = (day: number, isPrevMonth = false, isNextMonth = false) => {
+        let targetMonth = month;
+        let targetYear = year;
+        if (isPrevMonth) {
+            targetMonth = month - 1;
+            if (targetMonth < 0) {
+                targetMonth = 11;
+                targetYear = year - 1;
+            }
+        } else if (isNextMonth) {
+            targetMonth = month + 1;
+            if (targetMonth > 11) {
+                targetMonth = 0;
+                targetYear = year + 1;
+            }
+        }
+        const formattedDate = `${targetYear}-${String(targetMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+        onChange(formattedDate);
+        onClose();
+    };
+
+    const handleSelectToday = () => {
+        const formattedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+        onChange(formattedDate);
+        onClose();
+    };
+
+    const handleClear = () => {
+        onChange("");
+        onClose();
+    };
+
+    const days = [];
+    // Previous month offset days
+    for (let i = firstDayIndex - 1; i >= 0; i--) {
+        days.push({ day: prevMonthDays - i, isCurrentMonth: false, isPrevMonth: true });
+    }
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+        days.push({ day: i, isCurrentMonth: true });
+    }
+    // Next month offset days to fill exactly 42 slots (6 rows of 7)
+    const totalSlots = 42;
+    const nextDaysNeeded = totalSlots - days.length;
+    for (let i = 1; i <= nextDaysNeeded; i++) {
+        days.push({ day: i, isCurrentMonth: false, isNextMonth: true });
+    }
+
+    // Selected date parsed
+    const selectedDay = value ? new Date(value).getDate() : null;
+    const selectedMonth = value ? new Date(value).getMonth() : null;
+    const selectedYear = value ? new Date(value).getFullYear() : null;
+
+    return (
+        <div 
+            ref={containerRef}
+            className="absolute top-full left-0 mt-2 z-50 w-72 bg-[#091622] border border-teal-500/20 rounded-2xl p-4 shadow-2xl shadow-black/80 ring-1 ring-white/5 animate-in fade-in slide-in-from-top-2 duration-200"
+        >
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+                <button
+                    type="button"
+                    onClick={handlePrevMonth}
+                    className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-teal-400 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                
+                <span className="text-xs font-extrabold text-slate-200 tracking-wide select-none">
+                    {monthNames[month]} {year}
+                </span>
+
+                <button
+                    type="button"
+                    onClick={handleNextMonth}
+                    className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-teal-400 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            {/* Weekdays */}
+            <div className="grid grid-cols-7 gap-1 text-center mb-2">
+                {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map(d => (
+                    <span key={d} className="text-[9px] font-extrabold text-slate-500 tracking-wider uppercase select-none">{d}</span>
+                ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="grid grid-cols-7 gap-1">
+                {days.map((item, idx) => {
+                    const isSelected = item.isCurrentMonth && 
+                        selectedDay === item.day && 
+                        selectedMonth === month && 
+                        selectedYear === year;
+                    
+                    const isToday = item.isCurrentMonth &&
+                        today.getDate() === item.day &&
+                        today.getMonth() === month &&
+                        today.getFullYear() === year;
+
+                    return (
+                        <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectDay(item.day, item.isPrevMonth, item.isNextMonth)}
+                            className={`w-8 h-8 text-[11px] rounded-xl font-bold flex items-center justify-center transition-all cursor-pointer ${
+                                !item.isCurrentMonth 
+                                    ? "text-slate-600 opacity-40 hover:bg-white/5 hover:text-slate-400 hover:scale-105"
+                                    : isSelected
+                                        ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-extrabold shadow-lg shadow-teal-500/30 scale-105"
+                                        : isToday
+                                            ? "border border-teal-500/50 text-teal-400 font-semibold"
+                                            : "text-slate-300 hover:bg-white/10 hover:text-white hover:scale-105"
+                            }`}
+                        >
+                            {item.day}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="border-t border-white/5 mt-3 pt-3 flex items-center justify-between">
+                <button
+                    type="button"
+                    onClick={handleSelectToday}
+                    className="px-2.5 py-1 text-[10px] font-extrabold text-teal-400 hover:bg-teal-500/10 rounded-lg transition-all cursor-pointer"
+                >
+                    Today
+                </button>
+                <button
+                    type="button"
+                    onClick={handleClear}
+                    className="px-2.5 py-1 text-[10px] font-extrabold text-rose-400 hover:bg-rose-500/10 rounded-lg transition-all cursor-pointer"
+                >
+                    Clear
+                </button>
+            </div>
+        </div>
+    );
+}
+
 export default function ReportsManagement() {
-    const { reports, loading, changeStatus } = useReports("All");
+    const { reports, loading, error, changeStatus, refresh } = useReports("All");
     const [selectedTab, setSelectedTab] = useState<ReportStatus | "All">("All");
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [tempStatus, setTempStatus] = useState<ReportStatus | "">("");
@@ -24,9 +227,111 @@ export default function ReportsManagement() {
     const [fetchingReporter, setFetchingReporter] = useState(false);
     const [showReporterModal, setShowReporterModal] = useState(false);
 
-    const filteredReports = selectedTab === "All"
-        ? reports
-        : reports.filter(r => r.status === selectedTab);
+    // Filter states
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
+    const [showStartCalendar, setShowStartCalendar] = useState(false);
+    const [showEndCalendar, setShowEndCalendar] = useState(false);
+    const [filterCategory, setFilterCategory] = useState<string>("all");
+    const [filterProvince, setFilterProvince] = useState<string>("all");
+    const [filterDistrict, setFilterDistrict] = useState<string>("all");
+    const [filterLGA, setFilterLGA] = useState<string>("all");
+
+    const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setFilterProvince(e.target.value);
+        setFilterDistrict("all");
+        setFilterLGA("all");
+    };
+
+    const handleDistrictChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+        setFilterDistrict(e.target.value);
+        setFilterLGA("all");
+    };
+
+    const hasActiveFilters = startDate || endDate || filterCategory !== "all" || filterProvince !== "all" || filterDistrict !== "all" || filterLGA !== "all";
+
+    const clearAllFilters = () => {
+        setStartDate("");
+        setEndDate("");
+        setShowStartCalendar(false);
+        setShowEndCalendar(false);
+        setFilterCategory("all");
+        setFilterProvince("all");
+        setFilterDistrict("all");
+        setFilterLGA("all");
+    };
+
+    function getReportDateString(dateValue: any) {
+        if (!dateValue) return "";
+        let dateObj: Date;
+        if (typeof dateValue?.toDate === 'function') {
+            dateObj = dateValue.toDate();
+        } else {
+            dateObj = new Date(dateValue);
+        }
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+        const day = String(dateObj.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    const filteredReports = reports.filter(report => {
+        if (selectedTab !== "All" && report.status !== selectedTab) {
+            return false;
+        }
+
+        if (startDate || endDate) {
+            const reportDateStr = getReportDateString(report.createdAt);
+            if (startDate && reportDateStr < startDate) {
+                return false;
+            }
+            if (endDate && reportDateStr > endDate) {
+                return false;
+            }
+        }
+
+        if (filterCategory !== "all") {
+            const catLower = report.category.toLowerCase().trim();
+            const filterLower = filterCategory.toLowerCase().trim();
+            
+            const match = catLower === filterLower ||
+                (filterLower === "water & drainage" && catLower === "water and drainage") ||
+                (filterLower === "social safety" && catLower === "social security") ||
+                (filterLower === "waste & environment" && catLower === "waste & env.");
+                
+            if (!match) {
+                return false;
+            }
+        }
+
+        const loc = resolveLocation(report.location);
+
+        if (filterProvince !== "all") {
+            const cleanReportProvince = loc.province.replace(/ Province/gi, "").trim().toLowerCase();
+            const cleanFilterProvince = filterProvince.trim().toLowerCase();
+            if (cleanReportProvince !== cleanFilterProvince) {
+                return false;
+            }
+        }
+
+        if (filterDistrict !== "all") {
+            const cleanReportDistrict = loc.district.replace(/ District/gi, "").trim().toLowerCase();
+            const cleanFilterDistrict = filterDistrict.trim().toLowerCase();
+            if (cleanReportDistrict !== cleanFilterDistrict) {
+                return false;
+            }
+        }
+
+        if (filterLGA !== "all") {
+            const cleanReportLGA = loc.lga.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").trim().toLowerCase();
+            const cleanFilterLGA = filterLGA.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").trim().toLowerCase();
+            if (cleanReportLGA !== cleanFilterLGA) {
+                return false;
+            }
+        }
+
+        return true;
+    });
 
     // ─── Update Status Function ───────────────────────────────────────────────
     const handleSaveStatus = async () => {
@@ -82,7 +387,7 @@ export default function ReportsManagement() {
         }
     };
 
-    const resolveLocation = (location: any) => {
+    function resolveLocation(location: any) {
         if (!location) return { province: "Unknown Province", district: "Unknown District", lga: "Unknown Area" };
         if (location.province && location.district && location.localGovernmentArea) {
             return {
@@ -121,7 +426,7 @@ export default function ReportsManagement() {
             district: location.district || "Unknown District",
             lga: location.localGovernmentArea || location.area || "Unknown Area"
         };
-    };
+    }
 
     const openDetails = (report: Report) => {
         setSelectedReport(report);
@@ -131,13 +436,27 @@ export default function ReportsManagement() {
         fetchReporterProfile(report.uid);
     };
 
-    const formatDate = (dateValue: any) => {
+    function formatDate(dateValue: any) {
         if (!dateValue) return "Unknown date";
         if (typeof dateValue?.toDate === 'function') {
             return dateValue.toDate().toLocaleString();
         }
         return new Date(dateValue).toLocaleString();
-    };
+    }
+
+    function getFormattedDateTime(dateValue: any) {
+        if (!dateValue) return { date: "Unknown date", time: "" };
+        let dateObj: Date;
+        if (typeof dateValue?.toDate === 'function') {
+            dateObj = dateValue.toDate();
+        } else {
+            dateObj = new Date(dateValue);
+        }
+        return {
+            date: dateObj.toLocaleDateString(undefined, { dateStyle: "medium" }),
+            time: dateObj.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true })
+        };
+    }
 
     return (
         <div className="space-y-6 relative">
@@ -149,39 +468,266 @@ export default function ReportsManagement() {
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button 
+                        onClick={refresh}
+                        disabled={loading}
+                        className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-teal-400 hover:border-teal-500/30 transition-all disabled:opacity-50"
+                    >
+                        {loading ? "Refreshing..." : "Refresh"}
+                    </button>
                     <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-semibold text-slate-300 hover:bg-white/10 transition-all flex items-center gap-2">
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                         Export Data
                     </button>
-                    <button className="px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-teal-900/40 hover:from-teal-400 hover:to-cyan-400 transition-all active:scale-[0.98] flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" /></svg>
-                        New Report
-                    </button>
                 </div>
             </div>
 
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto no-scrollbar animate-slide-up stagger-1">
-                {(["All", "PENDING", "ASSIGNED", "FIXING", "RESOLVED", "REJECTED"] as const).map((tab) => (
+            {/* Filter Tabs & Reset */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-slide-up stagger-1">
+                <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto no-scrollbar">
+                    {(["All", "PENDING", "ASSIGNED", "FIXING", "RESOLVED", "REJECTED"] as const).map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setSelectedTab(tab)}
+                            className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${selectedTab === tab
+                                ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
+                                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                                }`}
+                        >
+                            {tab === "All" ? "All" : tab.charAt(0) + tab.slice(1).toLowerCase()}
+                            {tab === "All" ? "" : ` (${reports.filter(r => r.status === tab).length})`}
+                        </button>
+                    ))}
+                </div>
+                {hasActiveFilters && (
                     <button
-                        key={tab}
-                        onClick={() => setSelectedTab(tab)}
-                        className={`px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${selectedTab === tab
-                            ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
-                            : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-                            }`}
+                        onClick={clearAllFilters}
+                        className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/40 rounded-lg text-xs font-semibold text-rose-400 transition-all flex items-center gap-1.5 self-end sm:self-auto"
                     >
-                        {tab === "All" ? "All" : tab.charAt(0) + tab.slice(1).toLowerCase()}
-                        {tab === "All" ? "" : ` (${reports.filter(r => r.status === tab).length})`}
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        Clear Filters
                     </button>
-                ))}
+                )}
             </div>
+
+            {/* Filter Grid */}
+            <div className="relative z-30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 p-4 bg-[#0f2233]/40 backdrop-blur-md border border-white/5 rounded-2xl animate-slide-up stagger-1.5">
+                {/* Start Date Filter */}
+                <div className="relative group flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">From Date</label>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowStartCalendar(!showStartCalendar);
+                                setShowEndCalendar(false);
+                            }}
+                            className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-left flex items-center h-[38px] cursor-pointer ${
+                                startDate ? "pr-8" : "pr-4"
+                            }`}
+                        >
+                            {startDate ? formatDateOnly(startDate) : <span className="text-slate-500 font-medium">Select date</span>}
+                        </button>
+                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        {startDate && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setStartDate("");
+                                }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-md transition-all cursor-pointer z-10"
+                            >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
+                        {showStartCalendar && (
+                            <CustomCalendar
+                                value={startDate}
+                                onChange={(date) => setStartDate(date)}
+                                onClose={() => setShowStartCalendar(false)}
+                            />
+                        )}
+                    </div>
+                </div>
+
+                {/* End Date Filter */}
+                <div className="relative group flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">To Date</label>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowEndCalendar(!showEndCalendar);
+                                setShowStartCalendar(false);
+                            }}
+                            className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-left flex items-center h-[38px] cursor-pointer ${
+                                endDate ? "pr-8" : "pr-4"
+                            }`}
+                        >
+                            {endDate ? formatDateOnly(endDate) : <span className="text-slate-500 font-medium">Select date</span>}
+                        </button>
+                        <div className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                        </div>
+                        {endDate && (
+                            <button
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEndDate("");
+                                }}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-md transition-all cursor-pointer z-10"
+                            >
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        )}
+                        {showEndCalendar && (
+                            <CustomCalendar
+                                value={endDate}
+                                onChange={(date) => setEndDate(date)}
+                                onClose={() => setShowEndCalendar(false)}
+                            />
+                        )}
+                    </div>
+                </div>
+
+                {/* Category Filter */}
+                <div className="relative group flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Category</label>
+                    <div className="relative">
+                        <select
+                            value={filterCategory}
+                            onChange={(e) => setFilterCategory(e.target.value)}
+                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer"
+                        >
+                            <option value="all" className="bg-[#0b1a26] text-slate-300">All Categories</option>
+                            <option value="Road & Traffic" className="bg-[#0b1a26] text-slate-300">Road & Traffic</option>
+                            <option value="Water & Drainage" className="bg-[#0b1a26] text-slate-300">Water & Drainage</option>
+                            <option value="Waste & Environment" className="bg-[#0b1a26] text-slate-300">Waste & Environment</option>
+                            <option value="Social Safety" className="bg-[#0b1a26] text-slate-300">Social Safety</option>
+                            <option value="Bridge & Structural" className="bg-[#0b1a26] text-slate-300">Bridge & Structural</option>
+                            <option value="Other" className="bg-[#0b1a26] text-slate-300">Other</option>
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Province Filter */}
+                <div className="relative group flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Province</label>
+                    <div className="relative">
+                        <select
+                            value={filterProvince}
+                            onChange={handleProvinceChange}
+                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer"
+                        >
+                            <option value="all" className="bg-[#0b1a26] text-slate-300">All Provinces</option>
+                            {Object.keys(sriLankaGeographics).map(province => (
+                                <option key={province} value={province} className="bg-[#0b1a26] text-slate-300">
+                                    {province}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                {/* District Filter */}
+                <div className="relative group flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">District</label>
+                    <div className="relative">
+                        <select
+                            value={filterDistrict}
+                            onChange={handleDistrictChange}
+                            disabled={filterProvince === "all"}
+                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <option value="all" className="bg-[#0b1a26] text-slate-300">All Districts</option>
+                            {filterProvince !== "all" && Object.keys(sriLankaGeographics[filterProvince] || {}).map(district => (
+                                <option key={district} value={district} className="bg-[#0b1a26] text-slate-300">
+                                    {district}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors group-disabled:opacity-40">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                {/* LGA Filter */}
+                <div className="relative group flex flex-col gap-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">LGA</label>
+                    <div className="relative">
+                        <select
+                            value={filterLGA}
+                            onChange={(e) => setFilterLGA(e.target.value)}
+                            disabled={filterDistrict === "all"}
+                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <option value="all" className="bg-[#0b1a26] text-slate-300">All LGAs</option>
+                            {filterProvince !== "all" && filterDistrict !== "all" && (sriLankaGeographics[filterProvince]?.[filterDistrict] || []).map(lga => (
+                                <option key={lga} value={lga} className="bg-[#0b1a26] text-slate-300">
+                                    {lga}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors group-disabled:opacity-40">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Reports Found Count */}
+            {!loading && !error && (
+                <div className="text-xs text-slate-400 font-semibold pl-1 animate-fade-in">
+                    {filteredReports.length} Reports found
+                </div>
+            )}
 
             {/* Reports List */}
             <div className="grid grid-cols-1 gap-4 animate-slide-up stagger-2">
                 {loading ? (
                     <div className="flex justify-center py-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-500"></div>
+                    </div>
+                ) : error ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-center border border-red-500/20 bg-red-500/5 rounded-2xl p-6">
+                        <div className="text-red-400 text-3xl mb-3">⚠️</div>
+                        <h3 className="text-red-200 font-semibold text-sm">Failed to Load Reports</h3>
+                        <p className="text-slate-400 text-xs mt-1">{error}</p>
+                        <button 
+                            onClick={refresh}
+                            className="mt-4 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold text-slate-300 transition-colors"
+                        >
+                            Retry Loading
+                        </button>
                     </div>
                 ) : filteredReports.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -195,6 +741,8 @@ export default function ReportsManagement() {
                     filteredReports.map((report) => {
                         const cat = categoryStyleMeta[report.category] || categoryStyleMeta["Other"];
                         const st = statusStyleMeta[report.status] || { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" };
+                        const loc = resolveLocation(report.location);
+                        const { date, time } = getFormattedDateTime(report.createdAt);
 
                         return (
                             <div
@@ -206,24 +754,31 @@ export default function ReportsManagement() {
                                         <div className={`w-12 h-12 rounded-xl ${cat.bg} flex items-center justify-center text-xl shadow-inner border border-white/5 group-hover:scale-110 transition-transform duration-300`}>
                                             {cat.icon}
                                         </div>
-                                        <div className="space-y-1">
-                                            <h3 className="text-sm font-bold text-white">{report.category} Incident</h3>
-                                            <div className="flex items-center gap-3 text-[11px] text-slate-400">
-                                                <span className="flex items-center gap-1">
-                                                    <svg className="w-3 h-3 text-teal-500/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                                                    <span className="truncate max-w-[200px] md:max-w-[300px]">
-                                                        {(() => {
-                                                            const loc = resolveLocation(report.location);
-                                                            return [loc.province, loc.district, loc.lga].filter(Boolean).join(", ");
-                                                        })()}
-                                                    </span>
+                                        <div className="space-y-1.5 text-left">
+                                            <h3 className="text-sm font-bold text-white flex flex-wrap items-center gap-2">
+                                                <span>{report.category} Incident</span>
+                                                <span className="text-[10px] font-normal text-slate-400 bg-white/5 border border-white/10 px-2 py-0.5 rounded-md inline-flex items-center gap-1.5">
+                                                    <svg className="w-3.5 h-3.5 text-teal-500/60 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                    </svg>
+                                                    {date} • {time}
                                                 </span>
-                                                <span className="flex items-center gap-1">
-                                                    <svg className="w-3 h-3 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                                    {formatDate(report.createdAt)}
-                                                </span>
+                                            </h3>
+                                            <div className="space-y-0.5 text-[11px] text-slate-400">
+                                                <p className="flex items-center gap-1">
+                                                    <span className="font-semibold text-slate-500">Province:</span>
+                                                    <span className="text-slate-300">{loc.province}</span>
+                                                </p>
+                                                <p className="flex items-center gap-1">
+                                                    <span className="font-semibold text-slate-500">District:</span>
+                                                    <span className="text-slate-300">{loc.district}</span>
+                                                </p>
+                                                <p className="flex items-center gap-1">
+                                                    <span className="font-semibold text-slate-500">LGA:</span>
+                                                    <span className="text-slate-300">{loc.lga}</span>
+                                                </p>
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 pt-0.5">
                                                 <span className="text-[10px] text-slate-500 font-mono">Incident ID: {report.id}</span>
                                             </div>
                                         </div>
@@ -300,8 +855,62 @@ export default function ReportsManagement() {
                                             <p className="text-sm font-semibold text-slate-200">{selectedReport.category}</p>
                                         </div>
                                         <div className="p-3 bg-white/3 border border-white/5 rounded-xl space-y-1">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Submitted</p>
-                                            <p className="text-sm font-semibold text-slate-200">{formatDate(selectedReport.createdAt)}</p>
+                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Date & Time</p>
+                                            {(() => {
+                                                const { date, time } = getFormattedDateTime(selectedReport.createdAt);
+                                                return (
+                                                    <>
+                                                        <p className="text-sm font-semibold text-slate-200">{date}</p>
+                                                        <p className="text-xs text-slate-400 mt-0.5">{time}</p>
+                                                    </>
+                                                );
+                                            })()}
+                                        </div>
+                                    </div>
+
+                                    {/* Separated Location Blocks & Google Maps link */}
+                                    <div className="p-4 bg-white/3 border border-white/5 rounded-2xl space-y-3">
+                                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+                                            <svg className="w-3.5 h-3.5 text-teal-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                            Geographical & Location Details
+                                        </p>
+                                        <div className="space-y-2.5">
+                                            <div className="grid grid-cols-2 gap-2.5">
+                                                <div className="p-2 bg-white/2 border border-white/5 rounded-xl space-y-1">
+                                                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Province</span>
+                                                    <span className="text-xs font-bold text-slate-200">{(() => { const loc = resolveLocation(selectedReport.location); return loc.province; })()}</span>
+                                                </div>
+                                                <div className="p-2 bg-white/2 border border-white/5 rounded-xl space-y-1">
+                                                    <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">District</span>
+                                                    <span className="text-xs font-bold text-slate-200">{(() => { const loc = resolveLocation(selectedReport.location); return loc.district; })()}</span>
+                                                </div>
+                                            </div>
+                                            <div className="p-2 bg-white/2 border border-white/5 rounded-xl space-y-1">
+                                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Local Government Area (LGA)</span>
+                                                <span className="text-xs font-bold text-slate-200 block">{(() => { const loc = resolveLocation(selectedReport.location); return loc.lga; })()}</span>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 bg-white/2 border border-white/5 rounded-xl space-y-2">
+                                            <div className="space-y-0.5 text-xs">
+                                                <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Reported Address</span>
+                                                <p className="text-slate-300 font-medium text-[11px] leading-relaxed">{selectedReport.location?.address || "No formal address provided"}</p>
+                                            </div>
+                                            {selectedReport.location?.latitude && selectedReport.location?.longitude && (
+                                                <div className="pt-1.5 flex items-center justify-between border-t border-white/5 gap-4">
+                                                    <div className="text-[10px] text-slate-500 font-mono">
+                                                        Coords: {selectedReport.location.latitude.toFixed(6)}, {selectedReport.location.longitude.toFixed(6)}
+                                                    </div>
+                                                    <a
+                                                        href={`https://www.google.com/maps/search/?api=1&query=${selectedReport.location.latitude},${selectedReport.location.longitude}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/20 hover:border-teal-500/40 rounded-lg text-[9px] font-bold text-teal-400 transition-all hover:scale-[1.02]"
+                                                    >
+                                                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                                                        Google Maps Link
+                                                    </a>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
