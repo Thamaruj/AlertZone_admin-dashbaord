@@ -447,6 +447,26 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Styled with premium glassmorphic properties matching the dark theme: semi-transparent background overlay (`bg-[#091622]/95`), blur filter (`backdrop-blur-xl`), border ring accents (`border-teal-500/20`), and rich teal-to-emerald gradient active selections.
     - Verified build successfully compiled without any regressions.
 
+- **[2026-05-23] Map View Real Data & Active Report Filters Integration:**
+    - Connected the Map View component to the live Firestore database using the `useReports` hook.
+    - Added operational logic to automatically filter reports for active statuses only (`PENDING`, `ASSIGNED`, and `FIXING`).
+    - Implemented a local `resolveLocation` utility to extract nested coordinate objects (`latitude`/`longitude`), district, province, address, and Local Government Area (LGA) from the live reports schema structure.
+    - Replaced the horizontal scrolling categories button bar in the sidebar with a dual-dropdown filter panel:
+      - **Active Status Dropdown**: Filters the map view list by "All Active", "Pending", "Assigned", and "Fixing" statuses.
+      - **Report Type Dropdown**: Filters reports by category type ("All Types", "Road & Traffic", etc.) supporting both standard database category IDs and custom string formats.
+    - Polished details overlay panel: removed the hardcoded `priority` field since it does not exist in the Firestore data model, and standardized date-time formatting to local dates and 12-hour AM/PM times.
+    - Wired the "Open Management" button in the selected report panel to fire a custom `changeNavTab` navigation event, and added an event listener in `Maindashboard.tsx` to automatically redirect the admin to the live Reports Management tab.
+    - Verified the workspace successfully compiles with `npm run build`.
+
+- [2026-05-23] Map View Sidebar Card & Navigation Restructuring:
+    - Redesigned active report incidents card layout in the `Mapview.tsx` sidebar list to show the "Report Type" (e.g., Road & Traffic Incident) as the main card title.
+    - Configured reported address styling on sidebar cards and overlays to wrap naturally (`break-words`) instead of using single-line truncations, and set standard body font weighting (`font-normal text-slate-400`) to differentiate it from title styles.
+    - Updated map marker InfoWindows and selected report details overlays to display the Report Type as the main title, placing the monospaced unique Incident ID directly below it.
+    - Wired the "Open Management" button in Map View to store a global `pendingReportDetail` reference, trigger a `changeNavTab` navigation tab redirection to Reports Management, and dispatch a custom `openReportDetail` trigger.
+    - Added reactive lifecycle effects inside `Reportsmanagement.tsx` to automatically listen for redirection event cues and immediately launch the targeted report's complete interactive details modal.
+    - Checked all compilation flows confirming zero warnings.
+
 ---
 
 *Last Updated: 2026-05-23*
+

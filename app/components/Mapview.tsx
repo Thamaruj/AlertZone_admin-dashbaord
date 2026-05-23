@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { MOCK_REPORTS as reports_data, Report } from "@/app/data/mockData";
+import { useReports } from "@/lib/hooks/useReports";
+import { Report, ReportStatus } from "@/lib/types/report";
 
 // ─── geoBoundaries Land-Clipped GeoJSON Loader ────────────────────────────────
 // Files are served locally from /public/geojson/ — no CORS, no Git-LFS issues.
@@ -54,27 +55,127 @@ function matchesRegion(shapeName: string, regionKey: string): boolean {
     return normalizedShape === key;
 }
 
-const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
-    "Road & Traffic": { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
-    "Water and Drainage": { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
-    "Waste & Environment": { color: "text-green-400", bg: "bg-green-500/10", icon: "♻️" },
-    "Social Security": { color: "text-violet-400", bg: "bg-violet-500/10", icon: "🛡️" },
-    "Bridge & Structural": { color: "text-orange-400", bg: "bg-orange-500/10", icon: "🌉" },
-    "Other": { color: "text-slate-400", bg: "bg-slate-500/10", icon: "📍" },
+/**
+ * Helper to resolve geographical details (province, district, LGA, address) and coordinates.
+ */
+function resolveLocation(location: any) {
+    if (!location) return { province: "Unknown Province", district: "Unknown District", lga: "Unknown Area", address: "Unknown Location", latitude: 6.9271, longitude: 79.8612 };
+    
+    let province = location.province || "Unknown Province";
+    let district = location.district || "Unknown District";
+    let lga = location.localGovernmentArea || location.area || "Unknown Area";
+    let address = location.address || "Unknown Location";
+    let latitude = typeof location.latitude === 'number' ? location.latitude : parseFloat(location.latitude) || 6.9271;
+    let longitude = typeof location.longitude === 'number' ? location.longitude : parseFloat(location.longitude) || 79.8612;
+    
+    // Fallback parsing if fields are missing (like in old data formats)
+    if (!location.province || !location.district || !location.localGovernmentArea) {
+        const sriLankaGeographics: Record<string, Record<string, string[]>> = {
+            "Western": {
+                "Colombo": ["Colombo Municipal Council", "Kaduwela Municipal Council", "Kolonnawa Urban Council", "Kotte Municipal Council", "Moratuwa Municipal Council", "Seethawaka Pradeshiya Sabha", "Homagama Pradeshiya Sabha", "Maharagama Urban Council", "Kesbewa Urban Council", "Boralesgamuwa Urban Council", "Dehiwala-Mount Lavinia Municipal Council"],
+                "Gampaha": ["Gampaha Municipal Council", "Negombo Municipal Council", "Wattala Urban Council", "Minuwangoda Urban Council", "Ja-Ela Urban Council", "Katunayake-Seeduwa Urban Council", "Peliyagoda Urban Council", "Kelaniya Pradeshiya Sabha", "Mahara Pradeshiya Sabha", "Dompe Pradeshiya Sabha", "Biyagama Pradeshiya Sabha", "Attanagalla Pradeshiya Sabha", "Divulapitiya Pradeshiya Sabha", "Mirigama Pradeshiya Sabha"],
+                "Kalutara": ["Kalutara Urban Council", "Panadura Urban Council", "Horana Urban Council", "Beruwala Urban Council", "Matugama Pradeshiya Sabha", "Bulathsinhala Pradeshiya Sabha", "Bandaragama Pradeshiya Sabha", "Agalawatta Pradeshiya Sabha", "Dodangoda Pradeshiya Sabha", "Walallawita Pradeshiya Sabha"]
+            },
+            "Central": {
+                "Kandy": ["Kandy Municipal Council", "Gampola Urban Council", "Kadugannawa Urban Council", "Nawalapitiya Urban Council", "Harispattuwa Pradeshiya Sabha", "Kundasale Pradeshiya Sabha", "Pathadumbara Pradeshiya Sabha", "Udunuwara Pradeshiya Sabha", "Yatinuwara Pradeshiya Sabha"],
+                "Matale": ["Matale Municipal Council", "Dambulla Municipal Council", "Matale Pradeshiya Sabha", "Galewela Pradeshiya Sabha", "Naula Pradeshiya Sabha"],
+                "Nuwara Eliya": ["Nuwara Eliya Municipal Council", "Hatton-Dickoya Urban Council", "Talawakele-Lindula Urban Council", "Ambagamuwa Pradeshiya Sabha", "Walapane Pradeshiya Sabha", "Hanguranketha Pradeshiya Sabha"]
+            },
+            "Southern": {
+                "Galle": ["Galle Municipal Council", "Ambalangoda Urban Council", "Hikkaduwa Urban Council", "Galle Pradeshiya Sabha", "Baddegama Pradeshiya Sabha", "Karandeniya Pradeshiya Sabha", "Bentota Pradeshiya Sabha"],
+                "Matara": ["Matara Municipal Council", "Weligama Urban Council", "Matara Pradeshiya Sabha", "Devinuwara Pradeshiya Sabha", "Dickwella Pradeshiya Sabha", "Hakmana Pradeshiya Sabha"],
+                "Hambantota": ["Hambantota Municipal Council", "Tangalle Urban Council", "Tangalle Pradeshiya Sabha", "Beliatta Pradeshiya Sabha", "Ambalantota Pradeshiya Sabha", "Angunakolapelessa Pradeshiya Sabha"]
+            },
+            "Northern": {
+                "Jaffna": ["Jaffna Municipal Council", "Chavakachcheri Urban Council", "Point Pedro Urban Council", "Valvettithurai Urban Council", "Nallur Pradeshiya Sabha", "Karainagar Pradeshiya Sabha"],
+                "Kilinochchi": ["Karachchi Pradeshiya Sabha", "Poonakary Pradeshiya Sabha", "Pachchilaipalli Pradeshiya Sabha"],
+                "Mannar": ["Mannar Urban Council", "Mannar Pradeshiya Sabha", "Nanattan Pradeshiya Sabha", "Madhu Pradeshiya Sabha"],
+                "Vavuniya": ["Vavuniya Urban Council", "Vavuniya Pradeshiya Sabha", "Vavuniya North Pradeshiya Sabha", "Vavuniya South Pradeshiya Sabha"],
+                "Mullaitivu": ["Maritimepattu Pradeshiya Sabha", "Puthukudiyiruppu Pradeshiya Sabha", "Thunukkai Pradeshiya Sabha"]
+            },
+            "Eastern": {
+                "Batticaloa": ["Batticaloa Municipal Council", "Eravur Urban Council", "Kattankudy Urban Council", "Manmunai Pattu Pradeshiya Sabha", "Valachchenai Pradeshiya Sabha"],
+                "Ampara": ["Akkaraipattu Municipal Council", "Kalmunai Municipal Council", "Ampara Urban Council", "Uhana Pradeshiya Sabha", "Damana Pradeshiya Sabha"],
+                "Trincomalee": ["Trincomalee Urban Council", "Trincomalee Town and Gravets Pradeshiya Sabha", "Kinniya Urban Council", "Mutur Pradeshiya Sabha"]
+            },
+            "North Western": {
+                "Kurunegala": ["Kurunegala Municipal Council", "Kuliyapitiya Urban Council", "Kurunegala Pradeshiya Sabha", "Kuliyapitiya Pradeshiya Sabha", "Ibbagamuwa Pradeshiya Sabha"],
+                "Puttalam": ["Puttalam Urban Council", "Chilaw Urban Council", "Puttalam Pradeshiya Sabha", "Chilaw Pradeshiya Sabha", "Kalpitiya Pradeshiya Sabha", "Anamaduwa Pradeshiya Sabha"]
+            },
+            "North Central": {
+                "Anuradhapura": ["Anuradhapura Municipal Council", "Anuradhapura Pradeshiya Sabha", "Medawachchiya Pradeshiya Sabha", "Kekirawa Pradeshiya Sabha", "Galenbindunuwewa Pradeshiya Sabha"],
+                "Polonnaruwa": ["Polonnaruwa Municipal Council", "Polonnaruwa Pradeshiya Sabha", "Hingurakgoda Pradeshiya Sabha", "Medirigiriya Pradeshiya Sabha"]
+            },
+            "Uva": {
+                "Badulla": ["Badulla Municipal Council", "Bandarawela Municipal Council", "Haputale Urban Council", "Badulla Pradeshiya Sabha", "Bandarawela Pradeshiya Sabha", "Welimada Pradeshiya Sabha"],
+                "Moneragala": ["Moneragala Pradeshiya Sabha", "Wellawaya Pradeshiya Sabha", "Buttala Pradeshiya Sabha", "Bibile Pradeshiya Sabha", "Kataragama Pradeshiya Sabha"]
+            },
+            "Sabaragamuwa": {
+                "Ratnapura": ["Ratnapura Municipal Council", "Balangoda Urban Council", "Embilipitiya Urban Council", "Ratnapura Pradeshiya Sabha", "Balangoda Pradeshiya Sabha"],
+                "Kegalle": ["Kegalle Urban Council", "Kegalle Pradeshiya Sabha", "Mawanella Pradeshiya Sabha", "Warakapola Pradeshiya Sabha", "Ruwanwella Pradeshiya Sabha"]
+            }
+        };
+
+        const areaStr = (location.area || "").toLowerCase().trim();
+        const addressStr = (location.address || "").toLowerCase().trim();
+        
+        for (const [provName, districts] of Object.entries(sriLankaGeographics)) {
+            for (const [distName, lgas] of Object.entries(districts)) {
+                if ((areaStr && distName.toLowerCase() === areaStr) || addressStr.includes(distName.toLowerCase())) {
+                    province = provName;
+                    district = distName;
+                    lga = location.area || distName;
+                }
+                
+                for (const lgaName of lgas) {
+                    const cleanLga = lgaName.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").toLowerCase().trim();
+                    if ((areaStr && cleanLga.includes(areaStr)) || (addressStr && addressStr.includes(cleanLga)) || (areaStr && areaStr.includes(cleanLga))) {
+                        province = provName;
+                        district = distName;
+                        lga = lgaName;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    return { province, district, lga, address, latitude, longitude };
+}
+
+/**
+ * Formats real timestamps/ISO strings to premium display dates.
+ */
+function getFormattedDate(dateValue: any) {
+    if (!dateValue) return "Unknown date";
+    let dateObj: Date;
+    if (typeof dateValue?.toDate === 'function') {
+        dateObj = dateValue.toDate();
+    } else {
+        dateObj = new Date(dateValue);
+    }
+    return dateObj.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " • " + 
+           dateObj.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
+const categoryMeta: Record<string, { color: string; bg: string; icon: string }> = {
+    "Road & Traffic": { color: "text-[#4CC2D1]", bg: "bg-[#0D2A35]/40", icon: "🚧" },
+    "Water & Drainage": { color: "text-[#60A5FA]", bg: "bg-[#0D1A3D]/40", icon: "💧" },
+    "Water and Drainage": { color: "text-[#60A5FA]", bg: "bg-[#0D1A3D]/40", icon: "💧" },
+    "Waste & Environment": { color: "text-[#34D399]", bg: "bg-[#0D3D25]/40", icon: "♻️" },
+    "Waste & Env.": { color: "text-[#34D399]", bg: "bg-[#0D3D25]/40", icon: "♻️" },
+    "Social Safety": { color: "text-[#A78BFA]", bg: "bg-[#2D1F4A]/40", icon: "🛡️" },
+    "Social Security": { color: "text-[#A78BFA]", bg: "bg-[#2D1F4A]/40", icon: "🛡️" },
+    "Bridge & Structural": { color: "text-[#F59E0B]", bg: "bg-[#3D2E0A]/40", icon: "🌉" },
+    "Other": { color: "text-[#9CA3AF]", bg: "bg-[#1F2937]/40", icon: "📍" },
 };
 
-const statusMeta: Record<Report["status"], { color: string; bg: string; dot: string }> = {
-    Reported: { color: "text-orange-300", bg: "bg-orange-500/10", dot: "bg-orange-400" },
-    "In Progress": { color: "text-cyan-300", bg: "bg-cyan-500/10", dot: "bg-cyan-400" },
-    Solved: { color: "text-teal-300", bg: "bg-teal-500/10", dot: "bg-teal-400" },
-    Closed: { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" },
-};
-
-const priorityMeta: Record<Report["priority"], { color: string; bg: string }> = {
-    Low: { color: "text-blue-300", bg: "bg-blue-500/10" },
-    Medium: { color: "text-yellow-300", bg: "bg-yellow-500/10" },
-    High: { color: "text-orange-400", bg: "bg-orange-400/10" },
-    Critical: { color: "text-rose-500", bg: "bg-rose-500/10" },
+const statusMeta: Record<string, { color: string; bg: string; dot: string }> = {
+    PENDING: { color: "text-[#F59E0B]", bg: "bg-[#3D2E0A]", dot: "bg-[#F59E0B]" },
+    ASSIGNED: { color: "text-[#60A5FA]", bg: "bg-[#0D1A3D]", dot: "bg-[#60A5FA]" },
+    FIXING: { color: "text-[#4CC2D1]", bg: "bg-[#0D2A35]", dot: "bg-[#4CC2D1]" },
+    RESOLVED: { color: "text-[#30A89C]", bg: "bg-[#0D3D35]", dot: "bg-[#30A89C]" },
+    REJECTED: { color: "text-[#E05C5C]", bg: "bg-[#3D1515]", dot: "bg-[#E05C5C]" },
 };
 
 const sriLankaRegions: Record<string, string[]> = {
@@ -300,8 +401,9 @@ function GoogleMapContainer({
         if (!googleLoaded || !containerRef.current) return;
 
         const google = (window as any).google;
-        const initialCenter = selectedReport
-            ? { lat: selectedReport.coordinates.lat, lng: selectedReport.coordinates.lng }
+        const initialLoc = selectedReport ? resolveLocation(selectedReport.location) : null;
+        const initialCenter = initialLoc
+            ? { lat: initialLoc.latitude, lng: initialLoc.longitude }
             : { lat: mapCenter[0], lng: mapCenter[1] };
 
         const map = new google.maps.Map(containerRef.current, {
@@ -339,9 +441,10 @@ function GoogleMapContainer({
         }
 
         if (selectedReport) {
+            const loc = resolveLocation(selectedReport.location);
             mapRef.current.panTo({
-                lat: selectedReport.coordinates.lat,
-                lng: selectedReport.coordinates.lng,
+                lat: loc.latitude,
+                lng: loc.longitude,
             });
             if (mapRef.current.getZoom() < 14) {
                 mapRef.current.setZoom(14);
@@ -426,9 +529,11 @@ function GoogleMapContainer({
                 google.maps.event.trigger(mapRef.current, "resize");
             }
             
-            const centerTarget = selectedReport 
-                ? { lat: selectedReport.coordinates.lat, lng: selectedReport.coordinates.lng }
-                : { lat: mapCenter[0], lng: mapCenter[1] };
+            let centerTarget = { lat: mapCenter[0], lng: mapCenter[1] };
+            if (selectedReport) {
+                const loc = resolveLocation(selectedReport.location);
+                centerTarget = { lat: loc.latitude, lng: loc.longitude };
+            }
                 
             mapRef.current.panTo(centerTarget);
         }, 320);
@@ -495,7 +600,7 @@ function GoogleMapContainer({
 
         reports.forEach((report) => {
             const isSelected = selectedReport?.id === report.id;
-            const categoryInfo = categoryMeta[report.category] || { icon: "📍", color: "", bg: "" };
+            const categoryInfo = categoryMeta[report.category] || categoryMeta[report.categoryId] || { icon: "📍", color: "", bg: "" };
             const markerHtml = `
                 <div class="relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${
                     isSelected
@@ -505,12 +610,13 @@ function GoogleMapContainer({
                     <span class="text-lg">${categoryInfo.icon}</span>
                 </div>
             `;
-            const latlng = new google.maps.LatLng(report.coordinates.lat, report.coordinates.lng);
+            const loc = resolveLocation(report.location);
+            const latlng = new google.maps.LatLng(loc.latitude, loc.longitude);
             const handleMarkerClick = () => {
                 setSelectedReport(report);
                 if (activeInfoWindowRef.current) activeInfoWindowRef.current.close();
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `<div class="p-2 min-w-[150px]"><div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-white">${report.id}</span></div><p class="text-[11px] text-slate-300 mb-2">${report.location}</p></div>`,
+                    content: `<div class="p-2 min-w-[150px]"><div class="mb-1"><span class="text-xs font-bold text-white">${report.category} Incident</span><p class="text-[9px] text-slate-500 font-mono mt-0.5">ID: ${report.id}</p></div><p class="text-[10px] text-slate-400 leading-normal break-words mt-1.5">${loc.address}</p></div>`,
                     pixelOffset: new google.maps.Size(0, -20),
                 });
                 infoWindow.open({ map: mapRef.current, shouldFocus: false });
@@ -522,7 +628,7 @@ function GoogleMapContainer({
             markersRef.current.push({ id: report.id, overlay, latlng, report });
             if (isSelected) {
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `<div class="p-2 min-w-[150px]"><div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-white">${report.id}</span></div><p class="text-[11px] text-slate-300 mb-2">${report.location}</p></div>`,
+                    content: `<div class="p-2 min-w-[150px]"><div class="mb-1"><span class="text-xs font-bold text-white">${report.category} Incident</span><p class="text-[9px] text-slate-500 font-mono mt-0.5">ID: ${report.id}</p></div><p class="text-[10px] text-slate-400 leading-normal break-words mt-1.5">${loc.address}</p></div>`,
                     pixelOffset: new google.maps.Size(0, -20),
                 });
                 infoWindow.open({ map: mapRef.current, shouldFocus: false });
@@ -561,14 +667,14 @@ function GoogleMapContainer({
 }
 
 export default function MapView() {
-    const [reports] = useState<Report[]>(reports_data);
+    const { reports, loading, error, refresh } = useReports();
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
-    const [filter, setFilter] = useState<Report["category"] | "All">("All");
+    const [filter, setFilter] = useState<string>("All");
+    const [selectedStatus, setSelectedStatus] = useState<string>("All");
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedProvince, setSelectedProvince] = useState<string>("All");
     const [selectedDistrict, setSelectedDistrict] = useState<string>("All");
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [loading] = useState(false);
 
     useEffect(() => {
         setSelectedDistrict("All");
@@ -579,19 +685,47 @@ export default function MapView() {
         setSelectedReport(null);
     }, [selectedDistrict]);
 
+    // Active reports are PENDING, ASSIGNED, and FIXING
+    const activeReports = useMemo(() => {
+        return (reports || []).filter(
+            (r) => r.status === "PENDING" || r.status === "ASSIGNED" || r.status === "FIXING"
+        );
+    }, [reports]);
+
+    const resolvedActiveReports = useMemo(() => {
+        return activeReports.map(r => ({
+            ...r,
+            resolvedLocation: resolveLocation(r.location)
+        }));
+    }, [activeReports]);
+
     const filteredReports = useMemo(() => {
-        return reports.filter(r => {
-            const matchesFilter = filter === "All" || r.category === filter;
-            const matchesSearch = r.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                r.id?.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesProvince = selectedProvince === "All" || r.province === selectedProvince;
-            const matchesDistrict = selectedDistrict === "All" || r.district === selectedDistrict;
-            return matchesFilter && matchesSearch && matchesProvince && matchesDistrict;
+        return resolvedActiveReports.filter(r => {
+            const matchesStatus = selectedStatus === "All" || r.status === selectedStatus;
+            
+            const matchesFilter = filter === "All" ||
+                r.categoryId === filter ||
+                r.category === filter ||
+                (filter === "Water & Drainage" && r.category === "Water and Drainage") ||
+                (filter === "Social Safety" && r.category === "Social Security") ||
+                (filter === "Waste & Environment" && r.category === "Waste & Env.");
+
+            const matchesSearch = r.resolvedLocation.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                r.description?.toLowerCase().includes(searchQuery.toLowerCase());
+                
+            const matchesProvince = selectedProvince === "All" || r.resolvedLocation.province === selectedProvince;
+            const matchesDistrict = selectedDistrict === "All" || r.resolvedLocation.district === selectedDistrict;
+            
+            return matchesStatus && matchesFilter && matchesSearch && matchesProvince && matchesDistrict;
         });
-    }, [reports, filter, searchQuery, selectedProvince, selectedDistrict]);
+    }, [resolvedActiveReports, selectedStatus, filter, searchQuery, selectedProvince, selectedDistrict]);
 
     const mapCenter: [number, number] = useMemo(() => {
-        if (selectedReport) return [selectedReport.coordinates.lat, selectedReport.coordinates.lng];
+        if (selectedReport) {
+            const loc = resolveLocation(selectedReport.location);
+            return [loc.latitude, loc.longitude];
+        }
         if (selectedDistrict !== "All") {
             const geo = districtGeoinfo[selectedDistrict];
             if (geo) return [geo.lat, geo.lng];
@@ -601,7 +735,7 @@ export default function MapView() {
             if (geo) return [geo.lat, geo.lng];
         }
         return [6.9271, 79.8612];
-    }, [selectedReport, selectedProvince, selectedDistrict, filteredReports]);
+    }, [selectedReport, selectedProvince, selectedDistrict]);
 
     return (
         <div className="h-full w-full flex flex-col md:flex-row md:overflow-hidden relative animate-slide-up" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
@@ -638,121 +772,157 @@ export default function MapView() {
                                 </button>
                             </div>
                         </div>
-
-                    <div className="relative">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Find location or ID..."
-                            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50 transition-all font-medium"
-                        />
-                    </div>
-
-                    {/* Regional Dropdowns (Province & District) */}
-                    <div className="grid grid-cols-2 gap-2">
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Province</label>
-                            <select
-                                value={selectedProvince}
-                                onChange={(e) => setSelectedProvince(e.target.value)}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all font-medium appearance-none cursor-pointer"
-                                style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
-                            >
-                                <option value="All" className="bg-[#0f2233] text-slate-200">All Provinces</option>
-                                {Object.keys(sriLankaRegions).map((prov) => (
-                                    <option key={prov} value={prov} className="bg-[#0f2233] text-slate-200">{prov}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                            <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">District</label>
-                            <select
-                                value={selectedDistrict}
-                                onChange={(e) => setSelectedDistrict(e.target.value)}
-                                disabled={selectedProvince === "All"}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium appearance-none cursor-pointer"
-                                style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
-                            >
-                                <option value="All" className="bg-[#0f2233] text-slate-200">All Districts</option>
-                                {selectedProvince !== "All" && sriLankaRegions[selectedProvince]?.map((dist) => (
-                                    <option key={dist} value={dist} className="bg-[#0f2233] text-slate-200">{dist}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="flex gap-2 overflow-x-auto pb-1 custom-scrollbar">
-                        {["All", ...Object.keys(categoryMeta)].map((cat) => (
-                            <button
-                                key={cat}
-                                onClick={() => setFilter(cat as any)}
-                                className={`px-3 py-1.5 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all border ${filter === cat
-                                    ? "bg-teal-500/20 border-teal-500/40 text-teal-400"
-                                    : "bg-white/5 border-white/5 text-slate-400 hover:text-slate-300 hover:border-white/10"
-                                    }`}
-                            >
-                                {cat}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto space-y-2 p-3 custom-scrollbar">
-                    {filteredReports.map((report) => {
-                        const cat = categoryMeta[report.category];
-                        const st = statusMeta[report.status];
-                        const isSelected = selectedReport?.id === report.id;
-
-                        return (
-                            <button
-                                key={report.id}
-                                onClick={() => setSelectedReport(report)}
-                                className={`w-full text-left p-3 rounded-xl border transition-all group ${isSelected
-                                    ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
-                                    : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
-                                    }`}
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <div className="flex items-center gap-2">
-                                        <span className={`w-2 h-2 rounded-full ${st.dot}`} />
-                                        <span className="text-[10px] font-bold text-white tracking-tight">{report.id}</span>
-                                    </div>
-                                    <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${priorityMeta[report.priority]?.bg || 'bg-white/5'} ${priorityMeta[report.priority]?.color || 'text-slate-400'}`}>
-                                        {report.priority}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-lg ${cat?.bg || 'bg-white/5'} flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition-transform`}>
-                                        {cat?.icon || '📍'}
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="text-xs font-semibold text-slate-200 truncate">{report.location}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <p className="text-[10px] text-slate-400">{report.time}</p>
-                                            {report.district && (
-                                                <>
-                                                    <span className="w-1 h-1 rounded-full bg-slate-600" />
-                                                    <p className="text-[9px] font-bold text-teal-400 uppercase tracking-wider">{report.district}</p>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
-
-                    {!loading && filteredReports.length === 0 && (
-                        <div className="py-20 text-center opacity-40">
-                            <p className="text-2xl mb-2">📁</p>
-                            <p className="text-xs text-slate-300 font-bold uppercase tracking-widest">No matching reports</p>
-                            <p className="text-[10px] text-slate-500 mt-1">Check back later for updates</p>
-                        </div>
-                    )}
-                </div>
+ 
+                     <div className="relative">
+                         <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-teal-500/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                         </svg>
+                         <input
+                             value={searchQuery}
+                             onChange={(e) => setSearchQuery(e.target.value)}
+                             placeholder="Find location or ID..."
+                             className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/50 transition-all font-medium"
+                         />
+                     </div>
+ 
+                     {/* Regional Dropdowns (Province & District) */}
+                     <div className="grid grid-cols-2 gap-2">
+                         <div className="flex flex-col gap-1">
+                             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Province</label>
+                             <select
+                                 value={selectedProvince}
+                                 onChange={(e) => setSelectedProvince(e.target.value)}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all font-medium appearance-none cursor-pointer"
+                                 style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
+                             >
+                                 <option value="All" className="bg-[#0f2233] text-slate-200">All Provinces</option>
+                                 {Object.keys(sriLankaRegions).map((prov) => (
+                                     <option key={prov} value={prov} className="bg-[#0f2233] text-slate-200">{prov}</option>
+                                 ))}
+                             </select>
+                         </div>
+                         <div className="flex flex-col gap-1">
+                             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">District</label>
+                             <select
+                                 value={selectedDistrict}
+                                 onChange={(e) => setSelectedDistrict(e.target.value)}
+                                 disabled={selectedProvince === "All"}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium appearance-none cursor-pointer"
+                                 style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
+                             >
+                                 <option value="All" className="bg-[#0f2233] text-slate-200">All Districts</option>
+                                 {selectedProvince !== "All" && sriLankaRegions[selectedProvince]?.map((dist) => (
+                                     <option key={dist} value={dist} className="bg-[#0f2233] text-slate-200">{dist}</option>
+                                 ))}
+                             </select>
+                         </div>
+                     </div>
+ 
+                     {/* Status & Report Type Dropdowns */}
+                     <div className="grid grid-cols-2 gap-2">
+                         <div className="flex flex-col gap-1">
+                             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Status</label>
+                             <select
+                                 value={selectedStatus}
+                                 onChange={(e) => setSelectedStatus(e.target.value)}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all font-medium appearance-none cursor-pointer select-none"
+                                 style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
+                             >
+                                 <option value="All" className="bg-[#0f2233] text-slate-200">All Active</option>
+                                 <option value="PENDING" className="bg-[#0f2233] text-slate-200">Pending</option>
+                                 <option value="ASSIGNED" className="bg-[#0f2233] text-slate-200">Assigned</option>
+                                 <option value="FIXING" className="bg-[#0f2233] text-slate-200">Fixing</option>
+                             </select>
+                         </div>
+                         <div className="flex flex-col gap-1">
+                             <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Report Type</label>
+                             <select
+                                 value={filter}
+                                 onChange={(e) => setFilter(e.target.value)}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all font-medium appearance-none cursor-pointer select-none"
+                                 style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
+                             >
+                                 <option value="All" className="bg-[#0f2233] text-slate-200">All Types</option>
+                                 <option value="Road & Traffic" className="bg-[#0f2233] text-slate-200">Road & Traffic</option>
+                                 <option value="Water & Drainage" className="bg-[#0f2233] text-slate-200">Water & Drainage</option>
+                                 <option value="Waste & Environment" className="bg-[#0f2233] text-slate-200">Waste & Env.</option>
+                                 <option value="Social Safety" className="bg-[#0f2233] text-slate-200">Social Safety</option>
+                                 <option value="Bridge & Structural" className="bg-[#0f2233] text-slate-200">Bridge & Structural</option>
+                                 <option value="Other" className="bg-[#0f2233] text-slate-200">Other</option>
+                             </select>
+                         </div>
+                     </div>
+                 </div>
+ 
+                 <div className="flex-1 overflow-y-auto space-y-2 p-3 custom-scrollbar">
+                     {loading ? (
+                         <div className="flex flex-col items-center justify-center py-20 text-center">
+                             <div className="w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full animate-spin mb-3" />
+                             <p className="text-xs uppercase tracking-widest text-slate-500">Loading reports...</p>
+                         </div>
+                     ) : error ? (
+                         <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+                             <span className="text-2xl mb-2">⚠️</span>
+                             <p className="text-xs font-bold text-red-400">Failed to load reports</p>
+                             <p className="text-[10px] text-slate-500 mt-1 mb-3">{error}</p>
+                             <button onClick={refresh} className="px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-slate-300 text-[10px] font-bold rounded-lg transition-all active:scale-95 cursor-pointer">
+                                 Retry
+                             </button>
+                         </div>
+                     ) : filteredReports.length === 0 ? (
+                         <div className="py-20 text-center opacity-40">
+                             <p className="text-2xl mb-2">📁</p>
+                             <p className="text-xs text-slate-300 font-bold uppercase tracking-widest">No matching reports</p>
+                             <p className="text-[10px] text-slate-500 mt-1">Check back later for updates</p>
+                         </div>
+                     ) : (
+                         filteredReports.map((report) => {
+                             const cat = categoryMeta[report.category] || categoryMeta[report.categoryId] || { color: "", bg: "bg-white/5", icon: "📍" };
+                             const st = statusMeta[report.status] || { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" };
+                             const isSelected = selectedReport?.id === report.id;
+ 
+                             return (
+                                 <button
+                                     key={report.id}
+                                     onClick={() => setSelectedReport(report)}
+                                     className={`w-full text-left p-3 rounded-xl border transition-all group ${isSelected
+                                         ? "bg-teal-500/10 border-teal-500/30 ring-1 ring-teal-500/20 shadow-lg shadow-teal-900/10"
+                                         : "bg-white/2 border-white/5 hover:border-white/10 hover:bg-white/5"
+                                         }`}
+                                 >
+                                     <div className="flex items-start gap-3">
+                                         <div className={`w-8 h-8 rounded-lg ${cat.bg} flex items-center justify-center text-sm shadow-inner group-hover:scale-110 transition-transform flex-shrink-0`}>
+                                             {cat.icon}
+                                         </div>
+                                         <div className="min-w-0 flex-1">
+                                             <div className="flex items-center justify-between gap-2">
+                                                 <p className="text-xs font-bold text-white truncate">{report.category} Incident</p>
+                                                 <div className="flex items-center gap-1.5 flex-shrink-0">
+                                                     <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
+                                                     <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider">{report.status}</span>
+                                                 </div>
+                                             </div>
+                                             
+                                             <p className="text-[10px] text-slate-500 font-mono mt-0.5">Incident ID: {report.id}</p>
+                                             
+                                             <p className="text-xs font-normal text-slate-400 leading-relaxed break-words mt-1">{report.resolvedLocation.address}</p>
+                                             
+                                             <div className="flex items-center gap-2 mt-0.5">
+                                                 <p className="text-[10px] text-slate-400">{getFormattedDate(report.createdAt)}</p>
+                                                 {report.resolvedLocation.district && (
+                                                     <>
+                                                         <span className="w-1 h-1 rounded-full bg-slate-600" />
+                                                         <p className="text-[9px] font-bold text-teal-400 uppercase tracking-wider">{report.resolvedLocation.district}</p>
+                                                     </>
+                                                 )}
+                                             </div>
+                                         </div>
+                                     </div>
+                                 </button>
+                             );
+                         })
+                     )}
+                 </div>
                 </div>
             </div>
 
@@ -796,37 +966,39 @@ export default function MapView() {
                 {selectedReport && (
                     <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 sm:max-w-sm bg-[#0f2233]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden animate-in slide-in-from-bottom-10 sm:slide-in-from-right-10 duration-500 z-[1000]">
                         <div className="p-5 flex gap-4">
-                            <div className={`w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl shadow-inner ${categoryMeta[selectedReport.category]?.bg || 'bg-white/5'}`}>
-                                {categoryMeta[selectedReport.category]?.icon || '📍'}
+                            <div className={`w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl shadow-inner ${categoryMeta[selectedReport.category]?.bg || categoryMeta[selectedReport.categoryId]?.bg || 'bg-white/5'}`}>
+                                {categoryMeta[selectedReport.category]?.icon || categoryMeta[selectedReport.categoryId]?.icon || '📍'}
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="text-base font-bold text-white tracking-tight">{selectedReport.id}</h3>
-                                        <p className="text-xs text-slate-400 font-medium truncate">{selectedReport.location}</p>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-sm font-bold text-white tracking-tight truncate">{selectedReport.category} Incident</h3>
+                                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">Incident ID: {selectedReport.id}</p>
+                                        <p className="text-xs text-slate-400 font-normal leading-relaxed break-words mt-1.5">{resolveLocation(selectedReport.location).address}</p>
                                     </div>
-                                    <button onClick={() => setSelectedReport(null)} className="p-1 text-slate-500 hover:text-white transition-colors">
+                                    <button onClick={() => setSelectedReport(null)} className="p-1 text-slate-500 hover:text-white transition-colors ml-2 flex-shrink-0">
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
 
                                 <div className="mt-4 flex gap-3">
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusMeta[selectedReport.status]?.bg} ${statusMeta[selectedReport.status]?.color}`}>
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${statusMeta[selectedReport.status]?.bg || 'bg-white/5'} ${statusMeta[selectedReport.status]?.color || 'text-slate-400'}`}>
                                         {selectedReport.status}
-                                    </span>
-                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${priorityMeta[selectedReport.priority]?.bg} ${priorityMeta[selectedReport.priority]?.color}`}>
-                                        {selectedReport.priority}
                                     </span>
                                 </div>
 
                                 <p className="mt-4 text-xs text-slate-300 leading-relaxed italic line-clamp-2 pr-2 opacity-80 uppercase tracking-tight font-medium">"{selectedReport.description}"</p>
 
                                 <div className="mt-6 flex gap-2">
-                                    <button className="flex-1 py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-white text-[10px] font-bold rounded-xl transition-all shadow-lg shadow-teal-900/40 active:scale-[0.98] uppercase tracking-widest">
+                                    <button 
+                                        onClick={() => {
+                                            (window as any).pendingReportDetail = selectedReport;
+                                            window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }));
+                                            window.dispatchEvent(new CustomEvent("openReportDetail", { detail: { report: selectedReport } }));
+                                        }}
+                                        className="flex-1 py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-white text-[10px] font-bold rounded-xl transition-all shadow-lg shadow-teal-900/40 active:scale-[0.98] uppercase tracking-widest cursor-pointer"
+                                    >
                                         Open Management
-                                    </button>
-                                    <button className="px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest">
-                                        Share
                                     </button>
                                 </div>
                             </div>

@@ -458,7 +458,6 @@ function DashboardOverviewContent() {
 export default function AdminDashboard() {
     const { user, isSuperAdmin, logout } = useAuth();
     const [activeNav, setActiveNav] = useState("dashboard");
-    const [searchValue, setSearchValue] = useState("");
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -474,6 +473,18 @@ export default function AdminDashboard() {
             setLoading(false);
         }, 800);
         return () => clearTimeout(timer);
+    }, []);
+
+    // Listen to tab change events
+    useEffect(() => {
+        const handleTabChange = (e: Event) => {
+            const customEvent = e as CustomEvent<string>;
+            if (customEvent.detail) {
+                setActiveNav(customEvent.detail);
+            }
+        };
+        window.addEventListener("changeNavTab", handleTabChange);
+        return () => window.removeEventListener("changeNavTab", handleTabChange);
     }, []);
 
     const baseNavItems: NavItem[] = [
@@ -588,8 +599,22 @@ export default function AdminDashboard() {
                     </div>
                 </nav>
 
-                {/* Logout button at bottom of sidebar */}
-                <div className="px-3 py-4 border-t border-white/5 bg-white/[0.01]">
+                {/* Admin profile + Logout at bottom of sidebar */}
+                <div className="px-3 py-4 border-t border-white/5 bg-white/[0.01] space-y-2">
+                    {/* Admin profile card */}
+                    <div className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.03] border border-white/5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-teal-900/40 select-none flex-shrink-0">
+                            {initials}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-200 truncate">{user?.displayName ?? "Admin"}</p>
+                            <p className="text-[10px] text-teal-400/80 font-medium">
+                                {user?.role === "superadmin" ? "Super Admin" : "Admin"}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Sign Out button */}
                     <button
                         id="sidebar-logout-btn"
                         onClick={() => setShowLogoutConfirm(true)}
@@ -606,49 +631,19 @@ export default function AdminDashboard() {
             {/* ── Main ────────────────────────────────────────────────────────────── */}
             <div className="relative flex-1 flex flex-col min-w-0 overflow-hidden">
 
-                {/* Topbar */}
-                <header className="bg-[#0f2233]/80 backdrop-blur-xl border-b border-white/5 px-4 md:px-6 py-3 flex items-center gap-3 md:gap-4 flex-shrink-0">
-                    {/* Mobile Menu Toggle */}
+                {/* Topbar — mobile menu toggle only; profile lives in sidebar */}
+                <header className="md:hidden bg-[#0f2233]/80 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center gap-3 flex-shrink-0">
                     <button
-                        className="md:hidden p-2 -ml-2 text-slate-300 hover:bg-white/5 rounded-lg transition-colors"
+                        className="p-2 -ml-2 text-slate-300 hover:bg-white/5 rounded-lg transition-colors"
                         onClick={() => setIsMobileMenuOpen(true)}
                     >
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
-
-                    {/* Search */}
-                    <div className="flex-1 max-w-md relative group">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-teal-500/60 group-focus-within:text-teal-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <input
-                            value={searchValue}
-                            onChange={(e) => setSearchValue(e.target.value)}
-                            placeholder="Search reports..."
-                            className="w-full bg-white/5 border border-white/10 rounded-lg pl-9 pr-14 py-2 text-sm text-slate-200 placeholder:text-slate-400 focus:outline-none focus:bg-white/10 focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200"
-                        />
-                        <div className="absolute right-2 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-1 opacity-60">
-                            <kbd className="px-1.5 py-0.5 text-[9px] font-mono text-slate-300 bg-white/10 border border-white/10 rounded shadow-sm">⌘</kbd>
-                            <kbd className="px-1.5 py-0.5 text-[9px] font-mono text-slate-300 bg-white/10 border border-white/10 rounded shadow-sm">K</kbd>
-                        </div>
-                    </div>
-
-                    {/* Right profile block */}
-                    <div className="flex items-center gap-2 ml-auto">
-                        <div className="flex items-center gap-2.5">
-                            <div className="text-right hidden sm:block">
-                                <p className="text-xs font-semibold text-slate-200">{user?.displayName ?? "Admin"}</p>
-                                <p className="text-[10px] text-teal-400/80 font-medium">
-                                    {user?.role === "superadmin" ? "Super Admin" : "Admin"}
-                                </p>
-                            </div>
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow-lg shadow-teal-900/40 select-none">
-                                {initials}
-                            </div>
-                        </div>
-                    </div>
+                    <span className="text-sm font-semibold text-slate-200">
+                        {navItems.find(n => n.id === activeNav)?.label ?? "Dashboard"}
+                    </span>
                 </header>
 
                 {/* ── Scrollable page ── */}

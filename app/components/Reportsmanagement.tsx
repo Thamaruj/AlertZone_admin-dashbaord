@@ -436,6 +436,28 @@ export default function ReportsManagement() {
         fetchReporterProfile(report.uid);
     };
 
+    useEffect(() => {
+        if (typeof window !== "undefined" && (window as any).pendingReportDetail && reports.length > 0) {
+            const report = (window as any).pendingReportDetail;
+            const found = reports.find(r => r.id === report.id);
+            openDetails(found || report);
+            (window as any).pendingReportDetail = null;
+        }
+    }, [reports]);
+
+    useEffect(() => {
+        const handleOpenReportDetail = (e: Event) => {
+            const customEvent = e as CustomEvent<{ report: Report }>;
+            if (customEvent.detail?.report) {
+                const report = customEvent.detail.report;
+                const found = reports.find(r => r.id === report.id);
+                openDetails(found || report);
+            }
+        };
+        window.addEventListener("openReportDetail", handleOpenReportDetail);
+        return () => window.removeEventListener("openReportDetail", handleOpenReportDetail);
+    }, [reports]);
+
     function formatDate(dateValue: any) {
         if (!dateValue) return "Unknown date";
         if (typeof dateValue?.toDate === 'function') {

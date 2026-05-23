@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-22
+> **Last Updated:** 2026-05-23
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -17,7 +17,7 @@
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
 | Phase 5: Notifications System | 🔴 Not Started | UI exists with mock notifications |
 | Phase 6: Analytics (Live) | 🔴 Not Started | UI exists with hardcoded chart data |
-| Phase 7: Map View (Live) | 🟡 Partially Done | Google Maps integration complete with Sri Lankan Province/District filters |
+| Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
 | Phase 8: Push Notifications (FCM) | 🔴 Not Started | Not implemented |
 
 ---
@@ -59,6 +59,8 @@
 - [x] Filter-Independent Overview Stats — Total, Active, and Elite stats card counters remain unaffected by province, district, status, or keyword filters
 - [x] Sidebar Navigation Refinements — styled vertical nav tabs, removed glowing effect from left-top brand badge, and updated label to "Admin Dashboard"
 - [x] Premium Custom Scrollbars — added smooth custom scrollbars globally for Webkit and Firefox browsers
+- [x] Map View Sidebar Card & Overlay Restructuring — updated sidebar cards, map InfoWindows, and selected report details overlay in `Mapview.tsx` to display Report Type (e.g., Road & Traffic Incident) as the main title, and place the monospaced Incident ID directly below it. Configured reported addresses to wrap naturally without using bold/title fonts.
+- [x] Reports Redirection & Auto-Open — wired the "Open Management" button in Map View to redirect the admin to Reports Management and automatically trigger the detailed modal popover view.
 
 ### Reports Management (Live)
 - [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.
@@ -90,6 +92,7 @@
 - [x] Line chart — reads from `MONTHLY_DATA` (populated in mockData.ts)
 - [x] Recent reports table — reads from `MOCK_REPORTS` (populated in mockData.ts)
 - [ ] User profile in topbar — hardcoded "Alex Morgan / Super Admin"
+- [x] Desktop topbar removed — content area now gets full vertical space on `md+`; profile card moved to sidebar bottom above Sign Out
 
 ### Admin Login (`Adminlogin.tsx`)
 - [x] Login form — real auth via `/api/auth/login` (username + password)
@@ -115,8 +118,8 @@
 - [x] Map auto-fits bounds to the selected province/district polygon
 - [x] Marker categories, InfoWindows, and selection sync fully integrated with dashboard details panel overlay
 - [x] Sidebar collapse frees full map width (flex-1 layout fix)
-- [ ] No Firestore data subscription
-- [ ] No category/status filters wired to real data
+- [x] Firestore data subscription (wired to real data via `useReports()`)
+- [x] Category/status filters wired to real data (replaced with Active Status and Report Type select dropdowns)
 
 ### Users (`Users.tsx`)
 - [x] User list — live data queried from Firestore via `/api/users`
