@@ -13,7 +13,7 @@
 | Phase 0: Project Scaffolding | 🟢 Done | Next.js 16 project created with Tailwind CSS v4 |
 | Phase 1: UI Shell & Mock Dashboard | 🟡 Partially Done | All UI screens built with hardcoded/mock data |
 | Phase 2: Firebase Integration | 🔴 Not Started | Firebase SDK installed, config exists, but NOT wired to any component |
-| Phase 3: Reports Management (Live) | 🔴 Not Started | UI exists with mock data |
+| Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes and notifications |
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
 | Phase 5: Notifications System | 🔴 Not Started | UI exists with mock notifications |
 | Phase 6: Analytics (Live) | 🔴 Not Started | UI exists with hardcoded chart data |
@@ -60,6 +60,15 @@
 - [x] Sidebar Navigation Refinements — styled vertical nav tabs, removed glowing effect from left-top brand badge, and updated label to "Admin Dashboard"
 - [x] Premium Custom Scrollbars — added smooth custom scrollbars globally for Webkit and Firefox browsers
 
+### Reports Management (Live)
+- [x] Real-time Firebase Firestore data synchronization for reports
+- [x] Full UI detail modal with dynamic timeline styles matching report statuses
+- [x] Real status updates push to Firestore and log the `statusHistory` automatically
+- [x] Automatic user notification generation within Firestore when an admin changes a report status
+- [x] Robust reverse geographical lookup for locations mapping suburbs and GPS directly to formal Provinces and Districts, falling back gracefully if only coordinates are provided
+- [x] User avatars embedded directly into reporter cards, fetched instantly upon opening the modal
+- [x] Reporter ID removed from UI for cleaner layout
+
 ---
 
 ## What Uses MOCK DATA (UI exists, not wired to Firebase) 🟡
@@ -88,14 +97,6 @@
 - [x] Superadmin active admin warning popup: alerts superadmin if they attempt to deactivate an admin who has been active in the last 20 seconds
 - [x] Superadmin active admin deletion block: prevents deletion of admin accounts that are active or online, requiring deactivation and logout first.
 - [ ] "Forgot password" — not implemented (hardcoded credentials don't support reset)
-
-### Reports Management (`Reportsmanagement.tsx`)
-- [ ] Reports table — uses mock data types that **don't match** the mobile app's Firestore schema
-- [ ] Status values are wrong: `"Reported" | "In Progress" | "Solved" | "Closed"` instead of `"PENDING" | "ASSIGNED" | "FIXING" | "RESOLVED" | "REJECTED"`
-- [ ] Category values are updated to match planned integration: `"Road & Traffic" | "Water and Drainage" | "Waste & Environment" | "Social Security" | "Bridge & Structural" | "Other"` (still mock, not Firestore-wired)
-- [ ] No Firebase queries
-- [ ] No status update functionality
-- [ ] No notification creation on status change
 
 ### Map View (`Mapview.tsx`)
 - [x] Google Maps renders mock report pins around Colombo and other Sri Lankan regions
@@ -135,13 +136,13 @@
 - [ ] TypeScript types matching the mobile app's Firestore schema (reports, users, notifications)
 
 ### Core Functionality
-- [ ] Real-time report fetching from Firestore
-- [ ] Report status updates with `statusHistory` append
-- [ ] Notification creation on status change (critical for mobile app)
+- [x] Real-time report fetching from Firestore
+- [x] Report status updates with `statusHistory` append
+- [x] Notification creation on status change (critical for mobile app)
 - [x] User management — read users, suspend/activate
 - [ ] Report archival (soft-delete with `isArchived`)
 - [ ] Report assignment (`assignedTo` field)
-- [ ] Resolution notes (`resolutionNote` field)
+- [x] Resolution notes (`resolutionNote` field)
 
 ### Analytics & Data
 - [ ] Real-time stats aggregation from Firestore
