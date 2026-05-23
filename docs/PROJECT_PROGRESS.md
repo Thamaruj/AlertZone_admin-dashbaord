@@ -458,12 +458,13 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Wired the "Open Management" button in the selected report panel to fire a custom `changeNavTab` navigation event, and added an event listener in `Maindashboard.tsx` to automatically redirect the admin to the live Reports Management tab.
     - Verified the workspace successfully compiles with `npm run build`.
 
-- [2026-05-23] Map View Sidebar Card Restructuring:
-    - Redesigned active report incidents card layout in the `Mapview.tsx` sidebar list.
-    - Updated the title to show the "Report Type" (e.g., Road & Traffic Incident) as the main title of each report card.
-    - Prominently placed the monospaced unique Incident ID directly below the main title.
-    - Repositioned the geographical address and dynamic date & district metadata underneath the Incident ID to create an elegant hierarchical card structure.
-    - Maintained premium styling matching other live dashboard components.
+- [2026-05-23] Map View Sidebar Card & Navigation Restructuring:
+    - Redesigned active report incidents card layout in the `Mapview.tsx` sidebar list to show the "Report Type" (e.g., Road & Traffic Incident) as the main card title.
+    - Configured reported address styling on sidebar cards and overlays to wrap naturally (`break-words`) instead of using single-line truncations, and set standard body font weighting (`font-normal text-slate-400`) to differentiate it from title styles.
+    - Updated map marker InfoWindows and selected report details overlays to display the Report Type as the main title, placing the monospaced unique Incident ID directly below it.
+    - Wired the "Open Management" button in Map View to store a global `pendingReportDetail` reference, trigger a `changeNavTab` navigation tab redirection to Reports Management, and dispatch a custom `openReportDetail` trigger.
+    - Added reactive lifecycle effects inside `Reportsmanagement.tsx` to automatically listen for redirection event cues and immediately launch the targeted report's complete interactive details modal.
+    - Checked all compilation flows confirming zero warnings.
 
 ---
 

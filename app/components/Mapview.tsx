@@ -616,7 +616,7 @@ function GoogleMapContainer({
                 setSelectedReport(report);
                 if (activeInfoWindowRef.current) activeInfoWindowRef.current.close();
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `<div class="p-2 min-w-[150px]"><div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-white">${report.id}</span></div><p class="text-[11px] text-slate-300 mb-2">${loc.address}</p></div>`,
+                    content: `<div class="p-2 min-w-[150px]"><div class="mb-1"><span class="text-xs font-bold text-white">${report.category} Incident</span><p class="text-[9px] text-slate-500 font-mono mt-0.5">ID: ${report.id}</p></div><p class="text-[10px] text-slate-400 leading-normal break-words mt-1.5">${loc.address}</p></div>`,
                     pixelOffset: new google.maps.Size(0, -20),
                 });
                 infoWindow.open({ map: mapRef.current, shouldFocus: false });
@@ -628,7 +628,7 @@ function GoogleMapContainer({
             markersRef.current.push({ id: report.id, overlay, latlng, report });
             if (isSelected) {
                 const infoWindow = new google.maps.InfoWindow({
-                    content: `<div class="p-2 min-w-[150px]"><div class="flex items-center gap-2 mb-1"><span class="text-xs font-bold text-white">${report.id}</span></div><p class="text-[11px] text-slate-300 mb-2">${loc.address}</p></div>`,
+                    content: `<div class="p-2 min-w-[150px]"><div class="mb-1"><span class="text-xs font-bold text-white">${report.category} Incident</span><p class="text-[9px] text-slate-500 font-mono mt-0.5">ID: ${report.id}</p></div><p class="text-[10px] text-slate-400 leading-normal break-words mt-1.5">${loc.address}</p></div>`,
                     pixelOffset: new google.maps.Size(0, -20),
                 });
                 infoWindow.open({ map: mapRef.current, shouldFocus: false });
@@ -905,7 +905,7 @@ export default function MapView() {
                                              
                                              <p className="text-[10px] text-slate-500 font-mono mt-0.5">Incident ID: {report.id}</p>
                                              
-                                             <p className="text-xs font-semibold text-slate-200 truncate mt-1.5">{report.resolvedLocation.address}</p>
+                                             <p className="text-xs font-normal text-slate-400 leading-relaxed break-words mt-1">{report.resolvedLocation.address}</p>
                                              
                                              <div className="flex items-center gap-2 mt-0.5">
                                                  <p className="text-[10px] text-slate-400">{getFormattedDate(report.createdAt)}</p>
@@ -971,11 +971,12 @@ export default function MapView() {
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="flex justify-between items-start">
-                                    <div>
-                                        <h3 className="text-base font-bold text-white tracking-tight">{selectedReport.id}</h3>
-                                        <p className="text-xs text-slate-400 font-medium truncate">{selectedReport.location.address}</p>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-sm font-bold text-white tracking-tight truncate">{selectedReport.category} Incident</h3>
+                                        <p className="text-[10px] text-slate-500 font-mono mt-0.5">Incident ID: {selectedReport.id}</p>
+                                        <p className="text-xs text-slate-400 font-normal leading-relaxed break-words mt-1.5">{resolveLocation(selectedReport.location).address}</p>
                                     </div>
-                                    <button onClick={() => setSelectedReport(null)} className="p-1 text-slate-500 hover:text-white transition-colors">
+                                    <button onClick={() => setSelectedReport(null)} className="p-1 text-slate-500 hover:text-white transition-colors ml-2 flex-shrink-0">
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                                     </button>
                                 </div>
@@ -990,13 +991,14 @@ export default function MapView() {
 
                                 <div className="mt-6 flex gap-2">
                                     <button 
-                                        onClick={() => window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }))}
+                                        onClick={() => {
+                                            (window as any).pendingReportDetail = selectedReport;
+                                            window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }));
+                                            window.dispatchEvent(new CustomEvent("openReportDetail", { detail: { report: selectedReport } }));
+                                        }}
                                         className="flex-1 py-2.5 bg-gradient-to-r from-teal-500 to-cyan-500 hover:brightness-110 text-white text-[10px] font-bold rounded-xl transition-all shadow-lg shadow-teal-900/40 active:scale-[0.98] uppercase tracking-widest cursor-pointer"
                                     >
                                         Open Management
-                                    </button>
-                                    <button className="px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white text-[10px] font-bold rounded-xl transition-all uppercase tracking-widest">
-                                        Share
                                     </button>
                                 </div>
                             </div>
