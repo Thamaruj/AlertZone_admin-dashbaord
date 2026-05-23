@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+// lib/hooks/useReports.ts
+// Custom hook to fetch and manage reports from Server API routes.
+
+import { useState, useEffect, useCallback } from 'react';
 import { Report, ReportStatus } from '@/lib/types/report';
-import { subscribeToReports, updateReportStatus } from '@/lib/services/report.service';
+import { getReports, updateReportStatus } from '@/lib/services/report.service';
 import { useAuth } from '@/lib/context/AuthContext';
 
 export function useReports(statusFilter?: ReportStatus | "All") {
@@ -9,27 +12,36 @@ export function useReports(statusFilter?: ReportStatus | "All") {
     const [error, setError] = useState<string | null>(null);
     const { user } = useAuth();
 
-    useEffect(() => {
+    const fetchReports = useCallback(async () => {
         setLoading(true);
-        const unsubscribe = subscribeToReports((data) => {
+        try {
+            const data = await getReports();
             setReports(data);
-            setLoading(false);
             setError(null);
-        }, statusFilter);
+        } catch (err: any) {
+            console.error("❌ Failed to load reports:", err);
+            setError(err.message || "Failed to load reports");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-        return () => unsubscribe();
-    }, [statusFilter]);
+    useEffect(() => {
+        fetchReports();
+    }, [fetchReports]);
 
     const changeStatus = async (reportId: string, newStatus: ReportStatus, note?: string) => {
         if (!user) throw new Error("Must be logged in to update status");
         
         try {
             await updateReportStatus(reportId, newStatus, user.id, note);
+            // Refetch reports to sync the client state with the server
+            await fetchReports();
         } catch (err: any) {
             console.error("Failed to update status:", err);
             throw err;
         }
     };
 
-    return { reports, loading, error, changeStatus };
+    return { reports, loading, error, changeStatus, refresh: fetchReports };
 }
