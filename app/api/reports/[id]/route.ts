@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/services/auth.service";
 import { adminDb, admin } from "@/lib/firebase-admin";
 import { ReportStatus, StatusHistoryEntry } from "@/lib/types/report";
+import { sendPushNotification } from "@/lib/services/push.service";
 
 async function requireAdmin(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -70,29 +71,49 @@ export async function PATCH(
     // Update the report
     await reportRef.update(updatePayload);
 
-    // Create a notification for the citizen
+    // Fetch the citizen user's profile for notifications and contribution updates
+    const userRef = adminDb.collection("users").doc(reportData.uid);
+    const userSnap = await userRef.get();
+    const userData = userSnap.exists ? userSnap.data() || {} : {};
+
+    // Create a notification for the citizen in Firestore
     await adminDb.collection("notifications").add({
       recipientUid: reportData.uid,
       type: "status_change",
       title: "Report Status Updated",
       body: `Your report "${reportData.title || "Incident"}" status changed to ${status}.`,
       reportId: id,
-      data: { previousStatus, newStatus: status },
+      data: { 
+        previousStatus, 
+        newStatus: status,
+        latitude: reportData.location?.latitude || null,
+        longitude: reportData.location?.longitude || null,
+      },
       isRead: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
+    // Send push notification if token exists
+    const expoPushToken = userData?.expoPushToken || userData?.fcmToken;
+    if (expoPushToken) {
+      await sendPushNotification(
+        expoPushToken,
+        "Report Status Updated",
+        `Your report "${reportData.title || "Incident"}" status changed to ${status}.`,
+        {
+          reportId: id,
+          latitude: reportData.location?.latitude,
+          longitude: reportData.location?.longitude,
+        }
+      );
+    }
+
     // If status is RESOLVED, award contribution points and increment validated count
-    if (status === "RESOLVED") {
-      const userRef = adminDb.collection("users").doc(reportData.uid);
-      const userSnap = await userRef.get();
-      if (userSnap.exists) {
-        const userData = userSnap.data() || {};
-        await userRef.update({
-          reportsValidated: (userData.reportsValidated || 0) + 1,
-          contributionPoints: (userData.contributionPoints || 0) + 10, // 10 points
-        });
-      }
+    if (status === "RESOLVED" && userSnap.exists) {
+      await userRef.update({
+        reportsValidated: (userData.reportsValidated || 0) + 1,
+        contributionPoints: (userData.contributionPoints || 0) + 10, // 10 points
+      });
     }
 
     return NextResponse.json({ success: true });

@@ -493,7 +493,25 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Redesigned Session Management card with red highlights to match dashboard standards, and updated About AlertZone console/repo navigation links.
     - Re-verified production build compilation.
 
+- **[2026-05-24] Notification System Integration**:
+    - **Mobile App Setup**:
+      - Created `types/notification.ts` defining `AppNotification` and `NotificationType` (`status_change`, `upvote`, `badge_earned`, `system`).
+      - Created `services/notification.service.ts` to request permissions, retrieve tokens, configure default Android channel settings, and update Firestore documents.
+      - Developed the `useNotifications.ts` hook globally initialized in `app/_layout.tsx` to handle foreground notifications and tapped redirects.
+      - Implemented a complete dark-mode in-app Notification Center (`app/notifications.tsx`) with filtering tabs, and read/delete actions.
+      - Wired the Home screen bell icon (`home.tsx`) to subscribe to the unread count in real-time.
+    - **Dashboard & Push Integration**:
+      - Created `push.service.ts` calling Expo's Push API (`https://exp.host/--/api/v2/push/send`) for single and bulk push deliveries.
+      - Updated the reports PATCH route (`app/api/reports/[id]/route.ts`) to dispatch push notifications on status changes.
+      - Built a secure POST `/api/notifications/broadcast` route to query citizen users, batch write notification documents to Firestore, and push messages in bulk.
+      - Refactored `Notifications.tsx` in the dashboard to list live Firestore notification logs in real-time and added a Megaphone Broadcast Modal.
+    - **Expo Project ID and EAS Resolution**:
+      - **The Problem**: During runtime testing inside Expo Go, the app crashed on startup with `Error: No "projectId" found`. This was caused by modern Expo SDK 54's strict requirement that token generation be linked to an EAS (Expo Application Services) account, which was unconfigured.
+      - **Immediate Solution (Graceful Fallback)**: Modified `services/notification.service.ts` to check if `projectId` is present first. If missing, it logs a descriptive warning in the console explaining how to set it up, and gracefully returns `null` rather than throwing an exception. This kept in-app notifications functioning in real-time.
+      - **Full Resolution**: Run `npx eas login` and `npx eas project:init` in the mobile app directory. This linked the local workspace to the EAS account (`@stjalthotage/alertzone` under ID `55db983e-26bb-4c43-891e-d4e1155bd5ec`), automatically writing the required `projectId` into `app.json` and fully enabling native push deliveries.
+
 ---
 
 *Last Updated: 2026-05-24*
+
 
