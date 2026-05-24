@@ -6,7 +6,7 @@ import { Report, ReportStatus } from "@/lib/types/report";
 import { UserProfile } from "@/lib/types/user";
 import { categoryStyleMeta } from "@/lib/constants/categories";
 import { statusStyleMeta } from "@/lib/constants/statuses";
-import { sriLankaGeographics } from "@/lib/constants/sriLankaRegions";
+import { sriLankaGeographics, resolveSrilankaRegion } from "@/lib/constants/sriLankaRegions";
 import MiniMap from "./MiniMap";
 import UserDetailsModal from "./UserDetailsModal";
 
@@ -389,42 +389,40 @@ export default function ReportsManagement() {
 
     function resolveLocation(location: any) {
         if (!location) return { province: "Unknown Province", district: "Unknown District", lga: "Unknown Area" };
-        if (location.province && location.district && location.localGovernmentArea) {
-            return {
-                province: location.province,
-                district: location.district,
-                lga: location.localGovernmentArea
-            };
+        
+        let resolvedProvince = location.province || "";
+        let resolvedDistrict = location.district || "";
+        let resolvedLGA = location.localGovernmentArea || "";
+        
+        if (!resolvedProvince || !resolvedDistrict || !resolvedLGA) {
+            const areaStr = (location.area || "").trim();
+            const addressStr = (location.address || "").trim();
+            const fallbackStr = addressStr || areaStr;
+            const latitude = typeof location.latitude === 'number' ? location.latitude : parseFloat(location.latitude);
+            const longitude = typeof location.longitude === 'number' ? location.longitude : parseFloat(location.longitude);
+            
+            const res = resolveSrilankaRegion(
+                {
+                    region: resolvedProvince,
+                    district: resolvedDistrict,
+                    subregion: "",
+                    city: "",
+                    name: "",
+                    street: "",
+                },
+                fallbackStr,
+                latitude,
+                longitude
+            );
+            resolvedProvince = res.province;
+            resolvedDistrict = res.district;
+            resolvedLGA = res.localGovernmentArea;
         }
-        
-        const areaStr = (location.area || "").toLowerCase().trim();
-        const addressStr = (location.address || "").toLowerCase().trim();
-        
-        for (const [province, districts] of Object.entries(sriLankaGeographics)) {
-            for (const [district, lgas] of Object.entries(districts)) {
-                if ((areaStr && district.toLowerCase() === areaStr) || addressStr.includes(district.toLowerCase())) {
-                    return { province, district, lga: location.area || district };
-                }
-                
-                for (const lga of lgas) {
-                    const cleanLga = lga.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").toLowerCase().trim();
-                    if (areaStr && cleanLga.includes(areaStr)) {
-                        return { province, district, lga };
-                    }
-                    if (addressStr && addressStr.includes(cleanLga)) {
-                        return { province, district, lga };
-                    }
-                    if (areaStr && areaStr.includes(cleanLga)) {
-                        return { province, district, lga };
-                    }
-                }
-            }
-        }
-        
+
         return {
-            province: location.province || "Unknown Province",
-            district: location.district || "Unknown District",
-            lga: location.localGovernmentArea || location.area || "Unknown Area"
+            province: resolvedProvince || "Unknown Province",
+            district: resolvedDistrict || "Unknown District",
+            lga: resolvedLGA || "Unknown Area"
         };
     }
 

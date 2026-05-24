@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useReports } from "@/lib/hooks/useReports";
 import { Report, ReportStatus } from "@/lib/types/report";
+import { sriLankaGeographics, resolveSrilankaRegion } from "@/lib/constants/sriLankaRegions";
 
 // ─── geoBoundaries Land-Clipped GeoJSON Loader ────────────────────────────────
 // Files are served locally from /public/geojson/ — no CORS, no Git-LFS issues.
@@ -61,86 +62,43 @@ function matchesRegion(shapeName: string, regionKey: string): boolean {
 function resolveLocation(location: any) {
     if (!location) return { province: "Unknown Province", district: "Unknown District", lga: "Unknown Area", address: "Unknown Location", latitude: 6.9271, longitude: 79.8612 };
     
-    let province = location.province || "Unknown Province";
-    let district = location.district || "Unknown District";
-    let lga = location.localGovernmentArea || location.area || "Unknown Area";
+    let resolvedProvince = location.province || "";
+    let resolvedDistrict = location.district || "";
+    let resolvedLGA = location.localGovernmentArea || "";
     let address = location.address || "Unknown Location";
     let latitude = typeof location.latitude === 'number' ? location.latitude : parseFloat(location.latitude) || 6.9271;
     let longitude = typeof location.longitude === 'number' ? location.longitude : parseFloat(location.longitude) || 79.8612;
     
-    // Fallback parsing if fields are missing (like in old data formats)
-    if (!location.province || !location.district || !location.localGovernmentArea) {
-        const sriLankaGeographics: Record<string, Record<string, string[]>> = {
-            "Western": {
-                "Colombo": ["Colombo Municipal Council", "Kaduwela Municipal Council", "Kolonnawa Urban Council", "Kotte Municipal Council", "Moratuwa Municipal Council", "Seethawaka Pradeshiya Sabha", "Homagama Pradeshiya Sabha", "Maharagama Urban Council", "Kesbewa Urban Council", "Boralesgamuwa Urban Council", "Dehiwala-Mount Lavinia Municipal Council"],
-                "Gampaha": ["Gampaha Municipal Council", "Negombo Municipal Council", "Wattala Urban Council", "Minuwangoda Urban Council", "Ja-Ela Urban Council", "Katunayake-Seeduwa Urban Council", "Peliyagoda Urban Council", "Kelaniya Pradeshiya Sabha", "Mahara Pradeshiya Sabha", "Dompe Pradeshiya Sabha", "Biyagama Pradeshiya Sabha", "Attanagalla Pradeshiya Sabha", "Divulapitiya Pradeshiya Sabha", "Mirigama Pradeshiya Sabha"],
-                "Kalutara": ["Kalutara Urban Council", "Panadura Urban Council", "Horana Urban Council", "Beruwala Urban Council", "Matugama Pradeshiya Sabha", "Bulathsinhala Pradeshiya Sabha", "Bandaragama Pradeshiya Sabha", "Agalawatta Pradeshiya Sabha", "Dodangoda Pradeshiya Sabha", "Walallawita Pradeshiya Sabha"]
-            },
-            "Central": {
-                "Kandy": ["Kandy Municipal Council", "Gampola Urban Council", "Kadugannawa Urban Council", "Nawalapitiya Urban Council", "Harispattuwa Pradeshiya Sabha", "Kundasale Pradeshiya Sabha", "Pathadumbara Pradeshiya Sabha", "Udunuwara Pradeshiya Sabha", "Yatinuwara Pradeshiya Sabha"],
-                "Matale": ["Matale Municipal Council", "Dambulla Municipal Council", "Matale Pradeshiya Sabha", "Galewela Pradeshiya Sabha", "Naula Pradeshiya Sabha"],
-                "Nuwara Eliya": ["Nuwara Eliya Municipal Council", "Hatton-Dickoya Urban Council", "Talawakele-Lindula Urban Council", "Ambagamuwa Pradeshiya Sabha", "Walapane Pradeshiya Sabha", "Hanguranketha Pradeshiya Sabha"]
-            },
-            "Southern": {
-                "Galle": ["Galle Municipal Council", "Ambalangoda Urban Council", "Hikkaduwa Urban Council", "Galle Pradeshiya Sabha", "Baddegama Pradeshiya Sabha", "Karandeniya Pradeshiya Sabha", "Bentota Pradeshiya Sabha"],
-                "Matara": ["Matara Municipal Council", "Weligama Urban Council", "Matara Pradeshiya Sabha", "Devinuwara Pradeshiya Sabha", "Dickwella Pradeshiya Sabha", "Hakmana Pradeshiya Sabha"],
-                "Hambantota": ["Hambantota Municipal Council", "Tangalle Urban Council", "Tangalle Pradeshiya Sabha", "Beliatta Pradeshiya Sabha", "Ambalantota Pradeshiya Sabha", "Angunakolapelessa Pradeshiya Sabha"]
-            },
-            "Northern": {
-                "Jaffna": ["Jaffna Municipal Council", "Chavakachcheri Urban Council", "Point Pedro Urban Council", "Valvettithurai Urban Council", "Nallur Pradeshiya Sabha", "Karainagar Pradeshiya Sabha"],
-                "Kilinochchi": ["Karachchi Pradeshiya Sabha", "Poonakary Pradeshiya Sabha", "Pachchilaipalli Pradeshiya Sabha"],
-                "Mannar": ["Mannar Urban Council", "Mannar Pradeshiya Sabha", "Nanattan Pradeshiya Sabha", "Madhu Pradeshiya Sabha"],
-                "Vavuniya": ["Vavuniya Urban Council", "Vavuniya Pradeshiya Sabha", "Vavuniya North Pradeshiya Sabha", "Vavuniya South Pradeshiya Sabha"],
-                "Mullaitivu": ["Maritimepattu Pradeshiya Sabha", "Puthukudiyiruppu Pradeshiya Sabha", "Thunukkai Pradeshiya Sabha"]
-            },
-            "Eastern": {
-                "Batticaloa": ["Batticaloa Municipal Council", "Eravur Urban Council", "Kattankudy Urban Council", "Manmunai Pattu Pradeshiya Sabha", "Valachchenai Pradeshiya Sabha"],
-                "Ampara": ["Akkaraipattu Municipal Council", "Kalmunai Municipal Council", "Ampara Urban Council", "Uhana Pradeshiya Sabha", "Damana Pradeshiya Sabha"],
-                "Trincomalee": ["Trincomalee Urban Council", "Trincomalee Town and Gravets Pradeshiya Sabha", "Kinniya Urban Council", "Mutur Pradeshiya Sabha"]
-            },
-            "North Western": {
-                "Kurunegala": ["Kurunegala Municipal Council", "Kuliyapitiya Urban Council", "Kurunegala Pradeshiya Sabha", "Kuliyapitiya Pradeshiya Sabha", "Ibbagamuwa Pradeshiya Sabha"],
-                "Puttalam": ["Puttalam Urban Council", "Chilaw Urban Council", "Puttalam Pradeshiya Sabha", "Chilaw Pradeshiya Sabha", "Kalpitiya Pradeshiya Sabha", "Anamaduwa Pradeshiya Sabha"]
-            },
-            "North Central": {
-                "Anuradhapura": ["Anuradhapura Municipal Council", "Anuradhapura Pradeshiya Sabha", "Medawachchiya Pradeshiya Sabha", "Kekirawa Pradeshiya Sabha", "Galenbindunuwewa Pradeshiya Sabha"],
-                "Polonnaruwa": ["Polonnaruwa Municipal Council", "Polonnaruwa Pradeshiya Sabha", "Hingurakgoda Pradeshiya Sabha", "Medirigiriya Pradeshiya Sabha"]
-            },
-            "Uva": {
-                "Badulla": ["Badulla Municipal Council", "Bandarawela Municipal Council", "Haputale Urban Council", "Badulla Pradeshiya Sabha", "Bandarawela Pradeshiya Sabha", "Welimada Pradeshiya Sabha"],
-                "Moneragala": ["Moneragala Pradeshiya Sabha", "Wellawaya Pradeshiya Sabha", "Buttala Pradeshiya Sabha", "Bibile Pradeshiya Sabha", "Kataragama Pradeshiya Sabha"]
-            },
-            "Sabaragamuwa": {
-                "Ratnapura": ["Ratnapura Municipal Council", "Balangoda Urban Council", "Embilipitiya Urban Council", "Ratnapura Pradeshiya Sabha", "Balangoda Pradeshiya Sabha"],
-                "Kegalle": ["Kegalle Urban Council", "Kegalle Pradeshiya Sabha", "Mawanella Pradeshiya Sabha", "Warakapola Pradeshiya Sabha", "Ruwanwella Pradeshiya Sabha"]
-            }
-        };
-
-        const areaStr = (location.area || "").toLowerCase().trim();
-        const addressStr = (location.address || "").toLowerCase().trim();
+    if (!resolvedProvince || !resolvedDistrict || !resolvedLGA) {
+        const areaStr = (location.area || "").trim();
+        const fallbackStr = address !== "Unknown Location" ? address : areaStr;
         
-        for (const [provName, districts] of Object.entries(sriLankaGeographics)) {
-            for (const [distName, lgas] of Object.entries(districts)) {
-                if ((areaStr && distName.toLowerCase() === areaStr) || addressStr.includes(distName.toLowerCase())) {
-                    province = provName;
-                    district = distName;
-                    lga = location.area || distName;
-                }
-                
-                for (const lgaName of lgas) {
-                    const cleanLga = lgaName.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").toLowerCase().trim();
-                    if ((areaStr && cleanLga.includes(areaStr)) || (addressStr && addressStr.includes(cleanLga)) || (areaStr && areaStr.includes(cleanLga))) {
-                        province = provName;
-                        district = distName;
-                        lga = lgaName;
-                        break;
-                    }
-                }
-            }
-        }
+        const res = resolveSrilankaRegion(
+            {
+                region: resolvedProvince,
+                district: resolvedDistrict,
+                subregion: "",
+                city: "",
+                name: "",
+                street: "",
+            },
+            fallbackStr,
+            latitude,
+            longitude
+        );
+        resolvedProvince = res.province;
+        resolvedDistrict = res.district;
+        resolvedLGA = res.localGovernmentArea;
     }
-
-    return { province, district, lga, address, latitude, longitude };
+    
+    return {
+        province: resolvedProvince || "Unknown Province",
+        district: resolvedDistrict || "Unknown District",
+        lga: resolvedLGA || "Unknown Area",
+        address,
+        latitude,
+        longitude
+    };
 }
 
 /**

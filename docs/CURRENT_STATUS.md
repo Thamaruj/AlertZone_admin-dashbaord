@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-23
+> **Last Updated:** 2026-05-24
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -61,13 +61,17 @@
 - [x] Premium Custom Scrollbars — added smooth custom scrollbars globally for Webkit and Firefox browsers
 - [x] Map View Sidebar Card & Overlay Restructuring — updated sidebar cards, map InfoWindows, and selected report details overlay in `Mapview.tsx` to display Report Type (e.g., Road & Traffic Incident) as the main title, and place the monospaced Incident ID directly below it. Configured reported addresses to wrap naturally without using bold/title fonts.
 - [x] Reports Redirection & Auto-Open — wired the "Open Management" button in Map View to redirect the admin to Reports Management and automatically trigger the detailed modal popover view.
+- [x] Settings page — complete admin settings section with: My Account info card (avatar, display name, username, role), Edit Profile form (display name update via `/api/auth/profile`, JWT re-issued on change), Change Password form (bcrypt verification, strength meter, confirm match), About AlertZone system card (Firebase project, version, GitHub/Firebase links), and Sign Out button with confirmation modal. Superadmins see read-only notices for credentials managed via `.env.local`.
+- [x] Settings UI Upgrade — redesigned Settings page layout from a compact grid to a spacious, premium 3-column configuration (`lg:grid-cols-3` split into `col-span-1` left column and `col-span-2` right column). Upgraded card borders (`border-white/10`), inner card body padding (`p-6`), header spacing (`px-6 py-5`), larger avatar layout (`w-20 h-20` with glow ring), form textfield inputs (`rounded-xl px-4 py-3`), InfoRow vertical padding, and standardized button layouts across the entire page for consistent visual breathing room.
 
 ### Reports Management (Live)
 - [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.
 - [x] Full UI detail modal with dynamic timeline styles matching report statuses
 - [x] Status updates and mutations processed securely via backend PATCH route (`/api/reports/[id]`), appending to `statusHistory` and rewarding contribution points to citizens (+10 pts) for validated fixes.
 - [x] Automatic user notification generation within Firestore on the backend when an admin changes a report status
-- [x] Robust reverse geographical lookup for locations mapping suburbs and GPS directly to formal Provinces and Districts, falling back gracefully if only coordinates are provided
+- [x] Robust reverse geographical lookup (`resolveSrilankaRegion`) mapping suburbs and GPS directly to formal Provinces, Districts, and LGAs using the centralized 341-LGA coordinates database.
+- [x] Centroid-based fallback: uses coordinates to calculate the nearest LGA center if text matching is sparse or absent.
+- [x] Regex-based boundary matching: prevents incorrect subword overlaps (such as `"ella"` matching inside `"avissawella"` or `"pussellawa"`).
 - [x] User avatars embedded directly into reporter cards, fetched instantly upon opening the modal
 - [x] Reporter ID removed from UI for cleaner layout
 - [x] Added premium text-based "Refresh" button next to "Export Data" (matching User Management theme), removing the refresh SVG icon and the "New Report" button.

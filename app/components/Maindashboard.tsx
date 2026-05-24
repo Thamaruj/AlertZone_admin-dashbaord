@@ -9,6 +9,7 @@ const MapView = dynamic(() => import("./Mapview"), { ssr: false });
 import Users from "./Users";
 import Analytics from "./Analytics";
 import Notifications from "./Notifications";
+import Settings from "./Settings";
 import AdminUserManagement from "./AdminUserManagement";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { MOCK_REPORTS as REPORTS, MONTHLY_DATA, BAR_DATA, Report } from "@/app/data/mockData";
@@ -668,14 +669,7 @@ export default function AdminDashboard() {
                             {activeNav === "notifications" && <Notifications />}
                             {/* Superadmin only */}
                             {activeNav === "admin-users" && isSuperAdmin && <AdminUserManagement />}
-                            {["settings"].includes(activeNav) && (
-                                <div className="flex flex-col items-center justify-center h-full py-20 animate-slide-up">
-                                    <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
-                                        {navItems.find(n => n.id === activeNav)?.label}
-                                    </h2>
-                                    <p className="text-slate-400 mt-2 text-sm">This section is coming soon.</p>
-                                </div>
-                            )}
+                            {activeNav === "settings" && <Settings />}
                         </>
                     )}
 
