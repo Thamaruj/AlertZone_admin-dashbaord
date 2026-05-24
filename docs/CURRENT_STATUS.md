@@ -12,13 +12,13 @@
 |---|---|---|
 | Phase 0: Project Scaffolding | 🟢 Done | Next.js 16 project created with Tailwind CSS v4 |
 | Phase 1: UI Shell & Mock Dashboard | 🟡 Partially Done | All UI screens built with hardcoded/mock data |
-| Phase 2: Firebase Integration | 🔴 Not Started | Firebase SDK installed, config exists, but NOT wired to any component |
+| Phase 2: Firebase Integration | 🟢 Done | Firebase Client & Admin SDKs fully integrated across auth, users, and reports |
 | Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes and notifications |
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
-| Phase 5: Notifications System | 🔴 Not Started | UI exists with mock notifications |
+| Phase 5: Notifications System | 🟢 Done | Real-time notifications tab with Firestore logs and megaphone broadcast modal |
 | Phase 6: Analytics (Live) | 🔴 Not Started | UI exists with hardcoded chart data |
 | Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
-| Phase 8: Push Notifications (FCM) | 🔴 Not Started | Not implemented |
+| Phase 8: Push Notifications (Expo) | 🟢 Done | Integrated using Expo Push API, successfully sending status mutations and megaphone broadcasts |
 
 ---
 
@@ -63,6 +63,16 @@
 - [x] Reports Redirection & Auto-Open — wired the "Open Management" button in Map View to redirect the admin to Reports Management and automatically trigger the detailed modal popover view.
 - [x] Settings page — complete admin settings section with: My Account info card (avatar, display name, username, role), Edit Profile form (display name update via `/api/auth/profile`, JWT re-issued on change), Change Password form (bcrypt verification, strength meter, confirm match), About AlertZone system card (Firebase project, version, GitHub/Firebase links), and Sign Out button with confirmation modal. Superadmins see read-only notices for credentials managed via `.env.local`.
 - [x] Settings UI Upgrade — redesigned Settings page layout from a compact grid to a spacious, premium 3-column configuration (`lg:grid-cols-3` split into `col-span-1` left column and `col-span-2` right column). Upgraded card borders (`border-white/10`), inner card body padding (`p-6`), header spacing (`px-6 py-5`), larger avatar layout (`w-20 h-20` with glow ring), form textfield inputs (`rounded-xl px-4 py-3`), InfoRow vertical padding, and standardized button layouts across the entire page for consistent visual breathing room.
+
+### Notifications & Push System
+- [x] Real-time notification log — displays broadcast and system notifications directly from Firestore
+- [x] Megaphone Broadcast Modal — superadmin and admin users can broadcast site-wide announcements to all citizens
+- [x] Bulk & Single Push Delivery — integrated via Expo Push API to push status update notifications and broadcasts to native devices
+- [x] Mobile Notification Center — citizen users can view, filter (unread/read), and delete notifications in a dark-mode in-app feed
+- [x] Unread badge count — syncs the home screen bell icon badge in real-time with user notifications
+- [x] Tap Redirect — clicking on a notification redirects the user to the Map view and centers on the corresponding report coordinate
+- [x] Expo Go compatibility — safely bypassed remote push registration side effects in Expo Go via static subpath imports to allow testing in both environments without bundler crashes or startup warnings
+
 
 ### Reports Management (Live)
 - [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.
@@ -135,10 +145,7 @@
 - [ ] No Firestore aggregation queries
 - [ ] No date range filtering with real data
 
-### Notifications (`Notifications.tsx`)
-- [ ] Shows `MOCK_NOTIFICATIONS` array (5 hardcoded items)
-- [ ] No Firestore connection
-- [ ] No ability to create real notifications
+
 
 ---
 
@@ -178,11 +185,7 @@
 - [ ] Marker clustering for dense areas
 - [ ] Real-time updates on map (live subscription)
 
-### Notifications
-- [ ] Create Firestore notifications on status change
-- [ ] System-wide announcement creation
-- [ ] FCM push notification integration
-- [ ] Notification delivery stats
+
 
 ### Missing Infrastructure
 - [x] `lib/types/` directory — shared TypeScript interfaces (`user.ts`, `report.ts`)
@@ -214,7 +217,7 @@
 | **Authentication** | 🟡 SDK Ready | Firebase Auth initialized but not used in login |
 | **Firestore** | 🟡 SDK Ready | Firestore initialized but no queries run |
 | **Storage** | 🔴 Not Imported | Needed for report image display |
-| **Cloud Messaging** | 🔴 Not Set Up | Needed for push notifications to mobile |
+| **Cloud Messaging** | 🟢 Done | Integrated with Expo Push API for mobile remote notifications |
 | **Cloud Functions** | 🔴 Not Set Up | May be needed for automated notifications |
 | **Security Rules** | 🔴 Not Configured | Must support admin read/write access |
 
