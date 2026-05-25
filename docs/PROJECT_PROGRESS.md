@@ -493,7 +493,37 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - Redesigned Session Management card with red highlights to match dashboard standards, and updated About AlertZone console/repo navigation links.
     - Re-verified production build compilation.
 
+- **[2026-05-24] Notification System Integration**:
+    - **Mobile App Setup**:
+      - Created `types/notification.ts` defining `AppNotification` and `NotificationType` (`status_change`, `upvote`, `badge_earned`, `system`).
+      - Created `services/notification.service.ts` to request permissions, retrieve tokens, configure default Android channel settings, and update Firestore documents.
+      - Developed the `useNotifications.ts` hook globally initialized in `app/_layout.tsx` to handle foreground notifications and tapped redirects.
+      - Implemented a complete dark-mode in-app Notification Center (`app/notifications.tsx`) with filtering tabs, and read/delete actions.
+      - Wired the Home screen bell icon (`home.tsx`) to subscribe to the unread count in real-time.
+    - **Dashboard & Push Integration**:
+      - Created `push.service.ts` calling Expo's Push API (`https://exp.host/--/api/v2/push/send`) for single and bulk push deliveries.
+      - Updated the reports PATCH route (`app/api/reports/[id]/route.ts`) to dispatch push notifications on status changes.
+      - Built a secure POST `/api/notifications/broadcast` route to query citizen users, batch write notification documents to Firestore, and push messages in bulk.
+      - Refactored `Notifications.tsx` in the dashboard to list live Firestore notification logs in real-time and added a Megaphone Broadcast Modal.
+    - **Expo Project ID and EAS Resolution**:
+      - **The Problem**: During runtime testing inside Expo Go, the app crashed on startup with `Error: No "projectId" found`. This was caused by modern Expo SDK 54's strict requirement that token generation be linked to an EAS (Expo Application Services) account, which was unconfigured.
+      - **Immediate Solution (Graceful Fallback)**: Modified `services/notification.service.ts` to check if `projectId` is present first. If missing, it logs a descriptive warning in the console explaining how to set it up, and gracefully returns `null` rather than throwing an exception. This kept in-app notifications functioning in real-time.
+      - **Full Resolution**: Run `npx eas login` and `npx eas project:init` in the mobile app directory. This linked the local workspace to the EAS account (`@stjalthotage/alertzone` under ID `55db983e-26bb-4c43-891e-d4e1155bd5ec`), automatically writing the required `projectId` into `app.json` and fully enabling native push deliveries.
+    - **Metro Bundling Failure & Expo Go Native Module Bypass**:
+      - **The Problem**: Expo Go in SDK 53+ removed remote notification functionality. Attempting to statically import from `'expo-notifications'` triggers a startup exception/warning in Expo Go because of the side-effect loader `DevicePushTokenAutoRegistration.fx.js`.
+      - **The Attempted Fix & Metro Crash**: To bypass this in Expo Go, a dynamic `require('expo-notifications')` was conditionally called behind an `if (!isExpoGo)` block. However, this caused Metro DeltaBundler to crash with `Error: Got unexpected undefined` inside `metro/src/DeltaBundler/Graph.js` during dependency resolution, as Metro's static analysis could not correctly resolve the dynamic module structure.
+      - **The Resolution (Static Subpath Imports)**: Bypassed the main package entry point (`expo-notifications/build/index.js`) and its side effects by importing the required functions directly from their respective subpaths statically:
+        - `import getExpoPushTokenAsync from 'expo-notifications/build/getExpoPushTokenAsync';`
+        - `import { getPermissionsAsync, requestPermissionsAsync } from 'expo-notifications/build/NotificationPermissions';`
+        - `import { setNotificationHandler } from 'expo-notifications/build/NotificationsHandler';`
+        - `import setNotificationChannelAsync from 'expo-notifications/build/setNotificationChannelAsync';`
+        - `import { AndroidImportance } from 'expo-notifications/build/NotificationChannelManager.types';`
+        - `import { addNotificationReceivedListener, addNotificationResponseReceivedListener } from 'expo-notifications/build/NotificationsEmitter';`
+        This satisfies Metro's static resolution while allowing us to skip native token calls and listener attachments entirely during runtime inside Expo Go via the `isExpoGo` checks, ensuring a clean bundle and crash-free execution.
+      - **Runtime Warning & Environment Detection Fix**: In newer Expo SDK versions (53/54), `Constants.appOwnership` is deprecated/removed and returned `undefined`, making the environment check evaluate `isExpoGo` as `false` and triggering push notification native calls. We replaced it with the official `isRunningInExpoGo` function from `'expo'` package. Running the Expo development server with the cache cleared (`npx expo start -c`) ensures that Metro correctly rebuilds the dependency tree without using corrupt/stale caches.
+
 ---
 
 *Last Updated: 2026-05-24*
+
 

@@ -1,199 +1,570 @@
 "use client";
 
-import { useState } from "react";
-import { MOCK_NOTIFICATIONS, Notification, NotificationType } from "@/app/data/mockData";
+import { useState, useEffect } from "react";
+import { db } from "@/lib/firebase";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+} from "firebase/firestore";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type NotificationType = "System" | "Report" | "User" | "Alert";
+
+export type ClientNotification = {
+  id: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  time: string;
+  isRead: boolean;
+};
 
 // ─── Constants & Meta ─────────────────────────────────────────────────────────
 
 const typeMeta: Record<NotificationType, { color: string; bg: string; icon: React.ReactNode }> = {
-    System: {
-        color: "text-blue-400",
-        bg: "bg-blue-500/10",
-        icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><circle cx="12" cy="12" r="3" strokeWidth="2" /></svg>
-    },
-    Report: {
-        color: "text-teal-400",
-        bg: "bg-teal-500/10",
-        icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-    },
-    User: {
-        color: "text-purple-400",
-        bg: "bg-purple-500/10",
-        icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-    },
-    Alert: {
-        color: "text-rose-400",
-        bg: "bg-rose-500/10",
-        icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-    }
+  System: {
+    color: "text-blue-400",
+    bg: "bg-blue-500/10",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        <circle cx="12" cy="12" r="3" strokeWidth="2" />
+      </svg>
+    ),
+  },
+  Report: {
+    color: "text-teal-400",
+    bg: "bg-teal-500/10",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+  User: {
+    color: "text-purple-400",
+    bg: "bg-purple-500/10",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    ),
+  },
+  Alert: {
+    color: "text-rose-400",
+    bg: "bg-rose-500/10",
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+  },
 };
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const mapDbType = (dbType: string): NotificationType => {
+  if (dbType === "status_change") return "Report";
+  if (dbType === "upvote") return "User";
+  if (dbType === "badge_earned") return "User";
+  if (dbType === "system" || dbType === "alert") return "Alert";
+  
+  // Fallbacks
+  if (dbType === "Report" || dbType === "System" || dbType === "User" || dbType === "Alert") {
+    return dbType as NotificationType;
+  }
+  return "System";
+};
+
+const formatTime = (createdAt: any) => {
+  if (!createdAt) return "Just now";
+  let date: Date;
+  
+  if (typeof createdAt.toDate === "function") {
+    date = createdAt.toDate();
+  } else if (createdAt instanceof Date) {
+    date = createdAt;
+  } else if (createdAt?.seconds) {
+    date = new Date(createdAt.seconds * 1000);
+  } else {
+    date = new Date(createdAt);
+  }
+
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 0) return "Just now";
+
+  let interval = seconds / 31536000;
+  if (interval > 1) return Math.floor(interval) + "y ago";
+  interval = seconds / 2592000;
+  if (interval > 1) return Math.floor(interval) + "mo ago";
+  interval = seconds / 86400;
+  if (interval > 1) return Math.floor(interval) + "d ago";
+  interval = seconds / 3600;
+  if (interval > 1) return Math.floor(interval) + "h ago";
+  interval = seconds / 60;
+  if (interval > 1) return Math.floor(interval) + "m ago";
+  return "Just now";
+};
+
+// ─── Toast Sub-Component ──────────────────────────────────────────────────────
+
+function Toast({
+  type,
+  message,
+  onDismiss,
+}: {
+  type: "success" | "error";
+  message: string;
+  onDismiss: () => void;
+}) {
+  return (
+    <div
+      className={`fixed bottom-5 right-5 z-50 flex items-start gap-3.5 px-4.5 py-3.5 rounded-xl border text-xs font-semibold animate-slide-up shadow-2xl ${
+        type === "success"
+          ? "bg-teal-500/10 border-teal-500/20 text-teal-300 shadow-teal-950/20"
+          : "bg-red-500/10 border-red-500/20 text-red-300 shadow-red-950/20"
+      }`}
+    >
+      {type === "success" ? (
+        <svg className="w-4.5 h-4.5 flex-shrink-0 mt-0.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ) : (
+        <svg className="w-4.5 h-4.5 flex-shrink-0 mt-0.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )}
+      <span className="flex-1 leading-relaxed">{message}</span>
+      <button onClick={onDismiss} className="flex-shrink-0 opacity-60 hover:opacity-100 transition-opacity cursor-pointer p-0.5 rounded hover:bg-white/5">
+        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  );
+}
+
+// ─── Main Component ──────────────────────────────────────────────────────────
+
 export default function Notifications() {
-    const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
-    const [selectedTab, setSelectedTab] = useState<"All" | "Unread" | NotificationType>("All");
+  const [notifications, setNotifications] = useState<ClientNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedTab, setSelectedTab] = useState<"All" | "Unread" | NotificationType>("All");
+  
+  // Broadcast states
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastForm, setBroadcastForm] = useState({ title: "", body: "", type: "system" });
+  const [broadcastLoading, setBroadcastLoading] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-    const filteredNotifications = notifications.filter(n => {
-        if (selectedTab === "All") return true;
-        if (selectedTab === "Unread") return !n.isRead;
-        return n.type === selectedTab;
-    });
+  // 1. Subscribe to Firestore notification logs in real-time
+  useEffect(() => {
+    const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"), limit(100));
+    
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs.map((docSnap) => {
+          const data = docSnap.data();
+          return {
+            id: docSnap.id,
+            title: data.title ?? "Notification",
+            message: data.body ?? "",
+            type: mapDbType(data.type),
+            time: formatTime(data.createdAt),
+            isRead: data.isRead ?? false,
+          } as ClientNotification;
+        });
 
-    const unreadCount = notifications.filter(n => !n.isRead).length;
-
-    const handleMarkAsRead = (id: string) => {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-    };
-
-    const handleMarkAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-    };
-
-    const handleDelete = (id: string) => {
-        setNotifications(prev => prev.filter(n => n.id !== id));
-    };
-
-    return (
-        <div className="space-y-6 relative h-full flex flex-col">
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-slide-up flex-shrink-0">
-                <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1 flex items-center gap-3">
-                        Notifications
-                        {unreadCount > 0 && (
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-500 text-white shadow-[0_0_15px_rgba(20,184,166,0.5)]">
-                                {unreadCount} New
-                            </span>
-                        )}
-                    </h1>
-                    <p className="text-xs text-slate-300 mt-0.5">Stay updated with system alerts and incoming reports.</p>
-                </div>
-
-                <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
-                    <button
-                        onClick={handleMarkAllAsRead}
-                        disabled={unreadCount === 0}
-                        className={`flex-1 md:flex-none justify-center px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${unreadCount === 0
-                            ? "bg-white/5 text-slate-500 cursor-not-allowed border border-white/5"
-                            : "bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
-                            }`}
-                    >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                        Mark All as Read
-                    </button>
-                    <button className="flex-shrink-0 p-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg shadow-lg shadow-teal-900/40 hover:from-teal-400 hover:to-cyan-400 transition-all active:scale-[0.98]">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><circle cx="12" cy="12" r="3" strokeWidth="2" /></svg>
-                    </button>
-                </div>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-slide-up stagger-1 flex-shrink-0">
-                {["All", "Unread", "Alert", "Report", "System", "User"].map((tab) => {
-                    const isSelected = selectedTab === tab;
-                    let count = 0;
-                    if (tab === "All") count = notifications.length;
-                    else if (tab === "Unread") count = unreadCount;
-                    else count = notifications.filter(n => n.type === tab).length;
-
-                    return (
-                        <button
-                            key={tab}
-                            onClick={() => setSelectedTab(tab as any)}
-                            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all duration-200 whitespace-nowrap ${isSelected
-                                ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
-                                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-                                }`}
-                        >
-                            {tab}
-                            {count > 0 && tab !== "All" ? ` (${count})` : ""}
-                        </button>
-                    );
-                })}
-            </div>
-
-            {/* Notifications List */}
-            <div className="flex-1 overflow-y-auto animate-slide-up stagger-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-                {filteredNotifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center h-full">
-                        <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-3xl mb-4 opacity-50 relative">
-                            📭
-                            {selectedTab === "Unread" && unreadCount === 0 && (
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-teal-500 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(20,184,166,0.5)]">
-                                    <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" /></svg>
-                                </div>
-                            )}
-                        </div>
-                        <h3 className="text-slate-200 font-semibold">{selectedTab === "Unread" ? "You're all caught up!" : "No notifications found"}</h3>
-                        <p className="text-slate-500 text-xs mt-1">{selectedTab === "Unread" ? "You have read all your notifications." : "There are no notifications matching the selected filter."}</p>
-                    </div>
-                ) : (
-                    <div className="space-y-3">
-                        {filteredNotifications.map((notif) => {
-                            const meta = typeMeta[notif.type];
-                            return (
-                                <div
-                                    key={notif.id}
-                                    className={`group relative bg-[#0f2233]/80 backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${notif.isRead
-                                        ? "border-white/5 opacity-80 hover:opacity-100 hover:border-white/10"
-                                        : "border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.05)] hover:border-teal-500/50"
-                                        }`}
-                                >
-                                    {/* Unread Indicator */}
-                                    {!notif.isRead && (
-                                        <div className="absolute top-1/2 -translate-y-1/2 left-0 w-1 h-1/2 bg-teal-400 rounded-r-full shadow-[0_0_10px_rgba(20,184,166,0.8)]" />
-                                    )}
-
-                                    <div className="flex items-start gap-3 sm:gap-4 pl-1 sm:pl-2">
-                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 border border-white/5 group-hover:scale-110 transition-transform duration-300 ${meta.bg} ${meta.color}`}>
-                                            {meta.icon}
-                                        </div>
-
-                                        <div className="flex-1 min-w-0 pt-0.5">
-                                            <div className="flex items-start justify-between gap-2">
-                                                <h3 className={`text-sm font-semibold truncate flex-1 ${notif.isRead ? "text-slate-300" : "text-white"}`}>
-                                                    {notif.title}
-                                                </h3>
-                                                <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap mt-0.5 sm:mt-1 flex-shrink-0">
-                                                    {notif.time}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-slate-400 mt-1 leading-relaxed line-clamp-2">
-                                                {notif.message}
-                                            </p>
-
-                                            <div className="flex items-center justify-between mt-3">
-                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${meta.bg} ${meta.color} border border-white/5`}>
-                                                    {notif.type}
-                                                </span>
-
-                                                {/* Actions */}
-                                                <div className="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                                                    {!notif.isRead && (
-                                                        <button
-                                                            onClick={() => handleMarkAsRead(notif.id)}
-                                                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center hover:bg-teal-500 hover:text-white transition-all"
-                                                            title="Mark as read"
-                                                        >
-                                                            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => handleDelete(notif.id)}
-                                                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all"
-                                                        title="Delete notification"
-                                                    >
-                                                        <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
-        </div>
+        setNotifications(list);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("❌ Error reading notifications:", error);
+        setLoading(false);
+      }
     );
+
+    return unsubscribe;
+  }, []);
+
+  // 2. Auto dismiss toast
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [toast]);
+
+  const filteredNotifications = notifications.filter((n) => {
+    if (selectedTab === "All") return true;
+    if (selectedTab === "Unread") return !n.isRead;
+    return n.type === selectedTab;
+  });
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const handleMarkAsRead = async (id: string) => {
+    try {
+      await updateDoc(doc(db, "notifications", id), { isRead: true });
+    } catch (e) {
+      console.error("❌ Error marking notification as read:", e);
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    const unread = notifications.filter((n) => !n.isRead);
+    if (unread.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      unread.forEach((n) => {
+        batch.update(doc(db, "notifications", n.id), { isRead: true });
+      });
+      await batch.commit();
+    } catch (e) {
+      console.error("❌ Error marking all as read:", e);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, "notifications", id));
+    } catch (e) {
+      console.error("❌ Error deleting notification:", e);
+    }
+  };
+
+  const handleSendBroadcast = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!broadcastForm.title.trim() || !broadcastForm.body.trim()) return;
+
+    setBroadcastLoading(true);
+    setToast(null);
+
+    try {
+      const response = await fetch("/api/notifications/broadcast", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: broadcastForm.title.trim(),
+          body: broadcastForm.body.trim(),
+          type: broadcastForm.type,
+        }),
+      });
+
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.error ?? "Failed to send system broadcast.");
+
+      setToast({
+        type: "success",
+        message: `Megaphone broadcast sent successfully to ${resData.notifiedUsers} citizens! (${resData.pushedNotifications} pushes delivered)`,
+      });
+
+      setBroadcastForm({ title: "", body: "", type: "system" });
+      setShowBroadcastModal(false);
+    } catch (err: any) {
+      setToast({
+        type: "error",
+        message: err.message || "An unexpected error occurred during broadcast execution.",
+      });
+    } finally {
+      setBroadcastLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6 relative h-full flex flex-col">
+      {/* Toast Alert */}
+      {toast && (
+        <Toast type={toast.type} message={toast.message} onDismiss={() => setToast(null)} />
+      )}
+
+      {/* Header Area */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-slide-up flex-shrink-0">
+        <div>
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1 flex items-center gap-3">
+            Notifications
+            {unreadCount > 0 && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-teal-500 text-white shadow-[0_0_15px_rgba(20,184,166,0.5)]">
+                {unreadCount} New
+              </span>
+            )}
+          </h1>
+          <p className="text-xs text-slate-300 mt-0.5">Stay updated with system alerts and incoming reports.</p>
+        </div>
+
+        <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
+          <button
+            onClick={handleMarkAllAsRead}
+            disabled={unreadCount === 0}
+            className={`flex-1 md:flex-none justify-center px-3 sm:px-4 py-2 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+              unreadCount === 0
+                ? "bg-white/5 text-slate-500 cursor-not-allowed border border-white/5"
+                : "bg-white/5 border border-white/10 text-slate-300 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            Mark All as Read
+          </button>
+          
+          <button
+            onClick={() => setShowBroadcastModal(true)}
+            className="flex-shrink-0 px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-lg shadow-lg shadow-teal-900/40 hover:from-teal-400 hover:to-cyan-400 transition-all active:scale-[0.98] flex items-center gap-2 text-xs font-semibold cursor-pointer"
+            title="Broadcast Megaphone Alert"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+            </svg>
+            Broadcast Alert
+          </button>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-slide-up stagger-1 flex-shrink-0">
+        {["All", "Unread", "Alert", "Report", "System", "User"].map((tab) => {
+          const isSelected = selectedTab === tab;
+          let count = 0;
+          if (tab === "All") count = notifications.length;
+          else if (tab === "Unread") count = unreadCount;
+          else count = notifications.filter((n) => n.type === tab).length;
+
+          return (
+            <button
+              key={tab}
+              onClick={() => setSelectedTab(tab as any)}
+              className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                isSelected
+                  ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+              }`}
+            >
+              {tab}
+              {count > 0 && tab !== "All" ? ` (${count})` : ""}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Notifications List */}
+      <div className="flex-1 overflow-y-auto animate-slide-up stagger-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center h-full">
+            <svg className="w-8 h-8 animate-spin text-teal-400" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <p className="text-slate-400 text-xs mt-3">Loading active notification logs...</p>
+          </div>
+        ) : filteredNotifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center h-full">
+            <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-3xl mb-4 opacity-50 relative">
+              📭
+              {selectedTab === "Unread" && unreadCount === 0 && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-teal-500 rounded-full flex items-center justify-center shadow-[0_0_10px_rgba(20,184,166,0.5)]">
+                  <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <h3 className="text-slate-200 font-semibold">
+              {selectedTab === "Unread" ? "You're all caught up!" : "No notifications found"}
+            </h3>
+            <p className="text-slate-500 text-xs mt-1">
+              {selectedTab === "Unread"
+                ? "You have read all your notifications."
+                : "There are no notifications matching the selected filter."}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 pb-6">
+            {filteredNotifications.map((notif) => {
+              const meta = typeMeta[notif.type] || typeMeta.System;
+              return (
+                <div
+                  key={notif.id}
+                  className={`group relative bg-[#0f2233]/80 backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
+                    notif.isRead
+                      ? "border-white/5 opacity-85 hover:opacity-100 hover:border-white/10"
+                      : "border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.05)] hover:border-teal-500/50"
+                  }`}
+                >
+                  {/* Unread Indicator */}
+                  {!notif.isRead && (
+                    <div className="absolute top-1/2 -translate-y-1/2 left-0 w-1 h-1/2 bg-teal-400 rounded-r-full shadow-[0_0_10px_rgba(20,184,166,0.8)]" />
+                  )}
+
+                  <div className="flex items-start gap-3 sm:gap-4 pl-1 sm:pl-2">
+                    <div
+                      className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 border border-white/5 group-hover:scale-110 transition-transform duration-300 ${meta.bg} ${meta.color}`}
+                    >
+                      {meta.icon}
+                    </div>
+
+                    <div className="flex-1 min-w-0 pt-0.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3
+                          className={`text-sm font-semibold truncate flex-1 ${
+                            notif.isRead ? "text-slate-300" : "text-white"
+                          }`}
+                        >
+                          {notif.title}
+                        </h3>
+                        <span className="text-[10px] text-slate-500 font-mono whitespace-nowrap mt-0.5 sm:mt-1 flex-shrink-0">
+                          {notif.time}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400 mt-1 leading-relaxed line-clamp-2">
+                        {notif.message}
+                      </p>
+
+                      <div className="flex items-center justify-between mt-3">
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${meta.bg} ${meta.color} border border-white/5`}
+                        >
+                          {notif.type}
+                        </span>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                          {!notif.isRead && (
+                            <button
+                              onClick={() => handleMarkAsRead(notif.id)}
+                              className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center hover:bg-teal-500 hover:text-white transition-all cursor-pointer"
+                              title="Mark as read"
+                            >
+                              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleDelete(notif.id)}
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
+                            title="Delete notification log"
+                          >
+                            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Send Broadcast Modal */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowBroadcastModal(false)}
+          />
+          <div className="relative bg-[#0f2233] border border-white/10 rounded-2xl max-w-lg w-full p-6 shadow-2xl shadow-black/80 z-10 animate-slide-up">
+            {/* Mega glow border */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-teal-500/5 to-transparent pointer-events-none" />
+
+            <div className="flex items-center gap-3.5 pb-4 border-b border-white/5 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center text-teal-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-100">Send System Broadcast</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Dispatches push notifications & logs in-app messages to all citizens.</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleSendBroadcast} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Broadcast Type</label>
+                <select
+                  value={broadcastForm.type}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, type: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/10 transition-all duration-200 [&>option]:bg-[#0d1f2d] [&>option]:text-white"
+                >
+                  <option value="system">System Message (Info updates, app maintenance)</option>
+                  <option value="alert">High Alert Warning (Weather warnings, road blocks)</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Alert Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Extreme Weather Warning or App Maintenance"
+                  value={broadcastForm.title}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, title: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/10 transition-all duration-200"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Alert Body Message</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Provide instructions or description of this broadcast alert..."
+                  value={broadcastForm.body}
+                  onChange={(e) => setBroadcastForm({ ...broadcastForm, body: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/10 transition-all duration-200 resize-none"
+                />
+              </div>
+
+              <div className="flex w-full gap-3 pt-3 border-t border-white/5">
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="flex-1 bg-white/5 border border-white/10 rounded-xl py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 transition-all cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={broadcastLoading}
+                  className="flex-1 bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 disabled:opacity-50 text-white text-xs font-semibold py-2.5 rounded-xl transition-all shadow-md shadow-teal-950/40 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  {broadcastLoading ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                      Sending Broadcast…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      Send Broadcast
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
