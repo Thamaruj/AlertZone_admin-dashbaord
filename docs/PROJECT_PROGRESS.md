@@ -560,6 +560,11 @@ This document tracks the end-to-end development journey of the AlertZone admin d
     - **Fix 2**: Pre-populated the `lgas` map dynamically for each active district with all official LGAs from `sriLankaGeographics`. This ensures the LGA modal displays the complete set of official LGAs in that district, with report counts sorted by volume (descending) so active ones appear at the top and 0-count ones at the bottom.
     - **Issue 3**: The LGA modal was not centered on the viewport when opened, and was instead positioned relative to its animated parent `animate-slide-up` container, shifting it away from the screen center on scroll.
     - **Fix 3**: Wrapped the main return statement of `Analytics.tsx` in a React Fragment and moved the rendering of the `LGAModal` to the root level (outside the `animate-slide-up` div). This ensures `position: fixed` works relative to the viewport itself, keeping the modal perfectly centered on the screen regardless of scroll depth.
+    - **Visual/UX Enhancements**:
+      - Added a helper message banner just above the charts row reminding the admin to adjust the year and month filters to see reports in the graphs.
+      - Updated the Highlight Cards (Most Reported Province, District, and Category) to display the event counts and the selected time period (e.g. "Last 30 Days", "May 2026") as a sub-text label.
+      - Removed the "Avg. Resolution Time" card from the KPI row, resizing the grid to a balanced 3-column layout. Relocated the "resolved today" counter to the Resolution Rate card sub-label.
+      - Removed the bottom static "Insight Cards" (Pending Backlog, Resolution Health, and Community Engagement) to declutter the dashboard layout.
     - Verified all compilation checks and local Next.js production builds passed successfully.
 
 

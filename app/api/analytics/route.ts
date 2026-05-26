@@ -71,8 +71,11 @@ interface AnalyticsPayload {
     pendingReports: number;
     avgResolutionHours: number | null;
     mostReportedProvince: string | null;
+    mostReportedProvinceCount: number;
     mostReportedDistrict: string | null;
+    mostReportedDistrictCount: number;
     mostReportedCategory: string | null;
+    mostReportedCategoryCount: number;
   };
   dailyActivity: DayBucket[];
   categoryBreakdown: CategoryStat[];
@@ -387,10 +390,25 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .sort((a, b) => b.total - a.total);
 
     // ── Most reported ─────────────────────────────────────────────────────
-    const mostReportedProvince = provinceDistribution[0]?.province ?? null;
-    const mostReportedDistrict = provinceDistribution[0]?.districts[0]?.district ?? null;
+    const mostReportedProvinceObj = provinceDistribution[0] ?? null;
+    const mostReportedProvince = mostReportedProvinceObj?.province ?? null;
+    const mostReportedProvinceCount = mostReportedProvinceObj?.total ?? 0;
+
+    let mostReportedDistrict: string | null = null;
+    let mostReportedDistrictCount = 0;
+    for (const p of provinceDistribution) {
+      for (const d of p.districts) {
+        if (d.total > mostReportedDistrictCount) {
+          mostReportedDistrictCount = d.total;
+          mostReportedDistrict = d.district;
+        }
+      }
+    }
+
     const sortedCategories = Array.from(categoryMap.values()).sort((a, b) => b.total - a.total);
-    const mostReportedCategory = sortedCategories[0]?.name ?? null;
+    const mostReportedCategoryObj = sortedCategories[0] ?? null;
+    const mostReportedCategory = mostReportedCategoryObj?.name ?? null;
+    const mostReportedCategoryCount = mostReportedCategoryObj?.total ?? 0;
 
     // ── Final payload ─────────────────────────────────────────────────────
     const avgResolutionHours =
@@ -409,8 +427,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         pendingReports,
         avgResolutionHours,
         mostReportedProvince,
+        mostReportedProvinceCount,
         mostReportedDistrict,
+        mostReportedDistrictCount,
         mostReportedCategory,
+        mostReportedCategoryCount,
       },
       dailyActivity: Array.from(bucketMap.values()),
       categoryBreakdown: sortedCategories,

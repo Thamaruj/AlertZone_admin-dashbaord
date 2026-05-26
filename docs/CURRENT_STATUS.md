@@ -148,6 +148,9 @@
 - [x] Exact Province/District/LGA mapping utilizing centralized `resolveSrilankaRegion` lookup
 - [x] LGA modal pre-populated with all official LGAs for the selected district, showing full report counts sorted by volume
 - [x] LGA modal rendered at component root level (outside animated sliding divs) to guarantee viewport-fixed centering and screen alignment
+- [x] Helper instruction banner displayed above the charts row for adjusting year/month filters
+- [x] Highlight Cards (Most Reported) updated to show event count and selected time period as sub-text labels
+- [x] Removed "Avg. Resolution Time" card from KPI row, moved "resolved today" metric, and removed bottom static "Insight Cards" to simplify layout
 
 
 

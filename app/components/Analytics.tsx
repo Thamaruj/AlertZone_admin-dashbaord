@@ -20,7 +20,9 @@ interface AnalyticsData {
     totalReports: number; resolvedReports: number; resolutionRate: number;
     activeCitizens: number; resolvedToday: number; pendingReports: number;
     avgResolutionHours: number | null;
-    mostReportedProvince: string | null; mostReportedDistrict: string | null; mostReportedCategory: string | null;
+    mostReportedProvince: string | null; mostReportedProvinceCount: number;
+    mostReportedDistrict: string | null; mostReportedDistrictCount: number;
+    mostReportedCategory: string | null; mostReportedCategoryCount: number;
   };
   dailyActivity: DayBucket[];
   categoryBreakdown: CategoryStat[];
@@ -68,8 +70,8 @@ function StatCard({ label, value, sub, icon, accent, loading }: {
 
 // ─── Highlight Card (Most Reported) ───────────────────────────────────────────
 
-function HighlightCard({ label, value, icon, gradient, loading }: {
-  label: string; value: string | null; icon: React.ReactNode; gradient: string; loading: boolean;
+function HighlightCard({ label, value, subText, icon, gradient, loading }: {
+  label: string; value: string | null; subText?: string | null; icon: React.ReactNode; gradient: string; loading: boolean;
 }) {
   if (loading) return (
     <div className="bg-white/5 border border-white/10 rounded-2xl p-5 animate-pulse">
@@ -82,6 +84,7 @@ function HighlightCard({ label, value, icon, gradient, loading }: {
       <div>
         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">{label}</p>
         <p className="text-base font-bold text-white">{value ?? "—"}</p>
+        {subText && <p className="text-[11px] text-slate-400 mt-1">{subText}</p>}
       </div>
     </div>
   );
@@ -479,6 +482,12 @@ export default function Analytics() {
   const s = data?.summary;
   const isRangeMode = !filterYear;
 
+  const timePeriodText = filterYear && filterMonth
+    ? `${MONTHS[filterMonth - 1]} ${filterYear}`
+    : filterYear
+    ? `${filterYear}`
+    : timeRange;
+
   const formatAvgTime = (h: number | null | undefined) => {
     if (h === null || h === undefined) return "—";
     if (h < 1) return `${Math.round(h * 60)} min`;
@@ -573,7 +582,7 @@ export default function Analytics() {
       )}
 
       {/* ── KPI Cards ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         <StatCard label="Total Reports" loading={loading}
           value={loading ? "—" : (s?.totalReports ?? 0).toLocaleString()}
           sub={loading ? undefined : `${s?.pendingReports ?? 0} pending`}
@@ -582,7 +591,7 @@ export default function Analytics() {
         />
         <StatCard label="Resolution Rate" loading={loading}
           value={loading ? "—" : `${s?.resolutionRate ?? 0}%`}
-          sub={loading ? undefined : `${s?.resolvedReports ?? 0} resolved`}
+          sub={loading ? undefined : `${s?.resolvedReports ?? 0} resolved (${s?.resolvedToday ?? 0} today)`}
           accent="text-emerald-400"
           icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
         />
@@ -592,12 +601,6 @@ export default function Analytics() {
           accent="text-[#A78BFA]"
           icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
         />
-        <StatCard label="Avg. Resolution Time" loading={loading}
-          value={loading ? "—" : formatAvgTime(s?.avgResolutionHours)}
-          sub={loading ? undefined : `${s?.resolvedToday ?? 0} resolved today`}
-          accent="text-orange-400"
-          icon={<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
-        />
       </div>
 
       {/* ── Most Reported Highlights ───────────────────────────────────── */}
@@ -605,22 +608,30 @@ export default function Analytics() {
         <HighlightCard loading={loading}
           label="Most Reported Province"
           value={s?.mostReportedProvince ?? null}
+          subText={s?.mostReportedProvince ? `${s.mostReportedProvinceCount} events during ${timePeriodText}` : null}
           gradient="bg-gradient-to-br from-[#4CC2D1]/10 to-transparent border-[#4CC2D1]/20"
           icon={<svg className="w-5 h-5 text-[#4CC2D1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>}
         />
         <HighlightCard loading={loading}
           label="Most Reported District"
           value={s?.mostReportedDistrict ?? null}
+          subText={s?.mostReportedDistrict ? `${s.mostReportedDistrictCount} events during ${timePeriodText}` : null}
           gradient="bg-gradient-to-br from-[#A78BFA]/10 to-transparent border-[#A78BFA]/20"
           icon={<svg className="w-5 h-5 text-[#A78BFA]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>}
         />
         <HighlightCard loading={loading}
           label="Top Incident Category"
           value={s?.mostReportedCategory ?? null}
+          subText={s?.mostReportedCategory ? `${s.mostReportedCategoryCount} events during ${timePeriodText}` : null}
           gradient="bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20"
           icon={<svg className="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
         />
       </div>
+
+      {/* Helper message */}
+      <p className="text-xs  text-[#4CC2D1] bg-[#4CC2D1]/5 border border-[#4CC2D1]/10 rounded-xl px-4 py-3">
+        Adjust the year and month above to view the reports in graphs.
+      </p>
 
       {/* ── Charts Row ─────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -702,71 +713,6 @@ export default function Analytics() {
 
       {/* LGA Modal moved to the end of the file outside the animated div to prevent transform-based positioning issues */}
 
-      {/* ── Insight Cards ──────────────────────────────────────────────── */}
-      {!loading && data && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          {/* Pending Backlog */}
-          <div className="bg-gradient-to-br from-amber-500/10 to-orange-500/5 backdrop-blur-xl border border-amber-500/20 rounded-2xl p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <svg className="w-20 h-20 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-              </div>
-              <h3 className="text-base font-bold text-white">Pending Backlog</h3>
-            </div>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              <span className="text-amber-400 font-bold text-lg">{s?.pendingReports ?? 0}</span> reports awaiting action.
-              {(s?.pendingReports ?? 0) > 10 ? " Prioritize assignment to clear the queue." : " Backlog is well-managed."}
-            </p>
-          </div>
-
-          {/* Resolution Health */}
-          <div className="bg-gradient-to-br from-[#30A89C]/10 to-[#4CC2D1]/5 backdrop-blur-xl border border-[#30A89C]/20 rounded-2xl p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <svg className="w-20 h-20 text-[#30A89C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-              </svg>
-            </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-[#30A89C]/20 flex items-center justify-center text-[#30A89C]">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-              </div>
-              <h3 className="text-base font-bold text-white">Resolution Health</h3>
-            </div>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              Overall rate of{" "}
-              <span className={`font-bold text-lg ${(s?.resolutionRate ?? 0) >= 60 ? "text-[#30A89C]" : "text-amber-400"}`}>{s?.resolutionRate ?? 0}%</span>{" "}
-              across {(s?.totalReports ?? 0).toLocaleString()} reports.
-              {(s?.resolutionRate ?? 0) >= 60 ? " System is performing well." : " Focus on resolving outstanding reports."}
-            </p>
-          </div>
-
-          {/* Community Engagement */}
-          <div className="bg-gradient-to-br from-[#A78BFA]/10 to-purple-500/5 backdrop-blur-xl border border-[#A78BFA]/20 rounded-2xl p-6 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-              <svg className="w-20 h-20 text-[#A78BFA]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
-              </svg>
-            </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-xl bg-[#A78BFA]/20 flex items-center justify-center text-[#A78BFA]">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
-              </div>
-              <h3 className="text-base font-bold text-white">Community Engagement</h3>
-            </div>
-            <p className="text-slate-300 text-sm leading-relaxed">
-              <span className="text-[#A78BFA] font-bold text-lg">{(s?.activeCitizens ?? 0).toLocaleString()}</span> unique citizens reporting.
-              {(s?.activeCitizens ?? 0) > 0
-                ? ` Avg. ${((s?.totalReports ?? 0) / Math.max(s?.activeCitizens ?? 1, 1)).toFixed(1)} reports per citizen.`
-                : " No engagement data yet."}
-            </p>
-          </div>
-        </div>
-      )}
       </div>
 
       {/* LGA Modal — rendered at root level of the component to bypass parent CSS transitions/transforms */}
