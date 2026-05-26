@@ -553,5 +553,15 @@ This document tracks the end-to-end development journey of the AlertZone admin d
   - Time range selector (7 / 30 / 90 days) re-fetches the API on change.
   - Uses design system colors from GUIDELINES.md (`#4CC2D1`, `#30A89C`, `#A78BFA`, etc.) throughout — no ad-hoc colors.
 
+- **[2026-05-26] Analytics Bug Fixes (Provincial Distribution & LGA Counts)**:
+    - **Issue 1**: Reports with unrecognized area/suburb names (like "Nugegoda" or Sabaragamuwa Province coordinates) were resolved to "Other" province and filtered out of the distribution table.
+    - **Fix 1**: Integrated the centralized `resolveSrilankaRegion` helper from `lib/constants/sriLankaRegions.ts` into the server API endpoint (`route.ts`). This successfully maps 100% of reports to correct official provinces, districts, and LGAs via regex keyword scanning and GPS coordinates.
+    - **Issue 2**: The LGA counts modal showed unstructured area text or raw data since LGA names were not standardized, and it didn't list all LGAs.
+    - **Fix 2**: Pre-populated the `lgas` map dynamically for each active district with all official LGAs from `sriLankaGeographics`. This ensures the LGA modal displays the complete set of official LGAs in that district, with report counts sorted by volume (descending) so active ones appear at the top and 0-count ones at the bottom.
+    - **Issue 3**: The LGA modal was not centered on the viewport when opened, and was instead positioned relative to its animated parent `animate-slide-up` container, shifting it away from the screen center on scroll.
+    - **Fix 3**: Wrapped the main return statement of `Analytics.tsx` in a React Fragment and moved the rendering of the `LGAModal` to the root level (outside the `animate-slide-up` div). This ensures `position: fixed` works relative to the viewport itself, keeping the modal perfectly centered on the screen regardless of scroll depth.
+    - Verified all compilation checks and local Next.js production builds passed successfully.
+
+
 
 

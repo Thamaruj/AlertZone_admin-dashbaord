@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-26
+> **Last Updated:** 2026-05-26 (Updated with Analytics bug fixes)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -16,7 +16,7 @@
 | Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes and notifications |
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
 | Phase 5: Notifications System | 🟢 Done | Real-time notifications tab with Firestore logs and megaphone broadcast modal |
-| Phase 6: Analytics (Live) | 🟢 Done | Wired to real Firestore via `/api/analytics`; daily activity, category breakdown, province distribution, and KPI cards all use live data |
+| Phase 6: Analytics (Live) | 🟢 Done | Live Firestore data; year/month filters; exact Province/District/LGA mapping; most-reported highlights; orange/green chart; complete LGA counts modal |
 | Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
 | Phase 8: Push Notifications (Expo) | 🟢 Done | Integrated using Expo Push API, successfully sending status mutations and megaphone broadcasts |
 
@@ -145,6 +145,9 @@
 - [x] Server-side Firestore aggregation (daily activity, category breakdown, province distribution, KPI stats)
 - [x] Date range filtering (7 / 30 / 90 days) triggers live re-fetch
 - [x] Loading skeletons and error state with Retry button
+- [x] Exact Province/District/LGA mapping utilizing centralized `resolveSrilankaRegion` lookup
+- [x] LGA modal pre-populated with all official LGAs for the selected district, showing full report counts sorted by volume
+- [x] LGA modal rendered at component root level (outside animated sliding divs) to guarantee viewport-fixed centering and screen alignment
 
 
 
