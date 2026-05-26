@@ -16,7 +16,7 @@
 | Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes and notifications |
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
 | Phase 5: Notifications System | 🟢 Done | Real-time notifications tab with Firestore logs and megaphone broadcast modal |
-| Phase 6: Analytics (Live) | 🟢 Done | Live Firestore data; year/month filters; exact Province/District/LGA mapping; most-reported highlights; orange/green chart; complete LGA counts modal |
+| Phase 6: Analytics (Live) | 🟢 Done | Live Firestore data; year/month filters; exact Province/District/LGA mapping; most-reported highlights; orange/green chart; complete LGA counts modal; Regional & Report Type Comparison Playground with custom side-by-side SVG comparison charts & category distributions. |
 | Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
 | Phase 8: Push Notifications (Expo) | 🟢 Done | Integrated using Expo Push API, successfully sending status mutations and megaphone broadcasts |
 
@@ -150,7 +150,10 @@
 - [x] LGA modal rendered at component root level (outside animated sliding divs) to guarantee viewport-fixed centering and screen alignment
 - [x] Helper instruction banner displayed above the charts row for adjusting year/month filters
 - [x] Highlight Cards (Most Reported) updated to show event count and selected time period as sub-text labels
-- [x] Removed "Avg. Resolution Time" card from KPI row, moved "resolved today" metric, and removed bottom static "Insight Cards" to simplify layout
+- [x] Removed "Avg. Resolution Time" card from KPI row, resizing the grid to a balanced 3-column layout. Relocated the "resolved today" counter to the Resolution Rate card sub-label.
+- [x] Removed bottom static "Insight Cards" to simplify layout
+- [x] Regional & Report Type Comparison Playground allowing admins to select and compare up to 3 Provinces, Districts, or LGAs side-by-side.
+- [x] Centered Comparison Modal displaying regional KPI details, side-by-side volume charts (Total vs Resolved) using custom responsive SVGs, and category distribution progress matrices using region-themed colors.
 
 
 

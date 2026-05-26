@@ -42,6 +42,7 @@ interface LGAStat {
   total: number;
   resolved: number;
   resolutionRate: number;
+  categories: Record<string, number>;
 }
 
 interface DistrictStat {
@@ -50,6 +51,7 @@ interface DistrictStat {
   resolved: number;
   resolutionRate: number;
   lgas: LGAStat[];
+  categories: Record<string, number>;
 }
 
 interface ProvinceStat {
@@ -58,6 +60,7 @@ interface ProvinceStat {
   resolved: number;
   resolutionRate: number;
   districts: DistrictStat[];
+  categories: Record<string, number>;
 }
 
 interface AnalyticsPayload {
@@ -227,8 +230,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // Province → District → LGA nested maps
     const provinceMap: Map<string, {
-      total: number; resolved: number;
-      districts: Map<string, { total: number; resolved: number; lgas: Map<string, { total: number; resolved: number }> }>;
+      total: number; resolved: number; categories: Record<string, number>;
+      districts: Map<string, {
+        total: number; resolved: number; categories: Record<string, number>;
+        lgas: Map<string, {
+          total: number; resolved: number; categories: Record<string, number>;
+        }>;
+      }>;
     }> = new Map();
 
     for (const doc of snapshot.docs) {
@@ -327,33 +335,36 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       const lga = resolved.localGovernmentArea;
 
       if (!provinceMap.has(province)) {
-        provinceMap.set(province, { total: 0, resolved: 0, districts: new Map() });
+        provinceMap.set(province, { total: 0, resolved: 0, categories: {}, districts: new Map() });
       }
       const prov = provinceMap.get(province)!;
       prov.total++;
       if (status === "RESOLVED") prov.resolved++;
+      prov.categories[catId] = (prov.categories[catId] || 0) + 1;
 
       if (!prov.districts.has(district)) {
         // Pre-populate all official LGAs for this district with 0 counts
-        const lgasMap = new Map<string, { total: number; resolved: number }>();
+        const lgasMap = new Map<string, { total: number; resolved: number; categories: Record<string, number> }>();
         const cleanProv = province.replace(" Province", "").trim();
         const officialLgas = sriLankaGeographics[cleanProv]?.[district] || [];
         for (const olga of officialLgas) {
-          lgasMap.set(olga, { total: 0, resolved: 0 });
+          lgasMap.set(olga, { total: 0, resolved: 0, categories: {} });
         }
         
-        prov.districts.set(district, { total: 0, resolved: 0, lgas: lgasMap });
+        prov.districts.set(district, { total: 0, resolved: 0, categories: {}, lgas: lgasMap });
       }
       const dist = prov.districts.get(district)!;
       dist.total++;
       if (status === "RESOLVED") dist.resolved++;
+      dist.categories[catId] = (dist.categories[catId] || 0) + 1;
 
       if (!dist.lgas.has(lga)) {
-        dist.lgas.set(lga, { total: 0, resolved: 0 });
+        dist.lgas.set(lga, { total: 0, resolved: 0, categories: {} });
       }
       const lgaStat = dist.lgas.get(lga)!;
       lgaStat.total++;
       if (status === "RESOLVED") lgaStat.resolved++;
+      lgaStat.categories[catId] = (lgaStat.categories[catId] || 0) + 1;
     }
 
     // ── Build province distribution with nesting ──────────────────────────
@@ -368,6 +379,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
                 total: lData.total,
                 resolved: lData.resolved,
                 resolutionRate: lData.total > 0 ? Math.round((lData.resolved / lData.total) * 100) : 0,
+                categories: lData.categories,
               }))
               .sort((a, b) => b.total - a.total);
             return {
@@ -376,6 +388,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
               resolved: dData.resolved,
               resolutionRate: dData.total > 0 ? Math.round((dData.resolved / dData.total) * 100) : 0,
               lgas,
+              categories: dData.categories,
             };
           })
           .sort((a, b) => b.total - a.total);
@@ -385,6 +398,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           resolved: pData.resolved,
           resolutionRate: pData.total > 0 ? Math.round((pData.resolved / pData.total) * 100) : 0,
           districts,
+          categories: pData.categories,
         };
       })
       .sort((a, b) => b.total - a.total);

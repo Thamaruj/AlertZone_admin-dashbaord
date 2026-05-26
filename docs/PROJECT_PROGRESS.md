@@ -568,6 +568,15 @@ This document tracks the end-to-end development journey of the AlertZone admin d
       - Adjusted the X-axis label rendering step logic in the daily activity line chart. For the 90-day time range, it now uses a step size of 15 (rendering labels every 15 days) to prevent crowded or overlapping text labels on the axis.
     - Verified all compilation checks and local Next.js production builds passed successfully.
 
+- **[2026-05-26] Regional & Report Type Comparative Analytics**:
+    - **Regional Comparison Playground**: Built an interactive multi-select card at the bottom of the Analytics page to select and compare 2 or 3 Provinces, Districts, or LGAs side-by-side. Includes search filtering, dynamic tab level switches, selection constraints validation, and a dynamic region list preview with quick-remove options.
+    - **Centered Comparison Modal**: Built a fixed, screen-centered `ComparisonModal` that loads the selected regions and visualizes comparative metrics side-by-side:
+        - **Region KPIs**: Side-by-side comparison cards displaying Total Reports, Resolved Counts, and Resolution Rates (with color-coded progress bars), themed with regional identity colors (Cyan, Purple, Amber) to map cleanly to the visualizations.
+        - **Volume Comparison SVG Chart**: Renders side-by-side vertical bar charts comparing total reports (orange) and resolved reports (green) with clear X/Y grid lines and values labels.
+        - **Category Breakdown Matrix**: Progress bars comparing category counts (Road & Traffic, Water & Drainage, etc.) side-by-side for each selected region to highlight localized issue trends.
+        - **Automated Insights**: Dynamically summarizes comparison findings, pointing out which region has the highest report volume and which leads in resolution efficiency.
+    - Verified all compilation checks and local Next.js production builds passed successfully.
+
 
 
 
