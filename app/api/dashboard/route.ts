@@ -115,6 +115,37 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       else suspendedCitizens++;
     }
 
+    // ── Filter reports by admin scope ──────────────────────────────────────
+    let docs = reportsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (session.scope && session.scope !== "all") {
+      docs = docs.filter((r: any) => {
+        const loc = r.location ?? {};
+        const resolved2 = resolveSrilankaRegion(
+          {
+            region: loc.province ?? loc.region ?? "",
+            district: loc.district ?? "",
+            subregion: loc.subregion ?? "",
+            city: loc.city ?? "",
+            name: loc.name ?? "",
+            street: loc.street ?? "",
+          },
+          loc.address ?? loc.area ?? "",
+          typeof loc.latitude === "number" ? loc.latitude : (loc.latitude ? parseFloat(loc.latitude) : undefined),
+          typeof loc.longitude === "number" ? loc.longitude : (loc.longitude ? parseFloat(loc.longitude) : undefined)
+        );
+        if (session.scope === "province") {
+          return resolved2.province.toLowerCase() === session.province?.toLowerCase();
+        }
+        if (session.scope === "district") {
+          return resolved2.district.toLowerCase() === session.district?.toLowerCase();
+        }
+        if (session.scope === "lga") {
+          return resolved2.localGovernmentArea?.toLowerCase() === session.lga?.toLowerCase();
+        }
+        return true;
+      });
+    }
+
     // ── Aggregate report data ──────────────────────────────────────────────
     let total = 0;
     let pending = 0;
@@ -128,8 +159,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const allActivity: ActivityEntry[] = [];
     const recentPendingReports: RecentPendingReport[] = [];
 
-    for (const doc of reportsSnap.docs) {
-      const data = doc.data();
+    for (const reportObj of docs) {
+      const data = reportObj as any;
       if (data.isArchived === true) continue;
 
       total++;
@@ -172,15 +203,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           district = district || resolved2.district;
         }
 
-        const createdAt = data.createdAt?.toDate
-          ? data.createdAt.toDate().toISOString()
-          : data.createdAt ?? null;
+        const createdAt = data.createdAt ?? null;
 
         const catId2 = data.categoryId ?? "other";
         const catMeta = CATEGORY_META[catId2] ?? CATEGORY_META["other"];
 
         recentPendingReports.push({
-          id: doc.id,
+          id: reportObj.id,
           category: data.category ?? catMeta.name,
           categoryId: catId2,
           categoryColor: catMeta.color,
@@ -198,16 +227,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       for (let i = 1; i < statusHistory.length; i++) {
         const entry = statusHistory[i];
         if (!entry) continue;
-        const changedAt = entry.changedAt?.toDate
-          ? entry.changedAt.toDate().toISOString()
-          : entry.changedAt
-            ? typeof entry.changedAt === "string" ? entry.changedAt : new Date(entry.changedAt).toISOString()
-            : null;
+        const changedAt = entry.changedAt ?? null;
 
         if (!changedAt) continue;
 
         allActivity.push({
-          reportId: doc.id,
+          reportId: reportObj.id,
           category: data.category ?? "Unknown",
           oldStatus: statusHistory[i - 1]?.status ?? "PENDING",
           newStatus: entry.status,

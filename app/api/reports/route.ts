@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/services/auth.service";
 import { adminDb } from "@/lib/firebase-admin";
 import { Report } from "@/lib/types/report";
+import { resolveSrilankaRegion } from "@/lib/constants/sriLankaRegions";
 
 async function requireAdmin(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -59,6 +60,36 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // In-memory filter for non-archived reports
     reports = reports.filter((r) => r.isArchived !== true);
+
+    // Apply admin regional scope filter
+    if (session.scope && session.scope !== "all") {
+      reports = reports.filter((r) => {
+        const loc = (r.location ?? {}) as any;
+        const resolved = resolveSrilankaRegion(
+          {
+            region: loc.province ?? loc.region ?? "",
+            district: loc.district ?? "",
+            subregion: loc.subregion ?? "",
+            city: loc.city ?? "",
+            name: loc.name ?? "",
+            street: loc.street ?? "",
+          },
+          loc.address ?? loc.area ?? "",
+          typeof loc.latitude === "number" ? loc.latitude : (loc.latitude ? parseFloat(loc.latitude) : undefined),
+          typeof loc.longitude === "number" ? loc.longitude : (loc.longitude ? parseFloat(loc.longitude) : undefined)
+        );
+        if (session.scope === "province") {
+          return resolved.province.toLowerCase() === session.province?.toLowerCase();
+        }
+        if (session.scope === "district") {
+          return resolved.district.toLowerCase() === session.district?.toLowerCase();
+        }
+        if (session.scope === "lga") {
+          return resolved.localGovernmentArea?.toLowerCase() === session.lga?.toLowerCase();
+        }
+        return true;
+      });
+    }
 
     return NextResponse.json({ reports });
   } catch (error: any) {

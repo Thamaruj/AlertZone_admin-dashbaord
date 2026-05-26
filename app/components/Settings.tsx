@@ -6,7 +6,7 @@
 // and change their password. Superadmins see a read-only view since
 // their credentials are managed via .env.local.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -391,8 +391,65 @@ function ChangePasswordForm() {
 export default function Settings() {
   const { user, isSuperAdmin, logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [logins, setLogins] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchLogs = async () => {
+      try {
+        const [actRes, logRes] = await Promise.all([
+          fetch(`/api/admin-activities?adminId=${user.id}`, { credentials: "include" }),
+          fetch(`/api/admin-logins?adminId=${user.id}`, { credentials: "include" }),
+        ]);
+        if (actRes.ok && logRes.ok) {
+          const actData = await actRes.json();
+          const logData = await logRes.json();
+          setActivities(actData.logs ?? []);
+          setLogins(logData.logs ?? []);
+        }
+      } catch (err) {
+        console.error("❌ Failed to fetch admin settings logs:", err);
+      } finally {
+        setLogsLoading(false);
+      }
+    };
+    fetchLogs();
+  }, [user?.id]);
 
   if (!user) return null;
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { ref, uploadBytes, getDownloadURL } = await import("firebase/storage");
+      const { storage } = await import("@/lib/firebase");
+      
+      const storageRef = ref(storage, `admin-avatars/${user.id}`);
+      await uploadBytes(storageRef, file);
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      const res = await fetch("/api/auth/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ avatarUrl: downloadUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed to save profile picture");
+
+      window.location.reload();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error uploading file");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const initials = getInitials(user.displayName);
   const roleLabel = isSuperAdmin ? "Super Admin" : "Admin";
@@ -431,9 +488,36 @@ export default function Settings() {
               <div className="flex flex-col items-center gap-4 pb-6 border-b border-white/5 mb-6">
                 <div className="relative group">
                   <div className="absolute -inset-1.5 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500 opacity-20 blur-sm group-hover:opacity-40 transition duration-500" />
-                  <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-2xl font-black shadow-xl select-none">
-                    {initials}
-                  </div>
+                  <label
+                    htmlFor="avatar-file-input"
+                    className="relative w-20 h-20 rounded-full bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center text-white text-2xl font-black shadow-xl select-none overflow-hidden cursor-pointer border-2 border-transparent hover:border-teal-400 transition-all duration-300"
+                  >
+                    {uploading ? (
+                      <svg className="w-6 h-6 animate-spin text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    ) : user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.displayName} className="w-full h-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                    {/* Camera icon overlay */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                  </label>
+                  <input
+                    type="file"
+                    id="avatar-file-input"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    disabled={uploading}
+                    className="hidden"
+                  />
                   <div className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded-full bg-teal-400 border-3 border-[#0f2233] shadow-md flex items-center justify-center" />
                 </div>
                 <div className="text-center space-y-1.5">
@@ -449,6 +533,28 @@ export default function Settings() {
               <div className="space-y-1">
                 <InfoRow label="Username" value={`@${user.username}`} mono />
                 <InfoRow label="Role" value={roleLabel} />
+                
+                {/* Scoping Fields */}
+                <InfoRow 
+                  label="Assigned Scope" 
+                  value={
+                    user.scope 
+                      ? user.scope === "all" 
+                        ? "All Sri Lanka" 
+                        : user.scope.toUpperCase() 
+                      : "All Sri Lanka"
+                  } 
+                />
+                {user.scope && user.scope !== "all" && user.province && (
+                  <InfoRow label="Province" value={user.province} />
+                )}
+                {user.scope && user.scope !== "all" && user.district && (
+                  <InfoRow label="District" value={user.district} />
+                )}
+                {user.scope && user.scope !== "all" && user.lga && (
+                  <InfoRow label="LGA" value={user.lga} />
+                )}
+
                 <InfoRow
                   label="Account Status"
                   value={
@@ -617,6 +723,81 @@ export default function Settings() {
                 </button>
               </div>
             </div>
+
+            {/* My Activity Log Card */}
+            <SectionCard
+              title="My Activity Log"
+              subtitle="Recent actions performed on the platform"
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              }
+            >
+              {logsLoading ? (
+                <div className="space-y-2 animate-pulse">
+                  <div className="h-10 bg-white/5 rounded-xl" />
+                  <div className="h-10 bg-white/5 rounded-xl" />
+                </div>
+              ) : activities.length === 0 ? (
+                <p className="text-xs text-slate-500 py-3 text-center">No activities recorded.</p>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                  {activities.map((log) => (
+                    <div key={log.id} className="p-3 bg-white/3 border border-white/5 rounded-xl flex justify-between gap-3 text-xs animate-slide-up">
+                      <div>
+                        <p className="text-slate-200 font-medium leading-relaxed">{log.details}</p>
+                        <span className="inline-flex px-1.5 py-0.5 rounded bg-teal-500/10 text-[9px] font-bold text-teal-400 uppercase mt-1">
+                          {log.action}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap self-start">
+                        {new Date(log.timestamp).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit", hour12: true, month: "short", day: "numeric" })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Login History Card */}
+            <SectionCard
+              title="Login History"
+              subtitle="Audit log of your recent sessions"
+              icon={
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              }
+            >
+              {logsLoading ? (
+                <div className="space-y-2 animate-pulse">
+                  <div className="h-10 bg-white/5 rounded-xl" />
+                  <div className="h-10 bg-white/5 rounded-xl" />
+                </div>
+              ) : logins.length === 0 ? (
+                <p className="text-xs text-slate-500 py-3 text-center">No logins found.</p>
+              ) : (
+                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                  {logins.map((log) => (
+                    <div key={log.id} className="p-3 bg-white/3 border border-white/5 rounded-xl text-xs space-y-1.5 animate-slide-up">
+                      <div className="flex justify-between items-center flex-wrap gap-2">
+                        <span className="text-slate-200 font-semibold">{log.location}</span>
+                        <span className="text-[10px] font-mono text-slate-400">{log.ip}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3">
+                        <span>In: {new Date(log.loginAt).toLocaleString()}</span>
+                        {log.logoutAt ? (
+                          <span className="text-teal-400">Out: {new Date(log.logoutAt).toLocaleString()}</span>
+                        ) : (
+                          <span className="text-yellow-400 font-medium">Active Session</span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </SectionCard>
 
           </div>
         </div>

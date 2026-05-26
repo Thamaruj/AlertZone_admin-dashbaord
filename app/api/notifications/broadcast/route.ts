@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/services/auth.service";
 import { adminDb, admin } from "@/lib/firebase-admin";
 import { sendBulkPushNotifications } from "@/lib/services/push.service";
+import { logAdminActivity } from "@/lib/services/activity.service";
 
 async function requireAdmin(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -64,6 +65,15 @@ export async function POST(req: NextRequest) {
     // Commit Firestore updates in a single atomic transaction
     await batch.commit();
     console.log(`✅ Created ${usersSnap.size} in-app notifications in Firestore.`);
+
+    // Log the broadcast action
+    await logAdminActivity(
+      session.id,
+      session.username,
+      session.displayName,
+      "broadcast_sent",
+      `Sent broadcast notification: "${title}"`
+    );
 
     // 2. Dispatch push notifications in bulk to Expo push gateway
     let pushedCount = 0;

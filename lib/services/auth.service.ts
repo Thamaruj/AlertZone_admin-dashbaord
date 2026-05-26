@@ -173,6 +173,11 @@ async function validateFirestoreAdmin(
         displayName: data.displayName,
         role: data.role,
         isActive: data.isActive,
+        province: (data as any).province ?? "",
+        district: (data as any).district ?? "",
+        lga: (data as any).lga ?? "",
+        scope: (data as any).scope ?? "all",
+        avatarUrl: (data as any).avatarUrl ?? null,
       },
     };
   } catch (error) {
@@ -230,6 +235,11 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
         passwordHash: data.passwordHash,
         role: data.role,
         isActive: data.isActive,
+        province: data.province ?? "",
+        district: data.district ?? "",
+        lga: data.lga ?? "",
+        scope: data.scope ?? "all",
+        avatarUrl: data.avatarUrl ?? null,
         createdAt:
           data.createdAt && typeof data.createdAt.toDate === "function"
             ? data.createdAt.toDate()
@@ -238,7 +248,7 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
             : new Date(),
         createdBy: data.createdBy,
         lastLoginAt:
-          data.lastLoginAt && typeof data.lastLoginAt.toDate === "function"
+          data.lastLoginAt && typeof data.lastActiveAt && typeof data.lastLoginAt.toDate === "function"
             ? data.lastLoginAt.toDate()
             : data.lastLoginAt
             ? new Date(data.lastLoginAt)
@@ -258,7 +268,13 @@ export async function listAdminUsers(): Promise<AdminUser[]> {
 }
 
 export async function createAdminUser(
-  payload: CreateAdminUserRequest,
+  payload: CreateAdminUserRequest & {
+    province?: string;
+    district?: string;
+    lga?: string;
+    scope?: "all" | "province" | "district" | "lga";
+    avatarUrl?: string | null;
+  },
   createdBy: string
 ): Promise<AdminUser> {
   // Check username uniqueness
@@ -282,6 +298,11 @@ export async function createAdminUser(
     isActive: true,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     createdBy,
+    province: payload.province || "",
+    district: payload.district || "",
+    lga: payload.lga || "",
+    scope: payload.scope || "all",
+    avatarUrl: payload.avatarUrl || null,
   });
 
   return {
@@ -293,12 +314,17 @@ export async function createAdminUser(
     isActive: true,
     createdAt: new Date(),
     createdBy,
+    province: payload.province || "",
+    district: payload.district || "",
+    lga: payload.lga || "",
+    scope: payload.scope || "all",
+    avatarUrl: payload.avatarUrl || null,
   };
 }
 
 export async function updateAdminUser(
   userId: string,
-  updates: Partial<Pick<AdminUser, "isActive" | "displayName" | "role">>
+  updates: Partial<Pick<AdminUser, "isActive" | "displayName" | "role" | "province" | "district" | "lga" | "scope" | "avatarUrl">>
 ): Promise<void> {
   await adminDb.collection(ADMIN_USERS_COLLECTION).doc(userId).update(updates);
 }

@@ -10,6 +10,7 @@ import {
   SESSION_COOKIE_NAME,
 } from "@/lib/services/auth.service";
 import type { CreateAdminUserRequest } from "@/lib/types/auth";
+import { logAdminActivity } from "@/lib/services/activity.service";
 
 async function requireSuperadmin(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -59,7 +60,26 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const newUser = await createAdminUser(body, session.username);
+    const newUser = await createAdminUser({
+      username: body.username,
+      displayName: body.displayName,
+      password: body.password,
+      role: body.role,
+      province: (body as any).province,
+      district: (body as any).district,
+      lga: (body as any).lga,
+      scope: (body as any).scope,
+    }, session.username);
+
+    // Log admin creation activity
+    await logAdminActivity(
+      session.id,
+      session.username,
+      session.displayName,
+      "admin_created",
+      `Created admin user: @${body.username} (${body.role})`
+    );
+
     const { passwordHash: _ph, ...safeUser } = newUser;
     return NextResponse.json({ user: safeUser }, { status: 201 });
   } catch (error) {

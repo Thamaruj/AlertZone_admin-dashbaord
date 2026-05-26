@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import type { AdminUser, AdminRole } from "@/lib/types/auth";
 import { ADMIN_ROLES } from "@/lib/constants/auth";
+import { sriLankaGeographics } from "@/lib/constants/sriLankaRegions";
 
 type SafeAdminUser = Omit<AdminUser, "passwordHash">;
 
@@ -58,6 +59,10 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
     password: "",
     confirmPassword: "",
     role: "admin" as AdminRole,
+    province: "",
+    district: "",
+    lga: "",
+    scope: "all" as "all" | "province" | "district" | "lga",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +85,20 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
       return;
     }
 
+    // Validate Scoping
+    if (form.scope === "province" && !form.province) {
+      setError("Please select an assigned province for this scope");
+      return;
+    }
+    if (form.scope === "district" && !form.district) {
+      setError("Please select an assigned district for this scope");
+      return;
+    }
+    if (form.scope === "lga" && !form.lga) {
+      setError("Please select an assigned LGA for this scope");
+      return;
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/admin-users", {
@@ -91,6 +110,10 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
           displayName: form.displayName.trim(),
           password: form.password,
           role: form.role,
+          province: form.province,
+          district: form.district,
+          lga: form.lga,
+          scope: form.scope,
         }),
       });
       const data = await res.json();
@@ -113,7 +136,7 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up">
+      <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-white">Add Admin User</h2>
@@ -177,6 +200,68 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
             </select>
           </div>
 
+          {/* Visibility Scope */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-300">Visibility Scope</label>
+            <select
+              value={form.scope}
+              onChange={(e) => setForm({ ...form, scope: e.target.value as any })}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
+            >
+              <option value="all" className="bg-[#0f2233]">All Regions (Unrestricted)</option>
+              <option value="province" className="bg-[#0f2233]">Scope to Province</option>
+              <option value="district" className="bg-[#0f2233]">Scope to District</option>
+              <option value="lga" className="bg-[#0f2233]">Scope to LGA</option>
+            </select>
+          </div>
+
+          {/* Scoped Province */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-300">Assigned Province</label>
+            <select
+              value={form.province}
+              onChange={(e) => setForm({ ...form, province: e.target.value, district: "", lga: "" })}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
+            >
+              <option value="" className="bg-[#0f2233]">-- Select Province --</option>
+              {Object.keys(sriLankaGeographics).map((prov) => (
+                <option key={prov} value={prov} className="bg-[#0f2233]">{prov} Province</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Scoped District */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-300">Assigned District</label>
+            <select
+              value={form.district}
+              onChange={(e) => setForm({ ...form, district: e.target.value, lga: "" })}
+              disabled={!form.province}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="" className="bg-[#0f2233]">-- Select District --</option>
+              {form.province && Object.keys(sriLankaGeographics[form.province] || {}).map((dist) => (
+                <option key={dist} value={dist} className="bg-[#0f2233]">{dist}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Scoped LGA */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-slate-300">Assigned LGA</label>
+            <select
+              value={form.lga}
+              onChange={(e) => setForm({ ...form, lga: e.target.value })}
+              disabled={!form.district}
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <option value="" className="bg-[#0f2233]">-- Select LGA --</option>
+              {form.province && form.district && (sriLankaGeographics[form.province]?.[form.district] || []).map((lgaItem) => (
+                <option key={lgaItem} value={lgaItem} className="bg-[#0f2233]">{lgaItem}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Password */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-300">Password</label>
@@ -221,7 +306,7 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 pt-2">
             <button
               type="button"
               onClick={onClose}
@@ -261,6 +346,11 @@ export default function AdminUserManagement() {
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [showLogsForAdmin, setShowLogsForAdmin] = useState<{
+    id: string;
+    username: string;
+    displayName: string;
+  } | null>(null);
   
   // Custom action confirmation states
   const [confirmAction, setConfirmAction] = useState<{
@@ -402,7 +492,7 @@ export default function AdminUserManagement() {
         <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-xl overflow-hidden">
           <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-200">
-              Firestore Admin Accounts
+              Admin Accounts
             </h2>
             <span className="text-xs text-slate-400 bg-white/5 px-2 py-0.5 rounded-full">
               {admins.length} account{admins.length !== 1 ? "s" : ""}
@@ -443,6 +533,7 @@ export default function AdminUserManagement() {
                     <th className="px-5 py-3 text-left">Admin</th>
                     <th className="px-5 py-3 text-left">Username</th>
                     <th className="px-5 py-3 text-left">Role</th>
+                    <th className="px-5 py-3 text-left">Scope / Region</th>
                     <th className="px-5 py-3 text-left">Status</th>
                     <th className="px-5 py-3 text-left">Created</th>
                     <th className="px-5 py-3 text-left">Actions</th>
@@ -470,6 +561,46 @@ export default function AdminUserManagement() {
                         <td className={`px-5 py-3.5 font-mono font-semibold ${admin.isActive ? "text-slate-400" : "text-red-200"}`}>{admin.username}</td>
                         <td className="px-5 py-3.5">
                           <RoleBadge role={admin.role} />
+                        </td>
+                        <td className="px-5 py-3.5">
+                          {(() => {
+                            const a = admin as any;
+                            if (a.scope === "province") {
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="inline-flex items-center text-[10px] font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/10 w-fit">
+                                    Province Scope
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-semibold">{a.province} Province</span>
+                                </div>
+                              );
+                            }
+                            if (a.scope === "district") {
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="inline-flex items-center text-[10px] font-bold text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/10 w-fit">
+                                    District Scope
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-semibold">{a.district}, {a.province}</span>
+                                </div>
+                              );
+                            }
+                            if (a.scope === "lga") {
+                              return (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="inline-flex items-center text-[10px] font-bold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/10 w-fit">
+                                    LGA Scope
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-semibold">{a.lga}</span>
+                                </div>
+                              );
+                            }
+                            return (
+                              <span className="inline-flex items-center text-[10px] font-bold text-slate-400 bg-white/5 px-2 py-0.5 rounded border border-white/5">
+                                All Sri Lanka
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="px-5 py-3.5">
                           <StatusBadge isActive={admin.isActive} />
@@ -508,6 +639,18 @@ export default function AdminUserManagement() {
                               )}
                             </button>
 
+                            {/* View Logs */}
+                            <button
+                              onClick={() => setShowLogsForAdmin({ id: admin.id, username: admin.username, displayName: admin.displayName })}
+                              disabled={actionLoading === admin.id}
+                              title="View Activities & Login History"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 transition-all duration-150 disabled:opacity-50"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </button>
+
                             {/* Delete */}
                             <button
                               onClick={() => handleDeleteClick(admin.id, admin.username, admin.displayName)}
@@ -536,6 +679,16 @@ export default function AdminUserManagement() {
         <CreateAdminModal
           onClose={() => setShowCreateModal(false)}
           onCreated={fetchAdmins}
+        />
+      )}
+
+      {/* Admin Logs Modal */}
+      {showLogsForAdmin && (
+        <AdminLogsModal
+          adminId={showLogsForAdmin.id}
+          username={showLogsForAdmin.username}
+          displayName={showLogsForAdmin.displayName}
+          onClose={() => setShowLogsForAdmin(null)}
         />
       )}
 
@@ -678,5 +831,168 @@ export default function AdminUserManagement() {
         );
       })()}
     </>
+  );
+}
+
+// ─── Admin Logs Modal ─────────────────────────────────────────────────────────
+
+interface AdminLogsModalProps {
+  adminId: string;
+  username: string;
+  displayName: string;
+  onClose: () => void;
+}
+
+function AdminLogsModal({ adminId, username, displayName, onClose }: AdminLogsModalProps) {
+  const [activeTab, setActiveTab] = useState<"activities" | "logins">("activities");
+  const [activities, setActivities] = useState<any[]>([]);
+  const [logins, setLogins] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const endpoint = activeTab === "activities"
+          ? `/api/admin-activities?adminId=${adminId}`
+          : `/api/admin-logins?adminId=${adminId}`;
+        const res = await fetch(endpoint, { credentials: "include" });
+        if (!res.ok) throw new Error("Failed to fetch logs");
+        const data = await res.json();
+        if (activeTab === "activities") {
+          setActivities(data.logs ?? []);
+        } else {
+          setLogins(data.logs ?? []);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not load logs");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLogs();
+  }, [adminId, activeTab]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      
+      {/* Modal Card */}
+      <div className="relative w-full max-w-2xl bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 flex flex-col max-h-[80vh] animate-slide-up">
+        {/* Header */}
+        <div className="flex items-center justify-between pb-4 border-b border-white/5 flex-shrink-0">
+          <div>
+            <h2 className="text-base font-bold text-white">System Logs</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Viewing logs for {displayName} (@{username})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-white/5 py-3 flex-shrink-0">
+          <button
+            onClick={() => setActiveTab("activities")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === "activities"
+                ? "bg-teal-500/10 text-teal-400 border border-teal-500/30"
+                : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            Activity Log
+          </button>
+          <button
+            onClick={() => setActiveTab("logins")}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer ${
+              activeTab === "logins"
+                ? "bg-teal-500/10 text-teal-400 border border-teal-500/30"
+                : "text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent"
+            }`}
+          >
+            Login History
+          </button>
+        </div>
+
+        {/* Content list */}
+        <div className="flex-1 overflow-y-auto min-h-0 py-4 space-y-3 custom-scrollbar">
+          {loading ? (
+            <div className="space-y-3 py-6 animate-pulse">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-12 bg-white/5 rounded-xl" />
+              ))}
+            </div>
+          ) : error ? (
+            <p className="text-center text-xs text-red-400 py-10">{error}</p>
+          ) : activeTab === "activities" ? (
+            activities.length === 0 ? (
+              <p className="text-center text-xs text-slate-500 py-10">No activities recorded.</p>
+            ) : (
+              <div className="space-y-3">
+                {activities.map((log) => (
+                  <div key={log.id} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex justify-between gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs text-slate-200 leading-normal">{log.details}</p>
+                      <span className="inline-flex px-1.5 py-0.5 rounded bg-teal-500/10 text-[9px] font-bold text-teal-400 uppercase">
+                        {log.action}
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-mono text-slate-400 whitespace-nowrap self-start">
+                      {new Date(log.timestamp).toLocaleString("en-US", { hour12: true, month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            logins.length === 0 ? (
+              <p className="text-center text-xs text-slate-500 py-10">No login history found.</p>
+            ) : (
+              <div className="space-y-3">
+                {logins.map((log) => (
+                  <div key={log.id} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col gap-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-slate-200 font-semibold">{log.location}</span>
+                        <span className="text-[10px] font-mono text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">{log.ip}</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 truncate max-w-xs" title={log.userAgent}>{log.userAgent}</p>
+                    </div>
+                    <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-4 gap-y-1 border-t border-white/3 pt-1.5">
+                      <span>Logged In: <span className="text-slate-300 font-mono">{new Date(log.loginAt).toLocaleString()}</span></span>
+                      {log.logoutAt ? (
+                        <span>Logged Out: <span className="text-teal-400 font-mono">{new Date(log.logoutAt).toLocaleString()}</span></span>
+                      ) : (
+                        <span className="text-yellow-400 font-semibold">Active Session</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="border-t border-white/5 pt-3 flex justify-end flex-shrink-0">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 rounded-xl border border-white/10 transition-all cursor-pointer"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

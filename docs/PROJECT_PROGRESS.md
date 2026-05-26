@@ -4,6 +4,21 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 10: Admin Scopes, Profiling, and Audit Logs
+**Date:** 2026-05-27
+**Branch:** `feat/admin-scoping-logging`
+
+**Objective:** Implement admin regional scoping (Province, District, LGA) with scope-based filters, profile picture updates via Firebase Storage, daily activity logs, and login/logout audit history.
+
+**What was built:**
+- **Admin Scoping & Cascading UI:** Added Province, District, LGA selectors with cascaded filtering to the Admin creation/update form. Added visibility scope options (`all`, `province`, `district`, `lga`).
+- **Profile Picture Upload:** Integrated Firebase Storage uploading (`admin-avatars/{userId}`) inside the Settings page. Implemented profile PATCH handler and live auth session merges (including `superadmin` profile updates merged into Firestore document `adminUsers/superadmin`).
+- **Audit Logs & History:** Created backend activity logging and login auditing services. Tracks login location (simulated via IP blocks), user-agents, and admin actions (e.g. status changes, announcements, deactivations).
+- **Frontend Logs UI:** Rendered Activity Logs and Login History tables in Settings (for the current admin) and via a new "View Logs" modal action inside Admin User Management.
+- **Scoping Filter Enforcement:** Wired scope filters into reports list, dashboard stats, and analytics charts.
+
+---
+
 ## ✅ Phase 9: Live Dashboard Overview
 **Date:** 2026-05-27
 **Branch:** `feat/main-dashboard`
