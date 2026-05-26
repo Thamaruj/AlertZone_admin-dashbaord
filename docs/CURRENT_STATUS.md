@@ -154,6 +154,8 @@
 - [x] Removed bottom static "Insight Cards" to simplify layout
 - [x] Regional & Report Type Comparison Playground allowing admins to select and compare up to 3 Provinces, Districts, or LGAs side-by-side.
 - [x] Centered Comparison Modal displaying regional KPI details, side-by-side volume charts (Total vs Resolved) using custom responsive SVGs, and category distribution progress matrices using region-themed colors.
+- [x] LGA Modal Reports view: select an LGA to view all reports made within it, with matching normalized names and a redirect button to open the report modal on Reports Management.
+
 
 
 

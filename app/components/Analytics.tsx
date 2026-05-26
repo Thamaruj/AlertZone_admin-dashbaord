@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { resolveSrilankaRegion } from "@/lib/constants/sriLankaRegions";
+import { getReports } from "@/lib/services/report.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -260,7 +262,96 @@ function CategoryBreakdown({ data, loading }: { data: CategoryStat[]; loading: b
 
 // ─── LGA Modal ────────────────────────────────────────────────────────────────
 
-function LGAModal({ district, lgas, onClose }: { district: string; lgas: LGAStat[]; onClose: () => void }) {
+function LGAModal({
+  district,
+  lgas,
+  onClose,
+}: {
+  district: string;
+  lgas: LGAStat[];
+  onClose: () => void;
+}) {
+  const [activeLgaName, setActiveLgaName] = useState<string | null>(null);
+  const [allReports, setAllReports] = useState<any[]>([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+
+  useEffect(() => {
+    setLoadingReports(true);
+    getReports()
+      .then((reports) => {
+        setAllReports(reports || []);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch reports for LGAModal:", err);
+      })
+      .finally(() => {
+        setLoadingReports(false);
+      });
+  }, []);
+
+  const lgaReports = React.useMemo(() => {
+    if (!activeLgaName) return [];
+    return allReports.filter((report) => {
+      const loc = report.location || {};
+      let reportLGA = loc.localGovernmentArea || "";
+      if (!reportLGA) {
+        const addressObj = {
+          region: loc.province || loc.region || "",
+          district: loc.district || "",
+          subregion: "",
+          city: "",
+          name: "",
+          street: "",
+        };
+        const resolved = resolveSrilankaRegion(
+          addressObj,
+          loc.address || loc.area || "",
+          typeof loc.latitude === "number" ? loc.latitude : (loc.latitude ? parseFloat(loc.latitude) : undefined),
+          typeof loc.longitude === "number" ? loc.longitude : (loc.longitude ? parseFloat(loc.longitude) : undefined)
+        );
+        reportLGA = resolved.localGovernmentArea;
+      }
+      
+      const cleanReportLGA = reportLGA.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").trim().toLowerCase();
+      const cleanActiveLGA = activeLgaName.replace(/ Municipal Council| Urban Council| Pradeshiya Sabha/gi, "").trim().toLowerCase();
+      
+      return cleanReportLGA === cleanActiveLGA;
+    });
+  }, [allReports, activeLgaName]);
+
+  const handleOpenInManagement = (report: any) => {
+    if (typeof window !== "undefined") {
+      (window as any).pendingReportDetail = report;
+      window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }));
+      window.dispatchEvent(new CustomEvent("openReportDetail", { detail: { report } }));
+      onClose();
+    }
+  };
+
+  const getReportDateTime = (dateValue: any) => {
+    if (!dateValue) return "";
+    const dateObj = new Date(dateValue);
+    const dateStr = dateObj.toLocaleDateString(undefined, { dateStyle: "medium" });
+    const timeStr = dateObj.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit", hour12: true });
+    return `${dateStr} at ${timeStr}`;
+  };
+
+  const getStatusColorClass = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return "text-orange-300 bg-orange-500/10 border-orange-500/20";
+      case "ASSIGNED":
+      case "FIXING":
+        return "text-cyan-300 bg-cyan-500/10 border-cyan-500/20";
+      case "RESOLVED":
+        return "text-emerald-300 bg-emerald-500/10 border-emerald-500/20";
+      case "REJECTED":
+        return "text-rose-400 bg-rose-500/10 border-rose-500/20";
+      default:
+        return "text-slate-400 bg-white/5 border-white/5";
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"/>
@@ -268,9 +359,28 @@ function LGAModal({ district, lgas, onClose }: { district: string; lgas: LGAStat
         onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-white/5">
-          <div>
-            <h2 className="text-lg font-bold text-white">{district} — Local Gov. Areas</h2>
-            <p className="text-xs text-slate-400 mt-0.5">{lgas.length} areas within this district</p>
+          <div className="flex items-center gap-3">
+            {activeLgaName && (
+              <button
+                onClick={() => setActiveLgaName(null)}
+                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all"
+                title="Back to LGAs"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+            )}
+            <div>
+              <h2 className="text-lg font-bold text-white">
+                {activeLgaName ? `${activeLgaName}` : `${district} — Local Gov. Areas`}
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5 font-medium">
+                {activeLgaName 
+                  ? `${lgaReports.length} reports submitted` 
+                  : `${lgas.length} areas within this district`}
+              </p>
+            </div>
           </div>
           <button onClick={onClose}
             className="w-9 h-9 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 flex items-center justify-center text-slate-400 hover:text-white transition-all">
@@ -279,38 +389,90 @@ function LGAModal({ district, lgas, onClose }: { district: string; lgas: LGAStat
             </svg>
           </button>
         </div>
+        
         {/* Body */}
-        <div className="overflow-y-auto flex-1 p-4 space-y-2.5 custom-scrollbar">
-          {lgas.length === 0 ? (
-            <p className="text-center text-slate-500 text-sm py-8">No LGA data available</p>
-          ) : lgas.map((lga) => (
-            <div key={lga.name}
-              className="flex items-center gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl px-4 py-3 transition-all">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">{lga.name}</p>
+        <div className="overflow-y-auto flex-1 p-6 custom-scrollbar">
+          {activeLgaName ? (
+            /* LGA Reports View */
+            loadingReports ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-8 h-8 border-2 border-[#4CC2D1] border-t-transparent rounded-full animate-spin mb-3" />
+                <p className="text-xs uppercase tracking-widest text-slate-500 font-bold">Loading reports...</p>
               </div>
-              <div className="flex items-center gap-4 shrink-0">
-                <div className="text-right">
-                  <p className="text-xs text-slate-400">Total</p>
-                  <p className="text-sm font-mono font-bold text-white">{lga.total}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-slate-400">Resolved</p>
-                  <p className="text-sm font-mono font-bold text-emerald-400">{lga.resolved}</p>
-                </div>
-                <div className="w-20">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[10px] text-slate-500">Rate</span>
-                    <span className="text-[10px] font-bold text-white">{lga.resolutionRate}%</span>
-                  </div>
-                  <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${rateColor(lga.resolutionRate)}`}
-                      style={{ width: `${lga.resolutionRate}%` }}/>
-                  </div>
-                </div>
+            ) : lgaReports.length === 0 ? (
+              <div className="py-20 text-center opacity-60">
+                <p className="text-3xl mb-2">📁</p>
+                <p className="text-sm text-slate-400 font-bold uppercase tracking-widest">No reports in this LGA</p>
+                <p className="text-xs text-slate-500 mt-1">There are no reports recorded under {activeLgaName} in this period.</p>
               </div>
-            </div>
-          ))}
+            ) : (
+              <div className="space-y-4">
+                {lgaReports.map((report) => (
+                  <div key={report.id}
+                    className="bg-white/[0.02] border border-white/5 hover:border-[#4CC2D1]/30 hover:bg-white/[0.04] rounded-xl p-5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex items-center flex-wrap gap-2">
+                        <span className="text-sm font-bold text-white">{report.category} Incident</span>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getStatusColorClass(report.status)}`}>
+                          {report.status}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-mono">Incident ID: {report.id}</p>
+                      <p className="text-xs text-slate-300 line-clamp-2 leading-relaxed">{report.description}</p>
+                      <p className="text-[10px] text-slate-400 font-medium">Submitted on {getReportDateTime(report.createdAt)}</p>
+                    </div>
+                    <button
+                      onClick={() => handleOpenInManagement(report)}
+                      className="px-4 py-2 bg-[#4CC2D1]/10 hover:bg-[#4CC2D1] hover:text-white border border-[#4CC2D1]/30 hover:border-transparent text-xs font-bold text-[#4CC2D1] rounded-xl transition-all active:scale-[0.98] cursor-pointer text-center sm:self-center shrink-0"
+                    >
+                      Open Modal
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )
+          ) : (
+            /* LGAs List View */
+            lgas.length === 0 ? (
+              <p className="text-center text-slate-500 text-sm py-8 font-medium">No LGA data available</p>
+            ) : (
+              <div className="space-y-2.5">
+                {lgas.map((lga) => (
+                  <div key={lga.name}
+                    onClick={() => setActiveLgaName(lga.name)}
+                    className="flex items-center gap-4 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 rounded-xl px-4 py-3.5 transition-all cursor-pointer group">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-white group-hover:text-[#4CC2D1] transition-colors truncate">{lga.name}</p>
+                      <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider mt-0.5">Click to view reports</p>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total</p>
+                        <p className="text-sm font-mono font-bold text-white">{lga.total}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Resolved</p>
+                        <p className="text-sm font-mono font-bold text-emerald-400">{lga.resolved}</p>
+                      </div>
+                      <div className="w-20">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Rate</span>
+                          <span className="text-[10px] font-bold text-white font-mono">{lga.resolutionRate}%</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full rounded-full ${rateColor(lga.resolutionRate)}`}
+                            style={{ width: `${lga.resolutionRate}%` }}/>
+                        </div>
+                      </div>
+                      <svg className="w-4 h-4 text-slate-500 group-hover:text-[#4CC2D1] group-hover:translate-x-0.5 transition-all ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7"/>
+                      </svg>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
         </div>
       </div>
     </div>
