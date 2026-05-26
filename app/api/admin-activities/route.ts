@@ -37,24 +37,30 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const snapshot = await adminDb
       .collection("adminActivityLogs")
       .where("adminId", "==", adminId)
-      .orderBy("timestamp", "desc")
-      .limit(50)
       .get();
 
     const logs = snapshot.docs.map((doc) => {
       const data = doc.data();
-      const timestamp = data.timestamp?.toDate
-        ? data.timestamp.toDate().toISOString()
-        : data.timestamp;
+      const rawTimestamp = data.timestamp;
+      const timestamp = rawTimestamp?.toDate
+        ? rawTimestamp.toDate().toISOString()
+        : rawTimestamp;
 
       return {
         id: doc.id,
         ...data,
         timestamp,
+        _rawTime: rawTimestamp?.toDate
+          ? rawTimestamp.toDate().getTime()
+          : (rawTimestamp ? new Date(rawTimestamp).getTime() : 0),
       };
     });
 
-    return NextResponse.json({ logs });
+    // Sort descending by timestamp and limit to 50
+    logs.sort((a, b) => b._rawTime - a._rawTime);
+    const limitedLogs = logs.slice(0, 50).map(({ _rawTime, ...rest }) => rest);
+
+    return NextResponse.json({ logs: limitedLogs });
   } catch (error: any) {
     console.error("❌ GET /api/admin-activities error:", error);
     return NextResponse.json(

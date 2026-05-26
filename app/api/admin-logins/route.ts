@@ -37,15 +37,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const snapshot = await adminDb
       .collection("adminLoginLogs")
       .where("adminId", "==", adminId)
-      .orderBy("loginAt", "desc")
-      .limit(50)
       .get();
 
     const logs = snapshot.docs.map((doc) => {
       const data = doc.data();
-      const loginAt = data.loginAt?.toDate
-        ? data.loginAt.toDate().toISOString()
-        : data.loginAt;
+      const rawLoginAt = data.loginAt;
+      const loginAt = rawLoginAt?.toDate
+        ? rawLoginAt.toDate().toISOString()
+        : rawLoginAt;
       const logoutAt = data.logoutAt?.toDate
         ? data.logoutAt.toDate().toISOString()
         : data.logoutAt;
@@ -55,10 +54,17 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         ...data,
         loginAt,
         logoutAt,
+        _rawTime: rawLoginAt?.toDate
+          ? rawLoginAt.toDate().getTime()
+          : (rawLoginAt ? new Date(rawLoginAt).getTime() : 0),
       };
     });
 
-    return NextResponse.json({ logs });
+    // Sort descending by loginAt and limit to 50
+    logs.sort((a, b) => b._rawTime - a._rawTime);
+    const limitedLogs = logs.slice(0, 50).map(({ _rawTime, ...rest }) => rest);
+
+    return NextResponse.json({ logs: limitedLogs });
   } catch (error: any) {
     console.error("❌ GET /api/admin-logins error:", error);
     return NextResponse.json(
