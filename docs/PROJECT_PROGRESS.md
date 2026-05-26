@@ -524,6 +524,34 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
-*Last Updated: 2026-05-24*
+*Last Updated: 2026-05-26*
+
+---
+
+## 📊 Phase 6: Analytics — Live Firebase Data Integration
+- **Status:** ✅ Completed — 2026-05-26
+- **Branch:** `feat/analytics`
+
+**What was implemented:**
+
+- **New API route `app/api/analytics/route.ts`**: Server-side aggregation endpoint using Firebase Admin SDK. Accepts a `?range=7|30|90` query param. Fetches all non-archived reports, computes:
+  - **Summary KPIs**: Total reports, resolved reports, resolution rate %, active citizens (unique UIDs), resolved today, pending count, average resolution time (computed from `statusHistory` timestamps).
+  - **Daily activity buckets**: Per-day report submission and resolution counts for the selected range, outputting `{ day, date, reports, solved }[]` arrays suitable for the SVG line chart.
+  - **Category breakdown**: Per-category counts broken down by status (PENDING → pending, ASSIGNED/FIXING → inProgress, RESOLVED → resolved, REJECTED → rejected) with official category colors matching GUIDELINES.md.
+  - **Province distribution**: Reports grouped by province (inferred from `location.area` via a district-to-province lookup table), with total, resolved count, and resolution rate per province.
+  - Reuses the `requireAdmin` auth guard pattern from `/api/reports/route.ts`.
+
+- **Full rewrite of `app/components/Analytics.tsx`**:
+  - Replaced all mock data imports (`INCIDENT_BY_CATEGORY`, `DAILY_ACTIVITY`, `REGIONAL_PERFORMANCE`) with a live `fetch('/api/analytics?range=N')` call inside a `useEffect` triggered by the `timeRange` state.
+  - **Loading skeletons** (`animate-pulse`) for all 4 stat cards, the line chart, category bars, and province table rows — matching the dashboard's established UX pattern.
+  - **Error banner** with retry button when the API fails.
+  - **KPI stat cards**: Total Reports, Resolution Rate, Active Citizens, Avg. Resolution Time — all with live values and descriptive sub-labels.
+  - **Daily Activity SVG line chart**: Two-line chart (reports vs resolved) with area fill gradients, hover crosshair tooltips, Y-axis value labels, and adaptive X-axis labeling (day name for 7-day, date for 30/90-day).
+  - **Category breakdown**: Stacked horizontal progress bars per category, correctly using mobile-app-matching status colors (amber/pending, teal/in-progress, green/resolved, red/rejected).
+  - **Province distribution table**: Sortable by total reports, resolution rate displayed as a color-coded progress bar (green ≥70%, teal ≥40%, amber <40%).
+  - **Smart insight cards**: Three contextual cards (Pending Backlog, Resolution Health, Community Engagement) with dynamic copy driven by real data values.
+  - Time range selector (7 / 30 / 90 days) re-fetches the API on change.
+  - Uses design system colors from GUIDELINES.md (`#4CC2D1`, `#30A89C`, `#A78BFA`, etc.) throughout — no ad-hoc colors.
+
 
 
