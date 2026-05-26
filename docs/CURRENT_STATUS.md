@@ -143,7 +143,7 @@
 ### Analytics (`Analytics.tsx`)
 - [x] All charts wired to real Firestore data via `/api/analytics`
 - [x] Server-side Firestore aggregation (daily activity, category breakdown, province distribution, KPI stats)
-- [x] Date range filtering (7 / 30 / 90 days) triggers live re-fetch
+- [x] Date range filtering (7 / 30 / 90 days) triggers live re-fetch with adaptive X-axis label spacing (no overlapping labels on 90-day range)
 - [x] Loading skeletons and error state with Retry button
 - [x] Exact Province/District/LGA mapping utilizing centralized `resolveSrilankaRegion` lookup
 - [x] LGA modal pre-populated with all official LGAs for the selected district, showing full report counts sorted by volume

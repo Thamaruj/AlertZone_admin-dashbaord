@@ -112,7 +112,11 @@ function DailyActivityChart({ data, loading }: { data: DayBucket[]; loading: boo
   const pad = { top: 30, right: 20, bottom: 36, left: 42 };
 
   // Adaptive label step
-  const step = data.length <= 7 ? 1 : data.length <= 14 ? 2 : data.length <= 31 ? 4 : 1;
+  const step = data.length <= 7 ? 1
+             : data.length <= 15 ? 2
+             : data.length <= 31 ? 5
+             : data.length <= 62 ? 10
+             : 15;
 
   const getX = (i: number) => pad.left + (i * (W - pad.left - pad.right)) / Math.max(data.length - 1, 1);
   const getY = (v: number) => H - pad.bottom - (v * (H - pad.top - pad.bottom)) / maxVal;

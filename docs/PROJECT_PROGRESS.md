@@ -565,6 +565,7 @@ This document tracks the end-to-end development journey of the AlertZone admin d
       - Updated the Highlight Cards (Most Reported Province, District, and Category) to display the event counts and the selected time period (e.g. "Last 30 Days", "May 2026") as a sub-text label.
       - Removed the "Avg. Resolution Time" card from the KPI row, resizing the grid to a balanced 3-column layout. Relocated the "resolved today" counter to the Resolution Rate card sub-label.
       - Removed the bottom static "Insight Cards" (Pending Backlog, Resolution Health, and Community Engagement) to declutter the dashboard layout.
+      - Adjusted the X-axis label rendering step logic in the daily activity line chart. For the 90-day time range, it now uses a step size of 15 (rendering labels every 15 days) to prevent crowded or overlapping text labels on the axis.
     - Verified all compilation checks and local Next.js production builds passed successfully.
 
 
