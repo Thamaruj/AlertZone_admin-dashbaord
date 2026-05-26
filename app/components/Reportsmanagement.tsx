@@ -7,6 +7,7 @@ import { UserProfile } from "@/lib/types/user";
 import { categoryStyleMeta } from "@/lib/constants/categories";
 import { statusStyleMeta } from "@/lib/constants/statuses";
 import { sriLankaGeographics, resolveSrilankaRegion } from "@/lib/constants/sriLankaRegions";
+import { useAuth } from "@/lib/hooks/useAuth";
 import MiniMap from "./MiniMap";
 import UserDetailsModal from "./UserDetailsModal";
 
@@ -214,6 +215,7 @@ function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
 }
 
 export default function ReportsManagement() {
+    const { user } = useAuth();
     const { reports, loading, error, changeStatus, refresh } = useReports("All");
     const [selectedTab, setSelectedTab] = useState<ReportStatus | "All">("All");
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
@@ -237,6 +239,19 @@ export default function ReportsManagement() {
     const [filterDistrict, setFilterDistrict] = useState<string>("all");
     const [filterLGA, setFilterLGA] = useState<string>("all");
 
+    // Initialize filters based on admin scope
+    useEffect(() => {
+        if (user && user.scope && user.scope !== "all") {
+            if (user.province) setFilterProvince(user.province);
+            if ((user.scope === "district" || user.scope === "lga") && user.district) {
+                setFilterDistrict(user.district);
+            }
+            if (user.scope === "lga" && user.lga) {
+                setFilterLGA(user.lga);
+            }
+        }
+    }, [user]);
+
     const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         setFilterProvince(e.target.value);
         setFilterDistrict("all");
@@ -256,9 +271,23 @@ export default function ReportsManagement() {
         setShowStartCalendar(false);
         setShowEndCalendar(false);
         setFilterCategory("all");
-        setFilterProvince("all");
-        setFilterDistrict("all");
-        setFilterLGA("all");
+        if (user && user.scope && user.scope !== "all") {
+            if (user.province) setFilterProvince(user.province);
+            if (user.scope === "province") {
+                setFilterDistrict("all");
+                setFilterLGA("all");
+            } else if (user.scope === "district") {
+                setFilterDistrict(user.district || "all");
+                setFilterLGA("all");
+            } else if (user.scope === "lga") {
+                setFilterDistrict(user.district || "all");
+                setFilterLGA(user.lga || "all");
+            }
+        } else {
+            setFilterProvince("all");
+            setFilterDistrict("all");
+            setFilterLGA("all");
+        }
     };
 
     function getReportDateString(dateValue: any) {
@@ -656,7 +685,8 @@ export default function ReportsManagement() {
                         <select
                             value={filterProvince}
                             onChange={handleProvinceChange}
-                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer"
+                            disabled={!!(user?.scope && user.scope !== "all")}
+                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="all" className="bg-[#0b1a26] text-slate-300">All Provinces</option>
                             {Object.keys(sriLankaGeographics).map(province => (
@@ -680,8 +710,8 @@ export default function ReportsManagement() {
                         <select
                             value={filterDistrict}
                             onChange={handleDistrictChange}
-                            disabled={filterProvince === "all"}
-                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={filterProvince === "all" || !!(user?.scope === "district" || user?.scope === "lga")}
+                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="all" className="bg-[#0b1a26] text-slate-300">All Districts</option>
                             {filterProvince !== "all" && Object.keys(sriLankaGeographics[filterProvince] || {}).map(district => (
@@ -705,8 +735,8 @@ export default function ReportsManagement() {
                         <select
                             value={filterLGA}
                             onChange={(e) => setFilterLGA(e.target.value)}
-                            disabled={filterDistrict === "all"}
-                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                            disabled={filterDistrict === "all" || !!(user?.scope === "lga")}
+                            className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             <option value="all" className="bg-[#0b1a26] text-slate-300">All LGAs</option>
                             {filterProvince !== "all" && filterDistrict !== "all" && (sriLankaGeographics[filterProvince]?.[filterDistrict] || []).map(lga => (

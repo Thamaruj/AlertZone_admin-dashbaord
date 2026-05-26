@@ -782,7 +782,7 @@ export default function Settings() {
                   {logins.map((log) => (
                     <div key={log.id} className="p-3 bg-white/3 border border-white/5 rounded-xl text-xs space-y-1.5 animate-slide-up">
                       <div className="flex justify-between items-center flex-wrap gap-2">
-                        <span className="text-slate-200 font-semibold">{log.location}</span>
+                        <span className="text-slate-200 font-medium truncate max-w-[200px]" title={log.userAgent}>{log.userAgent}</span>
                         <span className="text-[10px] font-mono text-slate-400">{log.ip}</span>
                       </div>
                       <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3">

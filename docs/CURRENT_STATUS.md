@@ -20,7 +20,7 @@
 | Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
 | Phase 8: Push Notifications (Expo) | 🟢 Done | Integrated using Expo Push API, successfully sending status mutations and megaphone broadcasts |
 | Phase 9: Live Dashboard Overview | 🟢 Done | Standalone overview showing scoped stats, pending reports, category snapshot, activity feed, and quick links |
-| Phase 10: Admin Scopes, Profiling, and Audit Logs | 🟢 Done | Scoped data views, cascading admin creation, Firebase Storage profile pics, activity logs, and login auditing |
+| Phase 10: Admin Scopes, Profiling, and Audit Logs | 🟢 Done | Scoped data views, cascading admin creation/editing via a spacious 2-column modal, dropdown filter locking in Reports/Map views, Firebase Storage profile pics, activity logs, and login auditing |
 
 ---
 

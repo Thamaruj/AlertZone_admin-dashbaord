@@ -69,7 +69,6 @@ export async function logAdminLogin(
   userAgent: string
 ): Promise<string> {
   try {
-    const location = getSimulatedLocation(ip);
     const docRef = await adminDb.collection("adminLoginLogs").add({
       adminId,
       username,
@@ -78,7 +77,6 @@ export async function logAdminLogin(
       logoutAt: null,
       ip,
       userAgent,
-      location,
     });
     return docRef.id;
   } catch (error) {

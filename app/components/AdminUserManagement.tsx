@@ -45,24 +45,25 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
   );
 }
 
-// ─── Create Admin Modal ────────────────────────────────────────────────────────
+// ─── Admin Form Modal (Create / Edit) ──────────────────────────────────────────
 
-interface CreateModalProps {
+interface AdminFormModalProps {
+  adminToEdit?: SafeAdminUser | null;
   onClose: () => void;
   onCreated: () => void;
 }
 
-function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
+function AdminFormModal({ adminToEdit, onClose, onCreated }: AdminFormModalProps) {
   const [form, setForm] = useState({
-    username: "",
-    displayName: "",
+    username: adminToEdit?.username || "",
+    displayName: adminToEdit?.displayName || "",
     password: "",
     confirmPassword: "",
-    role: "admin" as AdminRole,
-    province: "",
-    district: "",
-    lga: "",
-    scope: "all" as "all" | "province" | "district" | "lga",
+    role: (adminToEdit?.role || "admin") as AdminRole,
+    province: adminToEdit?.province || "",
+    district: adminToEdit?.district || "",
+    lga: adminToEdit?.lga || "",
+    scope: (adminToEdit?.scope || "all") as "all" | "province" | "district" | "lga",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,17 +73,26 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
     e.preventDefault();
     setError(null);
 
-    if (!form.username.trim() || !form.displayName.trim() || !form.password) {
-      setError("All fields are required");
+    // Common checks
+    if (!form.displayName.trim()) {
+      setError("Display Name is required");
       return;
     }
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    if (form.password.length < 8) {
-      setError("Password must be at least 8 characters");
-      return;
+
+    if (!adminToEdit) {
+      // Create validation
+      if (!form.username.trim() || !form.password) {
+        setError("All fields are required");
+        return;
+      }
+      if (form.password !== form.confirmPassword) {
+        setError("Passwords do not match");
+        return;
+      }
+      if (form.password.length < 8) {
+        setError("Password must be at least 8 characters");
+        return;
+      }
     }
 
     // Validate Scoping
@@ -101,23 +111,43 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/admin-users", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          username: form.username.trim(),
-          displayName: form.displayName.trim(),
-          password: form.password,
-          role: form.role,
-          province: form.province,
-          district: form.district,
-          lga: form.lga,
-          scope: form.scope,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed to create admin user");
+      if (adminToEdit) {
+        // Edit Mode (PATCH API)
+        const res = await fetch(`/api/admin-users/${adminToEdit.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            displayName: form.displayName.trim(),
+            role: form.role,
+            province: form.scope === "all" ? "" : form.province,
+            district: (form.scope === "all" || form.scope === "province") ? "" : form.district,
+            lga: form.scope !== "lga" ? "" : form.lga,
+            scope: form.scope,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to update admin user");
+      } else {
+        // Create Mode (POST API)
+        const res = await fetch("/api/admin-users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            username: form.username.trim(),
+            displayName: form.displayName.trim(),
+            password: form.password,
+            role: form.role,
+            province: form.scope === "all" ? "" : form.province,
+            district: (form.scope === "all" || form.scope === "province") ? "" : form.district,
+            lga: form.scope !== "lga" ? "" : form.lga,
+            scope: form.scope,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Failed to create admin user");
+      }
       onCreated();
       onClose();
     } catch (err) {
@@ -136,15 +166,17 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between">
+      <div className="relative w-full max-w-3xl bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 space-y-4 animate-slide-up max-h-[95vh] overflow-y-auto">
+        <div className="flex items-center justify-between pb-3 border-b border-white/5">
           <div>
-            <h2 className="text-base font-bold text-white">Add Admin User</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Create a new admin account</p>
+            <h2 className="text-base font-bold text-white">{adminToEdit ? "Edit Admin Settings" : "Add Admin User"}</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {adminToEdit ? `Modifying @${adminToEdit.username}` : "Create a new admin account"}
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-white/5"
+            className="text-slate-400 hover:text-slate-200 transition-colors p-1 rounded-lg hover:bg-white/5 cursor-pointer"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -153,182 +185,206 @@ function CreateAdminModal({ onClose, onCreated }: CreateModalProps) {
         </div>
 
         {error && (
-          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2 animate-pulse">
             <svg className="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <p className="text-red-400 text-xs">{error}</p>
+            <p className="text-red-400 text-xs font-semibold">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Username */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Username</label>
-            <input
-              type="text"
-              autoComplete="off"
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-              placeholder="e.g. john_admin"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Left Column: Account Credentials */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-teal-400 uppercase tracking-wider border-b border-white/5 pb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-3 bg-teal-500 rounded-full" />
+                Account Credentials
+              </h3>
 
-          {/* Display Name */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Display Name</label>
-            <input
-              type="text"
-              value={form.displayName}
-              onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-              placeholder="e.g. John Perera"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
-            />
-          </div>
+              {/* Username */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">Username</label>
+                <input
+                  type="text"
+                  autoComplete="off"
+                  disabled={!!adminToEdit}
+                  value={form.username}
+                  onChange={(e) => setForm({ ...form, username: e.target.value })}
+                  placeholder="e.g. john_admin"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                />
+              </div>
 
-          {/* Role */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Role</label>
-            <select
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value as AdminRole })}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
-            >
-              <option value="admin" className="bg-[#0f2233]">Admin</option>
-              <option value="superadmin" className="bg-[#0f2233]">Super Admin</option>
-            </select>
-          </div>
+              {/* Display Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">Display Name</label>
+                <input
+                  type="text"
+                  value={form.displayName}
+                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  placeholder="e.g. John Perera"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all font-medium"
+                />
+              </div>
 
-          {/* Visibility Scope */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Visibility Scope</label>
-            <select
-              value={form.scope}
-              onChange={(e) => setForm({ ...form, scope: e.target.value as any })}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
-            >
-              <option value="all" className="bg-[#0f2233]">All Regions (Unrestricted)</option>
-              <option value="province" className="bg-[#0f2233]">Scope to Province</option>
-              <option value="district" className="bg-[#0f2233]">Scope to District</option>
-              <option value="lga" className="bg-[#0f2233]">Scope to LGA</option>
-            </select>
-          </div>
+              {/* Role */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">Role</label>
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm({ ...form, role: e.target.value as AdminRole })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer font-medium"
+                >
+                  <option value="admin" className="bg-[#0f2233]">Admin</option>
+                  <option value="superadmin" className="bg-[#0f2233]">Super Admin</option>
+                </select>
+              </div>
 
-          {/* Scoped Province */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Assigned Province</label>
-            <select
-              value={form.province}
-              onChange={(e) => setForm({ ...form, province: e.target.value, district: "", lga: "" })}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
-            >
-              <option value="" className="bg-[#0f2233]">-- Select Province --</option>
-              {Object.keys(sriLankaGeographics).map((prov) => (
-                <option key={prov} value={prov} className="bg-[#0f2233]">{prov} Province</option>
-              ))}
-            </select>
-          </div>
+              {/* Passwords (Only in Create Mode) */}
+              {!adminToEdit && (
+                <>
+                  {/* Password */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-300">Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={form.password}
+                        onChange={(e) => setForm({ ...form, password: e.target.value })}
+                        placeholder="Min. 8 characters"
+                        className="w-full bg-white/5 border border-white/10 rounded-lg px-3 pr-10 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all font-medium"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
+                        tabIndex={-1}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          {showPassword ? (
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                          ) : (
+                            <>
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </>
+                          )}
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
 
-          {/* Scoped District */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Assigned District</label>
-            <select
-              value={form.district}
-              onChange={(e) => setForm({ ...form, district: e.target.value, lga: "" })}
-              disabled={!form.province}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="" className="bg-[#0f2233]">-- Select District --</option>
-              {form.province && Object.keys(sriLankaGeographics[form.province] || {}).map((dist) => (
-                <option key={dist} value={dist} className="bg-[#0f2233]">{dist}</option>
-              ))}
-            </select>
-          </div>
+                  {/* Confirm Password */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-slate-300">Confirm Password</label>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={form.confirmPassword}
+                      onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                      placeholder="Re-enter password"
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all font-medium"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
 
-          {/* Scoped LGA */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Assigned LGA</label>
-            <select
-              value={form.lga}
-              onChange={(e) => setForm({ ...form, lga: e.target.value })}
-              disabled={!form.district}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <option value="" className="bg-[#0f2233]">-- Select LGA --</option>
-              {form.province && form.district && (sriLankaGeographics[form.province]?.[form.district] || []).map((lgaItem) => (
-                <option key={lgaItem} value={lgaItem} className="bg-[#0f2233]">{lgaItem}</option>
-              ))}
-            </select>
-          </div>
+            {/* Right Column: Regional Scope Settings */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold text-teal-400 uppercase tracking-wider border-b border-white/5 pb-1 flex items-center gap-1.5">
+                <span className="w-1.5 h-3 bg-teal-500 rounded-full" />
+                Regional Scope & Visibility
+              </h3>
 
-          {/* Password */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? "text" : "password"}
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                placeholder="Min. 8 characters"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 pr-10 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-3 flex items-center text-slate-400 hover:text-slate-200 transition-colors"
-                tabIndex={-1}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  {showPassword ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                  ) : (
-                    <>
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </>
-                  )}
-                </svg>
-              </button>
+              {/* Visibility Scope */}
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-slate-300">Visibility Scope</label>
+                <select
+                  value={form.scope}
+                  onChange={(e) => setForm({ ...form, scope: e.target.value as any })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer font-medium"
+                >
+                  <option value="all" className="bg-[#0f2233]">All Regions (Unrestricted)</option>
+                  <option value="province" className="bg-[#0f2233]">Scope to Province</option>
+                  <option value="district" className="bg-[#0f2233]">Scope to District</option>
+                  <option value="lga" className="bg-[#0f2233]">Scope to LGA</option>
+                </select>
+              </div>
+
+              {/* Scoped Province */}
+              <div className="space-y-1">
+                <label className={`text-xs font-medium ${form.scope === "all" ? "text-slate-500" : "text-slate-300"}`}>Assigned Province</label>
+                <select
+                  value={form.province}
+                  disabled={form.scope === "all"}
+                  onChange={(e) => setForm({ ...form, province: e.target.value, district: "", lga: "" })}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed font-medium"
+                >
+                  <option value="" className="bg-[#0f2233]">-- Select Province --</option>
+                  {Object.keys(sriLankaGeographics).map((prov) => (
+                    <option key={prov} value={prov} className="bg-[#0f2233]">{prov} Province</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Scoped District */}
+              <div className="space-y-1">
+                <label className={`text-xs font-medium ${(form.scope === "all" || form.scope === "province") ? "text-slate-500" : "text-slate-300"}`}>Assigned District</label>
+                <select
+                  value={form.district}
+                  onChange={(e) => setForm({ ...form, district: e.target.value, lga: "" })}
+                  disabled={form.scope === "all" || form.scope === "province" || !form.province}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed font-medium"
+                >
+                  <option value="" className="bg-[#0f2233]">-- Select District --</option>
+                  {form.province && Object.keys(sriLankaGeographics[form.province] || {}).map((dist) => (
+                    <option key={dist} value={dist} className="bg-[#0f2233]">{dist}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Scoped LGA */}
+              <div className="space-y-1">
+                <label className={`text-xs font-medium ${form.scope !== "lga" ? "text-slate-500" : "text-slate-300"}`}>Assigned LGA</label>
+                <select
+                  value={form.lga}
+                  onChange={(e) => setForm({ ...form, lga: e.target.value })}
+                  disabled={form.scope !== "lga" || !form.district}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed font-medium"
+                >
+                  <option value="" className="bg-[#0f2233]">-- Select LGA --</option>
+                  {form.province && form.district && (sriLankaGeographics[form.province]?.[form.district] || []).map((lgaItem) => (
+                    <option key={lgaItem} value={lgaItem} className="bg-[#0f2233]">{lgaItem}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Confirm Password */}
-          <div className="space-y-1">
-            <label className="text-xs font-medium text-slate-300">Confirm Password</label>
-            <input
-              type={showPassword ? "text" : "password"}
-              value={form.confirmPassword}
-              onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-              placeholder="Re-enter password"
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all"
-            />
-          </div>
-
           {/* Actions */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-3 pt-4 border-t border-white/5 justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all"
+              className="px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-400 bg-white/5 hover:bg-white/10 border border-white/10 transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              id="create-admin-submit"
               disabled={loading}
-              className="flex-1 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-lg shadow-teal-900/30 active:scale-[0.98]"
+              className="px-6 py-2.5 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-teal-900/30 active:scale-[0.98] cursor-pointer uppercase tracking-wider"
             >
               {loading ? (
-                <span className="flex items-center justify-center gap-2">
+                <span className="flex items-center gap-2">
                   <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                   </svg>
-                  Creating...
+                  Saving...
                 </span>
-              ) : "Create Admin"}
+              ) : adminToEdit ? "Save Changes" : "Create Admin"}
             </button>
           </div>
         </form>
@@ -345,6 +401,7 @@ export default function AdminUserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState<SafeAdminUser | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [showLogsForAdmin, setShowLogsForAdmin] = useState<{
     id: string;
@@ -639,6 +696,18 @@ export default function AdminUserManagement() {
                               )}
                             </button>
 
+                            {/* Edit Admin Scope / Info */}
+                            <button
+                              onClick={() => setShowEditModal(admin)}
+                              disabled={actionLoading === admin.id}
+                              title="Edit Scope & Settings"
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-teal-400 hover:bg-teal-500/10 transition-all duration-150 disabled:opacity-50"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+
                             {/* View Logs */}
                             <button
                               onClick={() => setShowLogsForAdmin({ id: admin.id, username: admin.username, displayName: admin.displayName })}
@@ -676,8 +745,17 @@ export default function AdminUserManagement() {
 
       {/* Create Admin Modal */}
       {showCreateModal && (
-        <CreateAdminModal
+        <AdminFormModal
           onClose={() => setShowCreateModal(false)}
+          onCreated={fetchAdmins}
+        />
+      )}
+
+      {/* Edit Admin Modal */}
+      {showEditModal && (
+        <AdminFormModal
+          adminToEdit={showEditModal}
+          onClose={() => setShowEditModal(null)}
           onCreated={fetchAdmins}
         />
       )}
@@ -963,7 +1041,6 @@ function AdminLogsModal({ adminId, username, displayName, onClose }: AdminLogsMo
                   <div key={log.id} className="p-3 bg-white/[0.02] border border-white/5 rounded-xl flex flex-col gap-2">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-200 font-semibold">{log.location}</span>
                         <span className="text-[10px] font-mono text-slate-500 bg-white/5 px-1.5 py-0.5 rounded">{log.ip}</span>
                       </div>
                       <p className="text-[10px] text-slate-400 truncate max-w-xs" title={log.userAgent}>{log.userAgent}</p>

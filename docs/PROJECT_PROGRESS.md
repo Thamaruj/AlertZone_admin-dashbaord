@@ -12,10 +12,14 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 **What was built:**
 - **Admin Scoping & Cascading UI:** Added Province, District, LGA selectors with cascaded filtering to the Admin creation/update form. Added visibility scope options (`all`, `province`, `district`, `lga`).
+- **Filter Dropdown Locking:** Enforced admin visibility scopes on the frontend filtering select dropdowns inside both Reports Management and Map View (locking the dropdown options to the admin's assigned province, district, and LGA scope automatically).
+- **Spacious Admin addition/edition modal:** Replaced the narrow single-column modal with a grid-based 2-column modal for admin creations and edits.
+- **Dynamic Scoping Updates:** Enabled superadmins to dynamically modify the visibility scope, assigned province, district, or LGA for any admin user.
+- **Location Auditing Removal:** Removed IP-based simulated login locations from login/logout audit history (writing, activity logging, and frontend listings) for enhanced privacy.
 - **Profile Picture Upload:** Integrated Firebase Storage uploading (`admin-avatars/{userId}`) inside the Settings page. Implemented profile PATCH handler and live auth session merges (including `superadmin` profile updates merged into Firestore document `adminUsers/superadmin`).
-- **Audit Logs & History:** Created backend activity logging and login auditing services. Tracks login location (simulated via IP blocks), user-agents, and admin actions (e.g. status changes, announcements, deactivations).
-- **Frontend Logs UI:** Rendered Activity Logs and Login History tables in Settings (for the current admin) and via a new "View Logs" modal action inside Admin User Management.
-- **Scoping Filter Enforcement:** Wired scope filters into reports list, dashboard stats, and analytics charts.
+- **Audit Logs & History:** Created backend activity logging and login auditing services tracking user-agents and admin actions.
+- **Frontend Logs UI:** Rendered Activity Logs and Login History tables in Settings (for the current admin) and via a "View Logs" modal action inside Admin User Management.
+- **Scoping Filter Enforcement:** Wired scope filters into reports list, dashboard stats, and analytics charts on the backend.
 
 ---
 

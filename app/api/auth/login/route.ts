@@ -9,7 +9,7 @@ import {
   buildSessionCookie,
 } from "@/lib/services/auth.service";
 import type { LoginRequest, LoginResponse } from "@/lib/types/auth";
-import { logAdminLogin, logAdminActivity, getSimulatedLocation } from "@/lib/services/activity.service";
+import { logAdminLogin, logAdminActivity } from "@/lib/services/activity.service";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -42,7 +42,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Log the login event
     const loginLogId = await logAdminLogin(session.id, session.username, session.displayName, ip, userAgent);
-    const location = getSimulatedLocation(ip);
 
     // Write login activity
     await logAdminActivity(
@@ -50,7 +49,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       session.username,
       session.displayName,
       "login",
-      `Logged in successfully from ${location}`
+      `Logged in successfully`
     );
 
     const sessionWithLog = { ...session, loginLogId };
