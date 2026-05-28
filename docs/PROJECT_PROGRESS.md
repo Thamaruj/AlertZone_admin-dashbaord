@@ -15,6 +15,7 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 - **Click-to-View Navigation:** Enabled clicking on the toast notification or any report notification card on the Notifications page to automatically navigate and open that report's details modal inside Reports Management.
 - **Unread Notification Badge:** Subscribed both `Maindashboard.tsx` and `Dashboard.tsx` to unread notification count, rendering a glassmorphic bell button in the dashboard page header and a red dot on the sidebar "Notifications" tab when unread items exist.
 - **Deterministic Notification Writing:** Handled document writing for new issues using a deterministic `new_report_{reportId}` key format to guarantee no duplicate notifications are logged in multi-admin client environments.
+- **Status Change Feedback Modal:** Replaced the inline success banner with a premium glassmorphic modal overlay that displays status change transitions, notifications sent to citizens, reward point summaries, and includes manual close options.
 
 ---
 

@@ -224,6 +224,11 @@ export default function ReportsManagement() {
     const [statusReason, setStatusReason] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+    const [statusChangeFeedback, setStatusChangeFeedback] = useState<{
+        status: ReportStatus;
+        previousStatus: ReportStatus;
+        message: string;
+    } | null>(null);
 
     // Archive confirmation states
     const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
@@ -396,6 +401,7 @@ export default function ReportsManagement() {
 
         setIsSaving(true);
         const newStatus = tempStatus as ReportStatus;
+        const previousStatus = selectedReport.status;
 
         try {
             await changeStatus(selectedReport.id, newStatus, statusReason.trim() ? statusReason : undefined);
@@ -415,6 +421,15 @@ export default function ReportsManagement() {
             });
             setStatusReason("");
             setShowConfirm(false);
+            setStatusChangeFeedback({
+                status: newStatus,
+                previousStatus,
+                message: `Status successfully updated to ${newStatus}. ${
+                    newStatus === "RESOLVED"
+                        ? "Citizen has been notified and rewarded +10 contribution points!"
+                        : "Citizen has been notified."
+                }`
+            });
         } catch (error) {
             console.error("Failed to save status", error);
             alert("Failed to update report status.");
@@ -531,7 +546,11 @@ export default function ReportsManagement() {
         if (typeof window !== "undefined" && (window as any).pendingReportDetail && reports.length > 0) {
             const report = (window as any).pendingReportDetail;
             const found = reports.find(r => r.id === report.id);
-            openDetails(found || report);
+            const targetReport = found || report;
+            if (targetReport) {
+                setSelectedTab(targetReport.status);
+                openDetails(targetReport);
+            }
             (window as any).pendingReportDetail = null;
         }
     }, [reports]);
@@ -542,7 +561,11 @@ export default function ReportsManagement() {
             if (customEvent.detail?.report) {
                 const report = customEvent.detail.report;
                 const found = reports.find(r => r.id === report.id);
-                openDetails(found || report);
+                const targetReport = found || report;
+                if (targetReport) {
+                    setSelectedTab(targetReport.status);
+                    openDetails(targetReport);
+                }
             }
         };
         window.addEventListener("openReportDetail", handleOpenReportDetail);
@@ -1206,7 +1229,7 @@ export default function ReportsManagement() {
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth="2.5" /></svg>
                                                     </div>
                                                 </div>
-
+ 
                                                 <button
                                                     onClick={() => setShowConfirm(true)}
                                                     disabled={isSaving || tempStatus === selectedReport.status}
@@ -1218,7 +1241,7 @@ export default function ReportsManagement() {
                                                     Review Change
                                                 </button>
                                             </div>
-
+ 
                                             <div className="relative">
                                                 <textarea
                                                     value={statusReason}
@@ -1373,6 +1396,93 @@ export default function ReportsManagement() {
                     user={selectedReporter} 
                     onClose={() => setShowReporterModal(false)} 
                 />
+            )}
+
+            {/* Status Change Feedback Modal */}
+            {statusChangeFeedback && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div
+                        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        onClick={() => setStatusChangeFeedback(null)}
+                    />
+                    <div className="relative w-full max-w-md bg-[#0f2233]/95 border border-emerald-500/30 backdrop-blur-xl rounded-2xl shadow-2xl p-6 overflow-hidden animate-in zoom-in-95 duration-200">
+                        {/* Close button top right */}
+                        <button
+                            onClick={() => setStatusChangeFeedback(null)}
+                            className="absolute top-4 right-4 text-slate-400 hover:text-white p-1 rounded hover:bg-white/5 transition-all cursor-pointer"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                        
+                        <div className="text-center space-y-5">
+                            <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-bounce">
+                                ✓
+                            </div>
+                            
+                            <div className="space-y-1">
+                                <h3 className="text-base font-bold text-white tracking-tight">Status Changed</h3>
+                                <p className="text-xs text-slate-400">The report status has been successfully updated.</p>
+                            </div>
+
+                            {(() => {
+                                const prevSt = statusStyleMeta[statusChangeFeedback.previousStatus] || { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" };
+                                const newSt = statusStyleMeta[statusChangeFeedback.status] || { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" };
+                                return (
+                                    <div className="flex items-center justify-center gap-3 bg-white/3 border border-white/5 p-3 rounded-xl">
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${prevSt.bg} ${prevSt.color}`}>
+                                            {statusChangeFeedback.previousStatus}
+                                        </span>
+                                        <svg className="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                        </svg>
+                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${newSt.bg} ${newSt.color} ring-1 ring-emerald-500/30`}>
+                                            {statusChangeFeedback.status}
+                                        </span>
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="space-y-2 bg-[#091622] border border-white/5 p-4 rounded-xl text-left text-xs">
+                                <div className="flex justify-between border-b border-white/5 pb-1.5">
+                                    <span className="text-slate-500 font-semibold">Incident ID</span>
+                                    <span className="text-slate-300 font-mono font-bold">{selectedReport?.id}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-white/5 py-1.5">
+                                    <span className="text-slate-500 font-semibold">Citizen / Reporter</span>
+                                    <span className="text-slate-300 font-semibold">{selectedReport?.authorName || "Anonymous"}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-white/5 py-1.5">
+                                    <span className="text-slate-500 font-semibold">In-app Alert</span>
+                                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Sent
+                                    </span>
+                                </div>
+                                <div className="flex justify-between py-1.5">
+                                    <span className="text-slate-500 font-semibold">Push Notification</span>
+                                    <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Sent
+                                    </span>
+                                </div>
+                                {statusChangeFeedback.status === "RESOLVED" && (
+                                    <div className="mt-2.5 pt-2.5 border-t border-emerald-500/20 text-[10px] text-emerald-300 font-bold bg-emerald-500/5 p-2 rounded-lg flex items-center gap-1.5">
+                                        🎁 Reward: +10 Contribution Points awarded!
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="pt-2 flex justify-center">
+                                <button
+                                    onClick={() => setStatusChangeFeedback(null)}
+                                    className="px-6 py-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold rounded-xl shadow-lg transition-all cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

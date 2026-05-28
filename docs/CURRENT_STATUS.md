@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-28 (Added real-time new issue toast notification, click-to-view redirection, dashboard/sidebar notification badges, and deterministic logs)
+> **Last Updated:** 2026-05-28 (Added real-time new issue toast notification, click-to-view redirection, dashboard/sidebar notification badges, deterministic logs, and success feedback modal overlay on status change)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -83,6 +83,7 @@
 - [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.
 - [x] Full UI detail modal with dynamic timeline styles, and a prominent status badge (colored box matching status style) under the main heading
 - [x] Status updates and mutations processed securely via backend PATCH route (`/api/reports/[id]`), appending to `statusHistory` and rewarding contribution points to citizens (+10 pts) for validated fixes.
+- [x] Status change success feedback modal — displays a success modal overlay when status is updated, showing transition details, notification statuses, and rewards info, including a manual close button
 - [x] Automatic user notification generation within Firestore on the backend when an admin changes a report status
 - [x] Robust reverse geographical lookup (`resolveSrilankaRegion`) mapping suburbs and GPS directly to formal Provinces, Districts, and LGAs using the centralized 341-LGA coordinates database.
 - [x] Centroid-based fallback: uses coordinates to calculate the nearest LGA center if text matching is sparse or absent.
