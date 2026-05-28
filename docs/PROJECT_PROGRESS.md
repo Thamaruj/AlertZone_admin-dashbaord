@@ -4,6 +4,20 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 13: Real-time New Issue Notifications & Dashboard Badge
+**Date:** 2026-05-28
+**Branch:** `fix-feat/dashboard`
+
+**Objective:** Support real-time toast notifications for admins when new reports are submitted, click-to-view redirection from alerts/notification cards to Reports Management details modals, and unread badges on the sidebar and dashboard overview header.
+
+**What was built:**
+- **Real-time Report Listener:** Subscribed the main dashboard to the `reports` Firestore collection in real-time, showing a premium floating toast notification for new incident submissions.
+- **Click-to-View Navigation:** Enabled clicking on the toast notification or any report notification card on the Notifications page to automatically navigate and open that report's details modal inside Reports Management.
+- **Unread Notification Badge:** Subscribed both `Maindashboard.tsx` and `Dashboard.tsx` to unread notification count, rendering a glassmorphic bell button in the dashboard page header and a red dot on the sidebar "Notifications" tab when unread items exist.
+- **Deterministic Notification Writing:** Handled document writing for new issues using a deterministic `new_report_{reportId}` key format to guarantee no duplicate notifications are logged in multi-admin client environments.
+
+---
+
 ## ✅ Phase 12: Report Archival & Soft-Delete Support
 **Date:** 2026-05-28
 **Branch:** `fix-feat/dashboard`

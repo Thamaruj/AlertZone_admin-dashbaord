@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-28 (Implemented Report Archival with location/time/admin filtering, archive/restore buttons on lists/modals, and confirmation dialogue)
+> **Last Updated:** 2026-05-28 (Added real-time new issue toast notification, click-to-view redirection, dashboard/sidebar notification badges, and deterministic logs)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -74,6 +74,9 @@
 - [x] Unread badge count — syncs the home screen bell icon badge in real-time with user notifications
 - [x] Tap Redirect — clicking on a notification redirects the user to the Map view and centers on the corresponding report coordinate
 - [x] Expo Go compatibility — safely bypassed remote push registration side effects in Expo Go via static subpath imports to allow testing in both environments without bundler crashes or startup warnings
+- [x] Real-time Admin Toast Notifications — shows a floating alert to the admin in real-time when a citizen submits an issue
+- [x] Click-to-View Navigation — clicking the toast alert or notification card navigates to the Reports Management page and opens the report details modal
+- [x] Unread Count Badges — displays a red dot badge in the sidebar navigation item and in the Dashboard Overview page header
 
 
 ### Reports Management (Live)
