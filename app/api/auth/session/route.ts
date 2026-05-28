@@ -34,9 +34,33 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         res.headers.set("Set-Cookie", buildClearSessionCookie());
         return res;
       }
+
+      const data = userDoc.data()!;
+      // Merge latest Firestore details into session returned to client
+      session.displayName = data.displayName ?? session.displayName;
+      session.province = data.province ?? "";
+      session.district = data.district ?? "";
+      session.lga = data.lga ?? "";
+      session.scope = data.scope ?? "all";
+      session.avatarUrl = data.avatarUrl ?? null;
     } catch (error) {
       console.error("❌ Session active check error:", error);
       return NextResponse.json({ user: null }, { status: 500 });
+    }
+  } else {
+    // For hardcoded superadmin, see if there is extra doc inside adminUsers/superadmin
+    try {
+      const userDoc = await adminDb.collection(ADMIN_USERS_COLLECTION).doc("superadmin").get();
+      if (userDoc.exists) {
+        const data = userDoc.data()!;
+        session.avatarUrl = data.avatarUrl ?? null;
+        session.province = data.province ?? "";
+        session.district = data.district ?? "";
+        session.lga = data.lga ?? "";
+        session.scope = data.scope ?? "all";
+      }
+    } catch (e) {
+      console.error("❌ Superadmin doc load error:", e);
     }
   }
 

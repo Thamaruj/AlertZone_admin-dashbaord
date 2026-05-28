@@ -6,6 +6,7 @@ import { verifySessionToken, SESSION_COOKIE_NAME } from "@/lib/services/auth.ser
 import { adminDb, admin } from "@/lib/firebase-admin";
 import { ReportStatus, StatusHistoryEntry } from "@/lib/types/report";
 import { sendPushNotification } from "@/lib/services/push.service";
+import { logAdminActivity } from "@/lib/services/activity.service";
 
 async function requireAdmin(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -70,6 +71,15 @@ export async function PATCH(
 
     // Update the report
     await reportRef.update(updatePayload);
+
+    // Log the action
+    await logAdminActivity(
+      session.id,
+      session.username,
+      session.displayName,
+      "report_status_update",
+      `Escalated report '${reportData.title || "Incident"}' status from ${previousStatus} to ${status}${note ? " (Note: " + note.trim() + ")" : ""}`
+    );
 
     // Fetch the citizen user's profile for notifications and contribution updates
     const userRef = adminDb.collection("users").doc(reportData.uid);

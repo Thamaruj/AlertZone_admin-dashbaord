@@ -239,11 +239,46 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       }>;
     }> = new Map();
 
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
+    // ── Filter reports by admin scope ──────────────────────────────────────
+    let docs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    if (session.scope && session.scope !== "all") {
+      docs = docs.filter((r: any) => {
+        const loc = r.location ?? {};
+        const resolved = resolveSrilankaRegion(
+          {
+            region: loc.province ?? loc.region ?? "",
+            district: loc.district ?? "",
+            subregion: loc.subregion ?? "",
+            city: loc.city ?? "",
+            name: loc.name ?? "",
+            street: loc.street ?? "",
+          },
+          loc.address ?? loc.area ?? "",
+          typeof loc.latitude === "number" ? loc.latitude : (loc.latitude ? parseFloat(loc.latitude) : undefined),
+          typeof loc.longitude === "number" ? loc.longitude : (loc.longitude ? parseFloat(loc.longitude) : undefined)
+        );
+        if (session.scope === "province") {
+          return resolved.province.toLowerCase() === session.province?.toLowerCase();
+        }
+        if (session.scope === "district") {
+          return resolved.district.toLowerCase() === session.district?.toLowerCase();
+        }
+        if (session.scope === "lga") {
+          return resolved.localGovernmentArea?.toLowerCase() === session.lga?.toLowerCase();
+        }
+        return true;
+      });
+    }
+
+    for (const reportObj of docs) {
+      const data = reportObj as any;
       if (data.isArchived === true) continue;
 
-      const createdAt: Date | null = data.createdAt?.toDate ? data.createdAt.toDate() : null;
+      const createdAt: Date | null = data.createdAt?.toDate 
+        ? data.createdAt.toDate() 
+        : data.createdAt 
+        ? new Date(data.createdAt) 
+        : null;
 
       // Apply date window filter — skip reports outside the selected period
       if (createdAt && (createdAt < startDate || createdAt > endDate)) continue;

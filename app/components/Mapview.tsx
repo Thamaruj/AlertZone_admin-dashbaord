@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useReports } from "@/lib/hooks/useReports";
 import { Report, ReportStatus } from "@/lib/types/report";
 import { sriLankaGeographics, resolveSrilankaRegion } from "@/lib/constants/sriLankaRegions";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 // ─── geoBoundaries Land-Clipped GeoJSON Loader ────────────────────────────────
 // Files are served locally from /public/geojson/ — no CORS, no Git-LFS issues.
@@ -625,6 +626,7 @@ function GoogleMapContainer({
 }
 
 export default function MapView() {
+    const { user } = useAuth();
     const { reports, loading, error, refresh } = useReports();
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [filter, setFilter] = useState<string>("All");
@@ -634,10 +636,32 @@ export default function MapView() {
     const [selectedDistrict, setSelectedDistrict] = useState<string>("All");
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
+    // Apply user scoping settings on load
     useEffect(() => {
-        setSelectedDistrict("All");
+        if (user && user.scope && user.scope !== "all") {
+            if (user.province) setSelectedProvince(user.province);
+            if ((user.scope === "district" || user.scope === "lga") && user.district) {
+                setSelectedDistrict(user.district);
+            }
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (user && user.scope && user.scope !== "all") {
+            if (user.scope === "district" || user.scope === "lga") {
+                if (selectedProvince === user.province) {
+                    setSelectedDistrict(user.district || "All");
+                } else {
+                    setSelectedDistrict("All");
+                }
+            } else {
+                setSelectedDistrict("All");
+            }
+        } else {
+            setSelectedDistrict("All");
+        }
         setSelectedReport(null);
-    }, [selectedProvince]);
+    }, [selectedProvince, user]);
 
     useEffect(() => {
         setSelectedReport(null);
@@ -750,7 +774,8 @@ export default function MapView() {
                              <select
                                  value={selectedProvince}
                                  onChange={(e) => setSelectedProvince(e.target.value)}
-                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 transition-all font-medium appearance-none cursor-pointer"
+                                 disabled={!!(user?.scope && user.scope !== "all")}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium appearance-none cursor-pointer"
                                  style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
                              >
                                  <option value="All" className="bg-[#0f2233] text-slate-200">All Provinces</option>
@@ -764,8 +789,8 @@ export default function MapView() {
                              <select
                                  value={selectedDistrict}
                                  onChange={(e) => setSelectedDistrict(e.target.value)}
-                                 disabled={selectedProvince === "All"}
-                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 disabled:opacity-40 disabled:cursor-not-allowed transition-all font-medium appearance-none cursor-pointer"
+                                 disabled={selectedProvince === "All" || !!(user?.scope === "district" || user?.scope === "lga")}
+                                 className="w-full bg-white/5 border border-white/10 rounded-xl px-2.5 py-2 text-xs text-slate-200 focus:outline-none focus:border-teal-500/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium appearance-none cursor-pointer"
                                  style={{ backgroundImage: `url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%2314b8a6' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E")`, backgroundPosition: 'right 0.5rem center', backgroundSize: '1.25rem', backgroundRepeat: 'no-repeat', paddingRight: '1.75rem' }}
                              >
                                  <option value="All" className="bg-[#0f2233] text-slate-200">All Districts</option>

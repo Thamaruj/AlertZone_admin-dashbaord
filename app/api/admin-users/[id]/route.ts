@@ -9,6 +9,8 @@ import {
   deleteAdminUser,
   SESSION_COOKIE_NAME,
 } from "@/lib/services/auth.service";
+import { adminDb } from "@/lib/firebase-admin";
+import { logAdminActivity } from "@/lib/services/activity.service";
 
 async function requireSuperadmin(req: NextRequest) {
   const token = req.cookies.get(SESSION_COOKIE_NAME)?.value;
@@ -34,7 +36,7 @@ export async function PATCH(
 
   try {
     const body = await req.json();
-    const allowed = ["isActive", "displayName", "role"] as const;
+    const allowed = ["isActive", "displayName", "role", "province", "district", "lga", "scope"] as const;
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (key in body) updates[key] = body[key];
@@ -44,7 +46,21 @@ export async function PATCH(
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
+    // Fetch target user's username for logging
+    const userDoc = await adminDb.collection("adminUsers").doc(id).get();
+    const targetUsername = userDoc.exists ? userDoc.data()?.username : "unknown";
+
     await updateAdminUser(id, updates);
+
+    // Log update activity
+    await logAdminActivity(
+      session.id,
+      session.username,
+      session.displayName,
+      "admin_updated",
+      `Updated admin user @${targetUsername}: ${Object.keys(updates).join(", ")}`
+    );
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ PATCH /api/admin-users/[id] error:", error);
@@ -67,7 +83,21 @@ export async function DELETE(
   }
 
   try {
+    // Fetch target user's username for logging
+    const userDoc = await adminDb.collection("adminUsers").doc(id).get();
+    const targetUsername = userDoc.exists ? userDoc.data()?.username : "unknown";
+
     await deleteAdminUser(id);
+
+    // Log deletion activity
+    await logAdminActivity(
+      session.id,
+      session.username,
+      session.displayName,
+      "admin_deleted",
+      `Deleted admin user @${targetUsername}`
+    );
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ DELETE /api/admin-users/[id] error:", error);

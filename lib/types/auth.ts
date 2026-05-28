@@ -17,6 +17,11 @@ export interface AdminUser {
   createdBy: string; // username of the superadmin who created this account
   lastLoginAt?: Date;
   lastActiveAt?: Date;
+  province?: string;
+  district?: string;
+  lga?: string;
+  scope?: "all" | "province" | "district" | "lga";
+  avatarUrl?: string | null;
 }
 
 /** Stored in the JWT session cookie */
@@ -26,6 +31,12 @@ export interface AdminSession {
   displayName: string;
   role: AdminRole;
   isActive: boolean;
+  province?: string;
+  district?: string;
+  lga?: string;
+  scope?: "all" | "province" | "district" | "lga";
+  avatarUrl?: string | null;
+  loginLogId?: string; // embedded login log document ID
   iat?: number; // JWT issued at
   exp?: number; // JWT expiry
 }
