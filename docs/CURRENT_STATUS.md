@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-27 (Admin scopes, profile pictures, activity logs, and login auditing implemented)
+> **Last Updated:** 2026-05-28 (Fixed dashboard date serialization issues, added admin name to greeting, and implemented view scope indicator badge)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -109,7 +109,8 @@
 - [x] Recent Activity Feed — last 10 status-change events sourced from `statusHistory` arrays
 - [x] Quick-nav shortcut cards — 5 navigation shortcuts with live counts to Reports, Map, Citizens, Analytics, Notifications
 - [x] `/api/dashboard` server route — secured aggregation endpoint returning KPIs, status distribution, category snapshot, pending reports, activity feed
-- [x] Live greeting + clock in header (updates every 30 seconds)
+- [x] Live greeting + clock in header (updates every 30 seconds, displays admin's name, and shows geographic view scope badge matching their assigned visibility scope)
+- [x] Date serialization fix (normalized Firestore Timestamp fields to standard ISO strings to prevent client-side "Invalid Date" errors)
 - [x] Refresh button with loading state
 
 ### Admin Login (`Adminlogin.tsx`)
