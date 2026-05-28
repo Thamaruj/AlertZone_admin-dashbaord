@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-26 (Updated with Analytics bug fixes)
+> **Last Updated:** 2026-05-27 (Live Dashboard Overview page implemented)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -11,7 +11,7 @@
 | Phase | Status | Notes |
 |---|---|---|
 | Phase 0: Project Scaffolding | 🟢 Done | Next.js 16 project created with Tailwind CSS v4 |
-| Phase 1: UI Shell & Mock Dashboard | 🟡 Partially Done | All UI screens built with hardcoded/mock data |
+| Phase 1: UI Shell & Mock Dashboard | 🟢 Done | All screens built; Dashboard Overview now live with real Firestore data |
 | Phase 2: Firebase Integration | 🟢 Done | Firebase Client & Admin SDKs fully integrated across auth, users, and reports |
 | Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes and notifications |
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
@@ -99,14 +99,16 @@
 
 ## What Uses MOCK DATA (UI exists, not wired to Firebase) 🟡
 
-### Dashboard Overview (`Maindashboard.tsx`)
-- [ ] Stat cards — all values hardcoded (`1,284`, `432`, `215`, `537`, `100`)
-- [ ] Donut chart — hardcoded values
-- [x] Bar chart — reads from `BAR_DATA` (populated in mockData.ts)
-- [x] Line chart — reads from `MONTHLY_DATA` (populated in mockData.ts)
-- [x] Recent reports table — reads from `MOCK_REPORTS` (populated in mockData.ts)
-- [ ] User profile in topbar — hardcoded "Alex Morgan / Super Admin"
-- [x] Desktop topbar removed — content area now gets full vertical space on `md+`; profile card moved to sidebar bottom above Sign Out
+### Dashboard Overview (`Maindashboard.tsx` + `Dashboard.tsx`)
+- [x] KPI stat cards — live Firestore data (Total, Pending, In Progress, Resolved, Citizens)
+- [x] Status distribution donut — live SVG donut with 5-status breakdown (PENDING/ASSIGNED/FIXING/RESOLVED/REJECTED)
+- [x] Category snapshot horizontal bars — all-time category volume from Firestore
+- [x] Reports Needing Action list — live PENDING reports with direct modal redirect to Reports Management
+- [x] Recent Activity Feed — last 10 status-change events sourced from `statusHistory` arrays
+- [x] Quick-nav shortcut cards — 5 navigation shortcuts with live counts to Reports, Map, Citizens, Analytics, Notifications
+- [x] `/api/dashboard` server route — secured aggregation endpoint returning KPIs, status distribution, category snapshot, pending reports, activity feed
+- [x] Live greeting + clock in header (updates every 30 seconds)
+- [x] Refresh button with loading state
 
 ### Admin Login (`Adminlogin.tsx`)
 - [x] Login form — real auth via `/api/auth/login` (username + password)

@@ -4,6 +4,34 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 9: Live Dashboard Overview
+**Date:** 2026-05-27
+**Branch:** `feat/main-dashboard`
+
+**Objective:** Replace the mock-data Dashboard Overview with a fully live, distinct page that does not duplicate the Analytics page.
+
+**What was built:**
+- **`app/api/dashboard/route.ts`** — new server-side aggregation endpoint (`GET /api/dashboard`) secured with the same `requireAdmin` JWT guard used across all routes. Returns in one request:
+  - KPI stats: total, pending, in-progress (ASSIGNED+FIXING), resolved, rejected, totalCitizens, activeCitizens, suspendedCitizens
+  - Status distribution array (5 statuses with counts + hex colors)
+  - Category snapshot array (all-time report counts by categoryId)
+  - Recent pending reports (up to 8, newest-first, with province/district resolved via `resolveSrilankaRegion`)
+  - Recent activity feed (last 10 status changes across all reports, sourced from `statusHistory` arrays)
+- **`app/components/Dashboard.tsx`** — new standalone `"use client"` component with:
+  - Contextual greeting + live date/time ticker (30s tick)
+  - 5-card KPI strip (Total, Pending, In Progress, Resolved, Citizens) with live data and resolution rate sub-label
+  - 12-column mid section: Reports Needing Action list (scrollable, with "Open →" button that fires `changeNavTab` + `openReportDetail` events) + interactive Status Distribution SVG donut
+  - 12-column bottom section: Category Snapshot horizontal bars + Recent Activity timeline feed with status transition badges
+  - Quick-nav shortcut row: 5 glassmorphic cards navigating to Reports, Map, Citizens, Analytics, Notifications
+  - Loading skeletons, error state with Retry button, Refresh button
+- **`app/components/Maindashboard.tsx`** — wired to use `<Dashboard onNavigate={setActiveNav} />` instead of the old `DashboardOverviewContent`. Removed all mock-data imports (`MOCK_REPORTS`, `MONTHLY_DATA`, `BAR_DATA`) and dead-code functions (`BarChart`, `LineChart`, `DonutChart`, `StatCard`, `DashboardOverviewContent`).
+
+**Verification:**
+- `npx tsc --noEmit` → 0 errors
+- `npm run build` → `✓ Compiled successfully`, `/api/dashboard` route confirmed in build output
+
+---
+
 ## 🛠 Phase 0: Project Scaffolding
 **Objective:** Create the Next.js project and establish the basic structure.
 

@@ -12,29 +12,11 @@ import Notifications from "./Notifications";
 import Settings from "./Settings";
 import AdminUserManagement from "./AdminUserManagement";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { MOCK_REPORTS as REPORTS, MONTHLY_DATA, BAR_DATA, Report } from "@/app/data/mockData";
+import Dashboard from "./Dashboard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type NavItem = { label: string; icon: React.ReactNode; id: string };
-
-// ─── Category / Status Meta ───────────────────────────────────────────────────
-
-const categoryMeta: Record<Report["category"], { color: string; bg: string; icon: string }> = {
-    "Road & Traffic": { color: "text-blue-400", bg: "bg-blue-500/10", icon: "🚧" },
-    "Water and Drainage": { color: "text-sky-400", bg: "bg-sky-500/10", icon: "💧" },
-    "Waste & Environment": { color: "text-green-400", bg: "bg-green-500/10", icon: "♻️" },
-    "Social Security": { color: "text-violet-400", bg: "bg-violet-500/10", icon: "🛡️" },
-    "Bridge & Structural": { color: "text-orange-400", bg: "bg-orange-500/10", icon: "🌉" },
-    "Other": { color: "text-slate-400", bg: "bg-slate-500/10", icon: "📍" },
-};
-
-const statusMeta: Record<Report["status"], { color: string; bg: string; dot: string }> = {
-    Reported: { color: "text-orange-300", bg: "bg-orange-500/10", dot: "bg-orange-400" },
-    "In Progress": { color: "text-cyan-300", bg: "bg-cyan-500/10", dot: "bg-cyan-400" },
-    Solved: { color: "text-teal-300", bg: "bg-teal-500/10", dot: "bg-teal-400" },
-    Closed: { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" },
-};
 
 // ─── AlertZone Logo ───────────────────────────────────────────────────────────
 
@@ -49,9 +31,35 @@ function AlertZoneLogo({ size = 28 }: { size?: number }) {
     );
 }
 
-// ─── Donut Chart ──────────────────────────────────────────────────────────────
+// ─── Stat Card (kept for potential future reuse) ─────────────────────────────
 
-function DonutChart() {
+// Note: StatCard kept as a utility in case other views need it.
+function _StatCard_UNUSED({ icon, label, value, trend, trendType }: {
+    icon: React.ReactNode; label: string; value: string; trend: string;
+    trendType?: "up" | "down" | "neutral";
+}) {
+    const trendStyles =
+        trendType === "down" ? "text-teal-300 bg-teal-500/10" :
+            trendType === "up" ? "text-orange-300 bg-orange-500/10" :
+                "text-slate-400 bg-white/5";
+    return (
+        <div className="group bg-[#0f2233]/80 backdrop-blur-md border border-white/5 border-t-white/10 rounded-xl p-4 flex flex-col gap-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(20,184,166,0.15)] hover:border-teal-500/30">
+            <div className="flex items-center justify-between">
+                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:text-teal-400 group-hover:bg-white/10">
+                    {icon}
+                </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${trendStyles}`}>
+                    {trend}
+                </span>
+            </div>
+            <p className="text-xs text-slate-300 font-medium mt-0.5">{label}</p>
+            <p className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400 tracking-tight">{value}</p>
+        </div>
+    );
+}
+_StatCard_UNUSED;
+
+function DonutChart_UNUSED() {
     const total = 1284, solved = 537, closed = 100, inProgress = 215, reported = 432;
     const cx = 80, cy = 80, r = 54, sw = 16;
     const circ = 2 * Math.PI * r;
@@ -102,165 +110,9 @@ function DonutChart() {
     );
 }
 
-// ─── Bar Chart ────────────────────────────────────────────────────────────────
+// (Legacy BarChart and LineChart removed — replaced by live Dashboard component)
 
-function BarChart() {
-    if (BAR_DATA.length === 0) return <div className="flex items-center justify-center w-full text-xs text-slate-500" style={{ height: 148 }}>No data available</div>;
-    const max = Math.max(...BAR_DATA.map((d) => d.value));
-    return (
-        <div className="flex items-end gap-3 px-1" style={{ height: 148 }}>
-            {BAR_DATA.map((d) => (
-                <div key={d.label} className="flex flex-col items-center gap-1.5 flex-1 relative group">
-                    <span className="text-[10px] font-bold text-slate-200 opacity-70 group-hover:opacity-100 transition-opacity duration-300 -mb-1">
-                        {d.value}
-                    </span>
-                    <div className="w-full flex items-end justify-center relative" style={{ height: 100 }}>
-                        <div
-                            className="w-full rounded-t-sm transition-all duration-700 cursor-pointer hover:brightness-125"
-                            style={{
-                                height: `${(d.value / max) * 95}px`,
-                                backgroundColor: d.color,
-                                opacity: 0.85,
-                                boxShadow: `0 -2px 8px ${d.color}44`,
-                            }}
-                        />
-
-                        {/* Custom Hover Tooltip */}
-                        <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl z-50 pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200">
-                            <span className="text-xs font-bold text-slate-100 mb-1 border-b border-white/5 pb-1 line-clamp-1 truncate" style={{ color: d.color }}>{d.label} Breakdown</span>
-                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
-                                <span className="text-orange-400">Reported</span>
-                                <span className="font-mono text-slate-200">{d.breakdown.reported}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
-                                <span className="text-cyan-400">In Progress</span>
-                                <span className="font-mono text-slate-200">{d.breakdown.inProgress}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
-                                <span className="text-teal-400">Solved</span>
-                                <span className="font-mono text-slate-200">{d.breakdown.solved}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[10px] py-0.5 min-w-[100px]">
-                                <span className="text-slate-400">Closed</span>
-                                <span className="font-mono text-slate-200">{d.breakdown.closed}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <span className="text-[9px] text-slate-300 font-mono pt-0.5">{d.label}</span>
-                </div>
-            ))}
-        </div>
-    );
-}
-
-// ─── Line Chart ───────────────────────────────────────────────────────────────
-
-function LineChart() {
-    if (MONTHLY_DATA.length === 0) return <div className="flex items-center justify-center w-full text-xs text-slate-500" style={{ height: 120 }}>No data available</div>;
-    const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-    const W = 560, H = 120;
-    const pad = { l: 8, r: 8, t: 8, b: 8 };
-    const iW = W - pad.l - pad.r;
-    const iH = H - pad.t - pad.b;
-    const maxVal = 100;
-    const toX = (i: number) => pad.l + (i / (MONTHLY_DATA.length - 1)) * iW;
-    const toY = (v: number) => pad.t + iH - (v / maxVal) * iH;
-    const pathD = (key: "y2025" | "y2026") =>
-        MONTHLY_DATA.map((d, i) => `${i === 0 ? "M" : "L"} ${toX(i)} ${toY(d[key])}`).join(" ");
-    const areaD = (key: "y2025" | "y2026") =>
-        `${pathD(key)} L ${toX(MONTHLY_DATA.length - 1)} ${toY(0)} L ${toX(0)} ${toY(0)} Z`;
-
-    return (
-        <div className="relative w-full" style={{ height: 120 }} onMouseLeave={() => setHoverIdx(null)}>
-            <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-full" preserveAspectRatio="none">
-                <defs>
-                    <linearGradient id="lgTeal" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#2dd4bf" stopOpacity="0.25" />
-                        <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0" />
-                    </linearGradient>
-                    <linearGradient id="lgSlate" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#475569" stopOpacity="0.15" />
-                        <stop offset="100%" stopColor="#475569" stopOpacity="0" />
-                    </linearGradient>
-                </defs>
-                <path d={areaD("y2025")} fill="url(#lgSlate)" />
-                <path d={areaD("y2026")} fill="url(#lgTeal)" />
-                <path d={pathD("y2025")} fill="none" stroke="#475569" strokeWidth="1.5" strokeDasharray="5 3" />
-                <path d={pathD("y2026")} fill="none" stroke="#2dd4bf" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-
-                {/* Interaction Overlay mapped to invisible rectangles */}
-                {MONTHLY_DATA.map((d, i) => {
-                    const xP = toX(i);
-                    const isHovered = hoverIdx === i;
-                    const bandWidth = iW / (MONTHLY_DATA.length - 1);
-                    return (
-                        <g key={d.month} onMouseEnter={() => setHoverIdx(i)}>
-                            <rect
-                                x={xP - bandWidth / 2} y={0} width={bandWidth} height={H}
-                                fill="transparent" className="cursor-crosshair"
-                            />
-                            {isHovered && (
-                                <line x1={xP} y1={pad.t} x2={xP} y2={H - pad.b} stroke="#94a3b8" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" pointerEvents="none" />
-                            )}
-                            <circle cx={xP} cy={toY(d.y2025)} r={isHovered ? 4 : 0} fill="#0d1f2d" stroke="#475569" strokeWidth="2" pointerEvents="none" className="transition-all duration-200" />
-                            <circle cx={xP} cy={toY(d.y2026)} r={isHovered ? 4 : 0} fill="#0d1f2d" stroke="#2dd4bf" strokeWidth="2" pointerEvents="none" className="transition-all duration-200" />
-                        </g>
-                    );
-                })}
-            </svg>
-
-            {/* Floating Tooltip */}
-            {hoverIdx !== null && (
-                <div
-                    className="absolute z-50 bg-[#0f2233] border border-white/10 rounded-lg p-2.5 shadow-2xl pointer-events-none fade-in slide-in-from-bottom-2 animate-in duration-200 min-w-[120px]"
-                    style={{
-                        left: `${(toX(hoverIdx) / W) * 100}%`,
-                        top: '10px',
-                        transform: 'translateX(calc(-50% + 5px))' // Slight correction for standard centering
-                    }}
-                >
-                    <span className="text-xs font-bold text-slate-100 mb-2 border-b border-white/5 pb-1 block">
-                        {MONTHLY_DATA[hoverIdx].month} Trend
-                    </span>
-                    <div className="flex justify-between items-center text-[10px] py-0.5 gap-4">
-                        <span className="flex items-center gap-1.5 text-white"><span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>2025</span>
-                        <span className="font-mono text-slate-300 font-semibold">{MONTHLY_DATA[hoverIdx].y2025}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] py-0.5 gap-4">
-                        <span className="flex items-center gap-1.5 text-white"><span className="w-1.5 h-1.5 rounded-full bg-teal-400"></span>2026</span>
-                        <span className="font-mono text-slate-100 font-bold">{MONTHLY_DATA[hoverIdx].y2026}</span>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}
-
-// ─── Stat Card ────────────────────────────────────────────────────────────────
-
-function StatCard({ icon, label, value, trend, trendType }: {
-    icon: React.ReactNode; label: string; value: string; trend: string;
-    trendType?: "up" | "down" | "neutral";
-}) {
-    const trendStyles =
-        trendType === "down" ? "text-teal-300 bg-teal-500/10" :
-            trendType === "up" ? "text-orange-300 bg-orange-500/10" :
-                "text-slate-400 bg-white/5";
-    return (
-        <div className="group bg-[#0f2233]/80 backdrop-blur-md border border-white/5 border-t-white/10 rounded-xl p-4 flex flex-col gap-2 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_8px_30px_rgb(20,184,166,0.15)] hover:border-teal-500/30">
-            <div className="flex items-center justify-between">
-                <div className="w-8 h-8 rounded-lg bg-white/5 border border-white/5 flex items-center justify-center transition-transform duration-300 group-hover:scale-110 group-hover:text-teal-400 group-hover:bg-white/10">
-                    {icon}
-                </div>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${trendStyles}`}>
-                    {trend}
-                </span>
-            </div>
-            <p className="text-xs text-slate-300 font-medium mt-0.5">{label}</p>
-            <p className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white to-slate-400 tracking-tight">{value}</p>
-        </div>
-    );
-}
+// (Legacy StatCard removed — replaced by live Dashboard component)
 
 function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; onClick: () => void }) {
     return (
@@ -295,164 +147,7 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
 }
 
 // ─── Dashboard Overview Content ───────────────────────────────────────────────
-
-function DashboardOverviewContent() {
-    return (
-        <>
-            {/* Page heading */}
-            <div className="flex items-start justify-between flex-wrap gap-3 animate-slide-up">
-                <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1">Dashboard Overview</h1>
-                    <p className="text-xs text-slate-300 mt-0.5">Real-time emergency monitoring and response status.</p>
-                </div>
-                <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
-                        <svg className="w-3.5 h-3.5 text-teal-500/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Last 30 Days
-                    </div>
-                    <button className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-400 hover:to-cyan-400 text-white text-xs font-semibold px-3 sm:px-4 py-2 rounded-lg shadow-lg shadow-teal-900/40 transition-all duration-200 active:scale-[0.98] flex items-center gap-1.5">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
-                        </svg>
-                        <span className="hidden sm:inline">Create Report</span>
-                        <span className="sm:hidden">New</span>
-                    </button>
-                </div>
-            </div>
-
-            {/* ── Stat Cards ── */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 animate-slide-up stagger-1">
-                <StatCard
-                    icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-                    label="Total Reports" value="1,284" trend="+10% from last month" trendType="up"
-                />
-                <StatCard
-                    icon={<svg className="w-4 h-4 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>}
-                    label="Reported" value="432" trend="-9% now stable" trendType="down"
-                />
-                <StatCard
-                    icon={<svg className="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>}
-                    label="In Progress" value="215" trend="Stable trend" trendType="neutral"
-                />
-                <StatCard
-                    icon={<svg className="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-                    label="Solved" value="537" trend="+40% solved faster" trendType="up"
-                />
-                <StatCard
-                    icon={<svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>}
-                    label="Closed" value="100" trend="Archived completely" trendType="neutral"
-                />
-            </div>
-
-            {/* ── Charts Row ── */}
-            <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-2">
-                <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-sm font-semibold text-slate-200">Incidents by Category</h2>
-                    <button className="text-slate-400 hover:text-slate-400 transition-colors">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <circle cx="12" cy="5" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="12" cy="19" r="1.5" />
-                        </svg>
-                    </button>
-                </div>
-                <div className="flex items-start justify-between gap-6 flex-wrap">
-                    <div className="flex-1 min-w-[200px]"><BarChart /></div>
-                    <div className="flex-shrink-0"><DonutChart /></div>
-                </div>
-            </div>
-
-            {/* ── Monthly Trend ── */}
-            <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl p-5 hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
-                <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
-                    <div>
-                        <h2 className="text-sm font-semibold text-slate-200">Monthly Trend</h2>
-                        <p className="text-[11px] text-slate-300 mt-0.5">Incident volume over the current year</p>
-                    </div>
-                    <div className="flex items-center gap-4 text-[11px] text-slate-300">
-                        <span className="flex items-center gap-1.5">
-                            <span className="w-6 h-0.5 bg-teal-400 rounded inline-block" />2026
-                        </span>
-                        <span className="flex items-center gap-1.5">
-                            <span className="w-5 border-t border-dashed border-slate-600 inline-block" />2025
-                        </span>
-                    </div>
-                </div>
-                <LineChart />
-                <div className="flex justify-between px-1 mt-1.5">
-                    {MONTHLY_DATA.map((d) => (
-                        <span key={d.month} className="text-[9px] text-slate-400 font-mono">{d.month}</span>
-                    ))}
-                </div>
-            </div>
-
-            {/* ── Recent Reports ── */}
-            <div className="bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 border-t-white/10 rounded-xl overflow-hidden hover:border-teal-500/30 hover:shadow-[0_0_30px_rgb(20,184,166,0.05)] transition-all duration-300 animate-slide-up stagger-3">
-                <div className="px-5 py-4 flex items-center justify-between border-b border-white/5">
-                    <h2 className="text-sm font-semibold text-slate-200">Recent Reports</h2>
-                    <button className="text-xs text-teal-400 font-semibold hover:text-teal-300 transition-colors">
-                        View All
-                    </button>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-xs min-w-[580px]">
-                        <thead>
-                            <tr className="bg-white/3 text-slate-400 font-semibold uppercase tracking-wide text-[10px] border-b border-white/5">
-                                <th className="px-5 py-3 text-left">Incident ID</th>
-                                <th className="px-5 py-3 text-left">Category</th>
-                                <th className="px-5 py-3 text-left">Location</th>
-                                <th className="px-5 py-3 text-left">Time</th>
-                                <th className="px-5 py-3 text-left">Status</th>
-                                <th className="px-5 py-3 text-left">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {REPORTS.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-5 py-10 text-center text-xs text-slate-500">No recent reports available</td>
-                                </tr>
-                            ) : REPORTS.map((r) => {
-                                const cat = categoryMeta[r.category];
-                                const st = statusMeta[r.status];
-                                return (
-                                    <tr key={r.id} className="hover:bg-white/3 transition-colors group">
-                                        <td className="px-5 py-3.5 font-mono font-semibold text-teal-400/80">{r.id}</td>
-                                        <td className="px-5 py-3.5">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cat.bg} ${cat.color} border border-white/5`}>
-                                                <span>{cat.icon}</span>{r.category}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3.5 text-slate-400">{r.location}</td>
-                                        <td className="px-5 py-3.5 text-slate-400 font-mono text-[11px]">{r.time}</td>
-                                        <td className="px-5 py-3.5">
-                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${st.bg} ${st.color} border border-white/5 transition-all outline outline-1 outline-transparent hover:outline-teal-500/30 cursor-default`}>
-                                                <span className="relative flex w-1.5 h-1.5">
-                                                    {(r.status === "Reported" || r.status === "In Progress") && (
-                                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${st.dot}`}></span>
-                                                    )}
-                                                    <span className={`relative inline-flex rounded-full w-1.5 h-1.5 ${st.dot}`} />
-                                                </span>
-                                                {r.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-3.5">
-                                            <button className="text-slate-400 hover:text-teal-400 transition-colors group-hover:text-slate-300">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                </svg>
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </>
-    );
-}
+// Replaced by the new live <Dashboard /> component — imported from ./Dashboard
 
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
@@ -661,7 +356,7 @@ export default function AdminDashboard() {
                         </div>
                     ) : (
                         <>
-                            {activeNav === "dashboard" && <DashboardOverviewContent />}
+                            {activeNav === "dashboard" && <Dashboard onNavigate={setActiveNav} />}
                             {activeNav === "reports" && <ReportsManagement />}
                             {activeNav === "map" && <MapView />}
                             {activeNav === "users" && <Users />}
