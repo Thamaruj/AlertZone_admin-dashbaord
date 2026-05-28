@@ -17,6 +17,7 @@ async function requireAdmin(req: NextRequest) {
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await requireAdmin(req);
+  const showArchived = req.nextUrl.searchParams.get("archived") === "true";
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -58,8 +59,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       };
     }) as Report[];
 
-    // In-memory filter for non-archived reports
-    reports = reports.filter((r) => r.isArchived !== true);
+    // In-memory filter for archived or non-archived reports
+    reports = reports.filter((r) => (r.isArchived === true) === showArchived);
 
     // Apply admin regional scope filter
     if (session.scope && session.scope !== "all") {

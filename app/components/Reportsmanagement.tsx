@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useReports } from "@/lib/hooks/useReports";
 import { Report, ReportStatus } from "@/lib/types/report";
 import { UserProfile } from "@/lib/types/user";
@@ -216,13 +216,18 @@ function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
 
 export default function ReportsManagement() {
     const { user } = useAuth();
-    const { reports, loading, error, changeStatus, refresh } = useReports("All");
+    const [showArchive, setShowArchive] = useState(false);
+    const { reports, loading, error, changeStatus, archiveReport, refresh } = useReports("All", showArchive);
     const [selectedTab, setSelectedTab] = useState<ReportStatus | "All">("All");
     const [selectedReport, setSelectedReport] = useState<Report | null>(null);
     const [tempStatus, setTempStatus] = useState<ReportStatus | "">("");
     const [statusReason, setStatusReason] = useState("");
     const [isSaving, setIsSaving] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
+
+    // Archive confirmation states
+    const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+    const [reportToArchive, setReportToArchive] = useState<Report | null>(null);
 
     // User details modal state
     const [selectedReporter, setSelectedReporter] = useState<UserProfile | null>(null);
@@ -238,6 +243,18 @@ export default function ReportsManagement() {
     const [filterProvince, setFilterProvince] = useState<string>("all");
     const [filterDistrict, setFilterDistrict] = useState<string>("all");
     const [filterLGA, setFilterLGA] = useState<string>("all");
+    const [filterAdmin, setFilterAdmin] = useState<string>("all");
+
+    // Memoized list of unique admins from statusHistory
+    const uniqueAdmins = useMemo(() => {
+        const admins = new Set<string>();
+        reports.forEach(r => {
+            (r.statusHistory || []).forEach(h => {
+                if (h.changedBy) admins.add(h.changedBy);
+            });
+        });
+        return Array.from(admins);
+    }, [reports]);
 
     // Initialize filters based on admin scope
     useEffect(() => {
@@ -263,7 +280,7 @@ export default function ReportsManagement() {
         setFilterLGA("all");
     };
 
-    const hasActiveFilters = startDate || endDate || filterCategory !== "all" || filterProvince !== "all" || filterDistrict !== "all" || filterLGA !== "all";
+    const hasActiveFilters = startDate || endDate || filterCategory !== "all" || filterProvince !== "all" || filterDistrict !== "all" || filterLGA !== "all" || filterAdmin !== "all";
 
     const clearAllFilters = () => {
         setStartDate("");
@@ -271,6 +288,7 @@ export default function ReportsManagement() {
         setShowStartCalendar(false);
         setShowEndCalendar(false);
         setFilterCategory("all");
+        setFilterAdmin("all");
         if (user && user.scope && user.scope !== "all") {
             if (user.province) setFilterProvince(user.province);
             if (user.scope === "province") {
@@ -359,6 +377,16 @@ export default function ReportsManagement() {
             }
         }
 
+        if (showArchive && filterAdmin !== "all") {
+            const latestEntry = report.statusHistory && report.statusHistory.length > 0
+                ? report.statusHistory[report.statusHistory.length - 1]
+                : null;
+            const changedBy = latestEntry?.changedBy?.toLowerCase().trim() || "";
+            if (changedBy !== filterAdmin.toLowerCase().trim()) {
+                return false;
+            }
+        }
+
         return true;
     });
 
@@ -390,6 +418,42 @@ export default function ReportsManagement() {
         } catch (error) {
             console.error("Failed to save status", error);
             alert("Failed to update report status.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleArchiveToggle = (report: Report) => {
+        setReportToArchive(report);
+        setShowArchiveConfirm(true);
+    };
+
+    const confirmArchiveToggle = async () => {
+        if (!reportToArchive) return;
+        setIsSaving(true);
+        try {
+            const nextArchiveState = !reportToArchive.isArchived;
+            await archiveReport(reportToArchive.id, nextArchiveState);
+            
+            // If the archived report is currently selected, update its local isArchived state
+            if (selectedReport && selectedReport.id === reportToArchive.id) {
+                setSelectedReport(prev => prev ? { ...prev, isArchived: nextArchiveState } : null);
+            }
+            
+            // If we archived it (isArchived === true) and we're not in the archive view,
+            // or if we unarchived it (isArchived === false) and we're in the archive view,
+            // we should close the selection detail since it won't be in the active list anymore
+            if (selectedReport && selectedReport.id === reportToArchive.id) {
+                if ((nextArchiveState && !showArchive) || (!nextArchiveState && showArchive)) {
+                    setSelectedReport(null);
+                }
+            }
+
+            setShowArchiveConfirm(false);
+            setReportToArchive(null);
+        } catch (error) {
+            console.error("Failed to archive report:", error);
+            alert("Failed to update report archive status.");
         } finally {
             setIsSaving(false);
         }
@@ -512,11 +576,31 @@ export default function ReportsManagement() {
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-slide-up">
                 <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1">Reports Management</h1>
-                    <p className="text-xs text-slate-300 mt-0.5">Filter, monitor, and manage citizen emergency reports.</p>
+                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-1">
+                        {showArchive ? "Archived Reports" : "Reports Management"}
+                    </h1>
+                    <p className="text-xs text-slate-300 mt-0.5">
+                        {showArchive ? "View, filter, and restore soft-deleted emergency reports." : "Filter, monitor, and manage citizen emergency reports."}
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-3">
+                    <button 
+                        onClick={() => {
+                            setShowArchive(!showArchive);
+                            clearAllFilters();
+                        }}
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${
+                            showArchive
+                                ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+                                : "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
+                        }`}
+                    >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                        </svg>
+                        {showArchive ? "Go to Active Reports" : "Go to Archive"}
+                    </button>
                     <button 
                         onClick={refresh}
                         disabled={loading}
@@ -562,7 +646,7 @@ export default function ReportsManagement() {
             </div>
 
             {/* Filter Grid */}
-            <div className="relative z-30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 p-4 bg-[#0f2233]/40 backdrop-blur-md border border-white/5 rounded-2xl animate-slide-up stagger-1.5">
+            <div className={`relative z-30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${showArchive ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} gap-3 p-4 bg-[#0f2233]/40 backdrop-blur-md border border-white/5 rounded-2xl animate-slide-up stagger-1.5`}>
                 {/* Start Date Filter */}
                 <div className="relative group flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">From Date</label>
@@ -752,6 +836,32 @@ export default function ReportsManagement() {
                         </div>
                     </div>
                 </div>
+
+                {/* Admin Filter (Only shown when viewing archive) */}
+                {showArchive && (
+                    <div className="relative group flex flex-col gap-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Admin</label>
+                        <div className="relative">
+                            <select
+                                value={filterAdmin}
+                                onChange={(e) => setFilterAdmin(e.target.value)}
+                                className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl pl-4 pr-10 py-2.5 text-xs text-slate-300 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all font-semibold cursor-pointer"
+                            >
+                                <option value="all" className="bg-[#0b1a26] text-slate-300">All Admins</option>
+                                {uniqueAdmins.map(admin => (
+                                    <option key={admin} value={admin} className="bg-[#0b1a26] text-slate-300">
+                                        {admin}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-teal-400 transition-colors">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Reports Found Count */}
@@ -839,6 +949,30 @@ export default function ReportsManagement() {
                                             <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />
                                             {report.status}
                                         </span>
+                                        {(report.status === "RESOLVED" || report.status === "REJECTED") && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleArchiveToggle(report);
+                                                }}
+                                                title={report.isArchived ? "Restore from Archive" : "Archive Report"}
+                                                className={`p-2.5 border rounded-xl transition-all group/btn cursor-pointer ${
+                                                    report.isArchived
+                                                        ? "bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20"
+                                                        : "bg-white/5 border-white/10 text-slate-400 hover:text-amber-400 hover:bg-white/10"
+                                                }`}
+                                            >
+                                                {report.isArchived ? (
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                                    </svg>
+                                                ) : (
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                                    </svg>
+                                                )}
+                                            </button>
+                                        )}
                                         <button
                                             onClick={() => openDetails(report)}
                                             className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-slate-400 hover:text-teal-400 hover:bg-white/10 transition-all group/btn"
@@ -1155,9 +1289,79 @@ export default function ReportsManagement() {
 
                         {/* Footer */}
                         <div className="px-6 py-5 bg-white/2 border-t border-white/5 flex justify-end flex-shrink-0">
+                            {(selectedReport.status === "RESOLVED" || selectedReport.status === "REJECTED") && (
+                                <button
+                                    onClick={() => handleArchiveToggle(selectedReport)}
+                                    className={`mr-3 px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+                                        selectedReport.isArchived
+                                            ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+                                            : "bg-white/5 border-white/10 text-slate-300 hover:text-amber-400 hover:bg-white/10 hover:border-amber-500/20"
+                                    }`}
+                                >
+                                    {selectedReport.isArchived ? (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                                            </svg>
+                                            Restore from Archive
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                                            </svg>
+                                            Archive Report
+                                        </>
+                                    )}
+                                </button>
+                            )}
                             <button onClick={() => setSelectedReport(null)} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-bold rounded-xl transition-all">
                                 Close
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Archive Confirmation Modal */}
+            {showArchiveConfirm && reportToArchive && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+                        onClick={() => setShowArchiveConfirm(false)}
+                    />
+                    <div className="relative w-full max-w-md bg-[#0f2233] border border-white/10 rounded-2xl shadow-2xl p-6 overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="text-center space-y-4">
+                            <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                                ⚠️
+                            </div>
+                            <div className="space-y-1.5">
+                                <h3 className="text-base font-bold text-white">
+                                    {reportToArchive.isArchived ? "Confirm Restore" : "Confirm Archive"}
+                                </h3>
+                                <p className="text-xs text-slate-400 leading-relaxed">
+                                    Are you sure you want to {reportToArchive.isArchived ? "restore" : "archive"} this report? 
+                                    {reportToArchive.isArchived 
+                                        ? " It will be returned to the active reports list." 
+                                        : " It will be soft-deleted and moved to the archive."}
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-3 pt-2">
+                                <button
+                                    onClick={confirmArchiveToggle}
+                                    disabled={isSaving}
+                                    className="flex-1 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-slate-950 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                                >
+                                    {isSaving ? "Processing..." : "Yes, Proceed"}
+                                </button>
+                                <button
+                                    onClick={() => setShowArchiveConfirm(false)}
+                                    disabled={isSaving}
+                                    className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-50 text-slate-300 text-xs font-bold rounded-xl transition-colors border border-white/10 cursor-pointer"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

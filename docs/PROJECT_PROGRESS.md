@@ -4,6 +4,21 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 12: Report Archival & Soft-Delete Support
+**Date:** 2026-05-28
+**Branch:** `fix-feat/dashboard`
+
+**Objective:** Implement soft-deletion (archival) of reports that are RESOLVED or REJECTED, with a toggleable Archive page, comprehensive filters (Location, Time, Admin who changed the status), and recovery support.
+
+**What was built:**
+- **Backend API Updates:** Enhanced `/api/reports` to support filtering by `archived=true/false` query parameter, and `/api/reports/[id]` PATCH endpoint to handle `isArchived` toggle, writing audit logs for archive/unarchive operations.
+- **Client Services & Hooks:** Added `archiveReport` utility in `lib/services/report.service.ts` and `lib/hooks/useReports.ts` to execute PATCH requests and trigger local state refreshes.
+- **UI & Navigation:** Integrated a "Go to Archive" button in Reports Management. Restructured filters list to dynamically show an "Admin" filter when viewing the archive (sourced from statusHistory data).
+- **Archive Action Controls:** Added Archive/Restore buttons in incident card rows and the detail modal footer for reports in `RESOLVED` or `REJECTED` state.
+- **Archive Confirmation Modal:** Implemented a glassmorphic modal overlay to confirm archival or recovery action.
+
+---
+
 ## ✅ Phase 11: Dashboard Bugfixes & Scoped Header Upgrades
 **Date:** 2026-05-28
 **Branch:** `fix-feat/dashboard`

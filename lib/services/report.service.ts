@@ -4,10 +4,11 @@
 import { Report, ReportStatus } from '@/lib/types/report';
 
 /**
- * Fetches all non-archived reports from the server API
+ * Fetches reports from the server API, optionally retrieving archived reports
  */
-export async function getReports(): Promise<Report[]> {
-  const res = await fetch("/api/reports");
+export async function getReports(archived?: boolean): Promise<Report[]> {
+  const url = archived ? "/api/reports?archived=true" : "/api/reports";
+  const res = await fetch(url);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error || "Failed to fetch reports");
@@ -40,5 +41,28 @@ export async function updateReportStatus(
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.error || "Failed to update report status");
+  }
+}
+
+/**
+ * Archives or unarchives a report via the server API
+ */
+export async function archiveReport(
+  reportId: string,
+  isArchived: boolean
+): Promise<void> {
+  const res = await fetch(`/api/reports/${reportId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      isArchived,
+    }),
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    throw new Error(errorData.error || "Failed to archive report");
   }
 }

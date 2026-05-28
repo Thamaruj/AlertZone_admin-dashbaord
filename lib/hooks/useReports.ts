@@ -3,10 +3,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Report, ReportStatus } from '@/lib/types/report';
-import { getReports, updateReportStatus } from '@/lib/services/report.service';
+import { getReports, updateReportStatus, archiveReport as apiArchiveReport } from '@/lib/services/report.service';
 import { useAuth } from '@/lib/context/AuthContext';
 
-export function useReports(statusFilter?: ReportStatus | "All") {
+export function useReports(statusFilter?: ReportStatus | "All", fetchArchived = false) {
     const [reports, setReports] = useState<Report[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -15,7 +15,7 @@ export function useReports(statusFilter?: ReportStatus | "All") {
     const fetchReports = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await getReports();
+            const data = await getReports(fetchArchived);
             setReports(data);
             setError(null);
         } catch (err: any) {
@@ -24,7 +24,7 @@ export function useReports(statusFilter?: ReportStatus | "All") {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [fetchArchived]);
 
     useEffect(() => {
         fetchReports();
@@ -43,5 +43,17 @@ export function useReports(statusFilter?: ReportStatus | "All") {
         }
     };
 
-    return { reports, loading, error, changeStatus, refresh: fetchReports };
+    const archiveReport = async (reportId: string, isArchived: boolean) => {
+        if (!user) throw new Error("Must be logged in to archive report");
+
+        try {
+            await apiArchiveReport(reportId, isArchived);
+            await fetchReports();
+        } catch (err: any) {
+            console.error("Failed to archive report:", err);
+            throw err;
+        }
+    };
+
+    return { reports, loading, error, changeStatus, archiveReport, refresh: fetchReports };
 }

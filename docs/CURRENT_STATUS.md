@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-28 (Fixed dashboard date serialization, added admin name/badge to greeting, and added status badge under report modal heading)
+> **Last Updated:** 2026-05-28 (Implemented Report Archival with location/time/admin filtering, archive/restore buttons on lists/modals, and confirmation dialogue)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -181,7 +181,7 @@
 - [x] Report status updates with `statusHistory` append
 - [x] Notification creation on status change (critical for mobile app)
 - [x] User management — read users, suspend/activate
-- [ ] Report archival (soft-delete with `isArchived`)
+- [x] Report archival (soft-delete with `isArchived`)
 - [ ] Report assignment (`assignedTo` field)
 - [x] Resolution notes (`resolutionNote` field)
 

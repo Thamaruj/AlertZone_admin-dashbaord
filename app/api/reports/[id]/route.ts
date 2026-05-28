@@ -31,11 +31,8 @@ export async function PATCH(
   }
 
   try {
-    const { status, adminId, note } = await req.json();
-
-    if (!status) {
-      return NextResponse.json({ error: "Status is required" }, { status: 400 });
-    }
+    const body = await req.json();
+    const { status, adminId, note, isArchived } = body;
 
     const reportRef = adminDb.collection("reports").doc(id);
     const reportSnap = await reportRef.get();
@@ -45,6 +42,28 @@ export async function PATCH(
     }
 
     const reportData = reportSnap.data() as any;
+
+    if (typeof isArchived === "boolean") {
+      await reportRef.update({
+        isArchived,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+
+      await logAdminActivity(
+        session.id,
+        session.username,
+        session.displayName,
+        isArchived ? "report_archive" : "report_unarchive",
+        `${isArchived ? "Archived" : "Unarchived"} report '${reportData.title || "Incident"}' (ID: ${id})`
+      );
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (!status) {
+      return NextResponse.json({ error: "Status is required" }, { status: 400 });
+    }
+
     const previousStatus = reportData.status;
 
     // Prepare status history entry matching target format
