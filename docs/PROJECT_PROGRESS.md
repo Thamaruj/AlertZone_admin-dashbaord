@@ -8,12 +8,13 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 **Date:** 2026-05-28
 **Branch:** `fix-feat/dashboard`
 
-**Objective:** Fix "Invalid Date" bug in Reports Needing Action / Recent Activity feed by properly serializing Firestore timestamps, and display the admin's name and geographic view scope (Province, District, LGA, or All Island) in the dashboard header.
+**Objective:** Fix "Invalid Date" bug in Reports Needing Action / Recent Activity feed, display the admin's name and geographic view scope badge, and add a prominent colored status badge inside the report details modal.
 
 **What was built:**
 - **Date Serialization Normalization:** Updated `app/api/dashboard/route.ts` to convert Firestore Timestamp fields (`createdAt` and `changedAt`) using `.toDate().toISOString()` to prevent client-side "Invalid Date" errors.
 - **Admin Greeting & Geoscope view badge:** Modified `app/components/Dashboard.tsx` to read user context from `useAuth()` and display the logged-in admin's `displayName` in the page greeting (e.g. `Good morning, Thamaruj 👋`).
 - **Geographic View Scope Badge:** Added a visual badge indicator below the date & time showing which regional scope the admin is looking at (`All Island View`, `Province: [Name] View`, `District: [Name] View`, or `LGA: [Name] View`) with a location icon and themed background color.
+- **Report Details Modal Status Badge:** Added a prominent, color-themed status badge box directly under the main heading (e.g., `{selectedReport.category} Incident`) inside the report details modal in `Reportsmanagement.tsx` showing the current status matching the dashboard's design guidelines.
 
 ---
 

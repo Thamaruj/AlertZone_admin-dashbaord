@@ -895,6 +895,28 @@ export default function ReportsManagement() {
 
                         {/* Content Scrollable */}
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
+                            {/* Full-width Status Banner */}
+                            {(() => {
+                                const st = statusStyleMeta[selectedReport.status] || { color: "text-slate-400", bg: "bg-slate-500/10", dot: "bg-slate-400" };
+                                const latestEntry = selectedReport.statusHistory && selectedReport.statusHistory.length > 0
+                                    ? selectedReport.statusHistory[selectedReport.statusHistory.length - 1]
+                                    : null;
+                                const lastChangedAt = latestEntry?.changedAt || selectedReport.createdAt;
+                                const { date, time } = getFormattedDateTime(lastChangedAt);
+                                return (
+                                    <div className={`w-full p-4 rounded-2xl border flex items-center justify-between transition-all ${st.bg} border-white/5 ${st.color}`}>
+                                        <div className="flex items-center gap-2.5">
+                                            <span className={`w-2 h-2 rounded-full ${st.dot} animate-pulse`} />
+                                            <span className="text-xs font-bold uppercase tracking-widest">
+                                                Status: {selectedReport.status}
+                                            </span>
+                                        </div>
+                                        <span className="text-[10px] opacity-75 font-semibold">
+                                            Status Updated: {date} · {time}
+                                        </span>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Top Grid: Overview + Map */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

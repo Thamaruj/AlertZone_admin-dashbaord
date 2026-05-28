@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-28 (Fixed dashboard date serialization issues, added admin name to greeting, and implemented view scope indicator badge)
+> **Last Updated:** 2026-05-28 (Fixed dashboard date serialization, added admin name/badge to greeting, and added status badge under report modal heading)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -78,7 +78,7 @@
 
 ### Reports Management (Live)
 - [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.
-- [x] Full UI detail modal with dynamic timeline styles matching report statuses
+- [x] Full UI detail modal with dynamic timeline styles, and a prominent status badge (colored box matching status style) under the main heading
 - [x] Status updates and mutations processed securely via backend PATCH route (`/api/reports/[id]`), appending to `statusHistory` and rewarding contribution points to citizens (+10 pts) for validated fixes.
 - [x] Automatic user notification generation within Firestore on the backend when an admin changes a report status
 - [x] Robust reverse geographical lookup (`resolveSrilankaRegion`) mapping suburbs and GPS directly to formal Provinces, Districts, and LGAs using the centralized 341-LGA coordinates database.
