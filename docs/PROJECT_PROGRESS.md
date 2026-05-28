@@ -524,6 +524,61 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
-*Last Updated: 2026-05-24*
+*Last Updated: 2026-05-26*
 
+---
 
+## 📊 Phase 6: Analytics — Live Firebase Data Integration
+- **Status:** ✅ Completed — 2026-05-26
+- **Branch:** `feat/analytics`
+
+**What was implemented:**
+
+- **New API route `app/api/analytics/route.ts`**: Server-side aggregation endpoint using Firebase Admin SDK. Accepts a `?range=7|30|90` query param. Fetches all non-archived reports, computes:
+  - **Summary KPIs**: Total reports, resolved reports, resolution rate %, active citizens (unique UIDs), resolved today, pending count, average resolution time (computed from `statusHistory` timestamps).
+  - **Daily activity buckets**: Per-day report submission and resolution counts for the selected range, outputting `{ day, date, reports, solved }[]` arrays suitable for the SVG line chart.
+  - **Category breakdown**: Per-category counts broken down by status (PENDING → pending, ASSIGNED/FIXING → inProgress, RESOLVED → resolved, REJECTED → rejected) with official category colors matching GUIDELINES.md.
+  - **Province distribution**: Reports grouped by province (inferred from `location.area` via a district-to-province lookup table), with total, resolved count, and resolution rate per province.
+  - Reuses the `requireAdmin` auth guard pattern from `/api/reports/route.ts`.
+
+- **Full rewrite of `app/components/Analytics.tsx`**:
+  - Replaced all mock data imports (`INCIDENT_BY_CATEGORY`, `DAILY_ACTIVITY`, `REGIONAL_PERFORMANCE`) with a live `fetch('/api/analytics?range=N')` call inside a `useEffect` triggered by the `timeRange` state.
+  - **Loading skeletons** (`animate-pulse`) for all 4 stat cards, the line chart, category bars, and province table rows — matching the dashboard's established UX pattern.
+  - **Error banner** with retry button when the API fails.
+  - **KPI stat cards**: Total Reports, Resolution Rate, Active Citizens, Avg. Resolution Time — all with live values and descriptive sub-labels.
+  - **Daily Activity SVG line chart**: Two-line chart (reports vs resolved) with area fill gradients, hover crosshair tooltips, Y-axis value labels, and adaptive X-axis labeling (day name for 7-day, date for 30/90-day).
+  - **Category breakdown**: Stacked horizontal progress bars per category, correctly using mobile-app-matching status colors (amber/pending, teal/in-progress, green/resolved, red/rejected).
+  - **Province distribution table**: Sortable by total reports, resolution rate displayed as a color-coded progress bar (green ≥70%, teal ≥40%, amber <40%).
+  - **Smart insight cards**: Three contextual cards (Pending Backlog, Resolution Health, Community Engagement) with dynamic copy driven by real data values.
+  - Time range selector (7 / 30 / 90 days) re-fetches the API on change.
+  - Uses design system colors from GUIDELINES.md (`#4CC2D1`, `#30A89C`, `#A78BFA`, etc.) throughout — no ad-hoc colors.
+
+- **[2026-05-26] Analytics Bug Fixes (Provincial Distribution & LGA Counts)**:
+    - **Issue 1**: Reports with unrecognized area/suburb names (like "Nugegoda" or Sabaragamuwa Province coordinates) were resolved to "Other" province and filtered out of the distribution table.
+    - **Fix 1**: Integrated the centralized `resolveSrilankaRegion` helper from `lib/constants/sriLankaRegions.ts` into the server API endpoint (`route.ts`). This successfully maps 100% of reports to correct official provinces, districts, and LGAs via regex keyword scanning and GPS coordinates.
+    - **Issue 2**: The LGA counts modal showed unstructured area text or raw data since LGA names were not standardized, and it didn't list all LGAs.
+    - **Fix 2**: Pre-populated the `lgas` map dynamically for each active district with all official LGAs from `sriLankaGeographics`. This ensures the LGA modal displays the complete set of official LGAs in that district, with report counts sorted by volume (descending) so active ones appear at the top and 0-count ones at the bottom.
+    - **Issue 3**: The LGA modal was not centered on the viewport when opened, and was instead positioned relative to its animated parent `animate-slide-up` container, shifting it away from the screen center on scroll.
+    - **Fix 3**: Wrapped the main return statement of `Analytics.tsx` in a React Fragment and moved the rendering of the `LGAModal` to the root level (outside the `animate-slide-up` div). This ensures `position: fixed` works relative to the viewport itself, keeping the modal perfectly centered on the screen regardless of scroll depth.
+    - **Visual/UX Enhancements**:
+      - Added a helper message banner just above the charts row reminding the admin to adjust the year and month filters to see reports in the graphs.
+      - Updated the Highlight Cards (Most Reported Province, District, and Category) to display the event counts and the selected time period (e.g. "Last 30 Days", "May 2026") as a sub-text label.
+      - Removed the "Avg. Resolution Time" card from the KPI row, resizing the grid to a balanced 3-column layout. Relocated the "resolved today" counter to the Resolution Rate card sub-label.
+      - Removed the bottom static "Insight Cards" (Pending Backlog, Resolution Health, and Community Engagement) to declutter the dashboard layout.
+      - Adjusted the X-axis label rendering step logic in the daily activity line chart. For the 90-day time range, it now uses a step size of 15 (rendering labels every 15 days) to prevent crowded or overlapping text labels on the axis.
+    - Verified all compilation checks and local Next.js production builds passed successfully.
+
+- [2026-05-26] Regional & Report Type Comparative Analytics:
+    - **Regional Comparison Playground**: Built an interactive multi-select card at the bottom of the Analytics page to select and compare 2 or 3 Provinces, Districts, or LGAs side-by-side. Includes search filtering, dynamic tab level switches, selection constraints validation, and a region list preview with quick-remove options.
+    - **Centered Comparison Modal**: Built a fixed, screen-centered `ComparisonModal` that loads the selected regions and visualizes comparative metrics side-by-side:
+        - **Region KPIs**: Side-by-side comparison cards displaying Total Reports, Resolved Counts, and Resolution Rates (with color-coded progress bars), themed with regional identity colors (Cyan, Purple, Amber) to map cleanly to the visualizations.
+        - **Volume Comparison SVG Chart**: Renders side-by-side vertical bar charts comparing total reports (orange) and resolved reports (green) with clear X/Y grid lines and values labels.
+        - **Category Breakdown Matrix**: Progress bars comparing category counts (Road & Traffic, Water & Drainage, etc.) side-by-side for each selected region to highlight localized issue trends.
+        - **Automated Insights**: Dynamically summarizes comparison findings, pointing out which region has the highest report volume and which leads in resolution efficiency.
+    - Verified all compilation checks and local Next.js production builds passed successfully.
+
+- [2026-05-26] LGA Reports Drill-Down & Redirection:
+    - **LGA Modal Reports Integration**: Upgraded the `LGAModal` component to fetch the complete reports list from `/api/reports` on mount.
+    - **Normalized Match Resolution**: Implemented client-side sorting and filtering that matches reports to the clicked LGA name by normalizing boundaries and stripping administrative suffixes.
+    - **Cross-Tab Redirection**: Added an "Open Modal" trigger that sets `(window as any).pendingReportDetail`, switches the dashboard navigation to the Reports tab, and dispatches a custom event listener that launches the target report modal instantly.
+    - Verified that all TypeScript and Next.js production builds compile without warnings or errors.

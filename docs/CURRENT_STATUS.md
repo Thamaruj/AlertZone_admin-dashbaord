@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-24
+> **Last Updated:** 2026-05-26 (Updated with Analytics bug fixes)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -16,7 +16,7 @@
 | Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes and notifications |
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
 | Phase 5: Notifications System | 🟢 Done | Real-time notifications tab with Firestore logs and megaphone broadcast modal |
-| Phase 6: Analytics (Live) | 🔴 Not Started | UI exists with hardcoded chart data |
+| Phase 6: Analytics (Live) | 🟢 Done | Live Firestore data; year/month filters; exact Province/District/LGA mapping; most-reported highlights; orange/green chart; complete LGA counts modal; Regional & Report Type Comparison Playground with custom side-by-side SVG comparison charts & category distributions. |
 | Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
 | Phase 8: Push Notifications (Expo) | 🟢 Done | Integrated using Expo Push API, successfully sending status mutations and megaphone broadcasts |
 
@@ -141,9 +141,21 @@
 - [x] User types match mobile app's `UserProfile` schema (includes `nic`, `province`, `district`, `localGovernmentArea`)
 
 ### Analytics (`Analytics.tsx`)
-- [ ] All charts use hardcoded/empty data
-- [ ] No Firestore aggregation queries
-- [ ] No date range filtering with real data
+- [x] All charts wired to real Firestore data via `/api/analytics`
+- [x] Server-side Firestore aggregation (daily activity, category breakdown, province distribution, KPI stats)
+- [x] Date range filtering (7 / 30 / 90 days) triggers live re-fetch with adaptive X-axis label spacing (no overlapping labels on 90-day range)
+- [x] Loading skeletons and error state with Retry button
+- [x] Exact Province/District/LGA mapping utilizing centralized `resolveSrilankaRegion` lookup
+- [x] LGA modal pre-populated with all official LGAs for the selected district, showing full report counts sorted by volume
+- [x] LGA modal rendered at component root level (outside animated sliding divs) to guarantee viewport-fixed centering and screen alignment
+- [x] Helper instruction banner displayed above the charts row for adjusting year/month filters
+- [x] Highlight Cards (Most Reported) updated to show event count and selected time period as sub-text labels
+- [x] Removed "Avg. Resolution Time" card from KPI row, resizing the grid to a balanced 3-column layout. Relocated the "resolved today" counter to the Resolution Rate card sub-label.
+- [x] Removed bottom static "Insight Cards" to simplify layout
+- [x] Regional & Report Type Comparison Playground allowing admins to select and compare up to 3 Provinces, Districts, or LGAs side-by-side.
+- [x] Centered Comparison Modal displaying regional KPI details, side-by-side volume charts (Total vs Resolved) using custom responsive SVGs, and category distribution progress matrices using region-themed colors.
+- [x] LGA Modal Reports view: select an LGA to view all reports made within it, with matching normalized names and a redirect button to open the report modal on Reports Management.
+
 
 
 
@@ -169,12 +181,13 @@
 - [x] Resolution notes (`resolutionNote` field)
 
 ### Analytics & Data
-- [ ] Real-time stats aggregation from Firestore
-- [ ] Reports-over-time chart with real data
-- [ ] Category/status/area distribution charts
-- [ ] Resolution rate calculation
-- [ ] Average resolution time calculation
-- [ ] Date range filtering
+- [x] Real-time stats aggregation from Firestore
+- [x] Reports-over-time chart with real data
+- [x] Category/status breakdown charts
+- [x] Province distribution table with resolution rates
+- [x] Resolution rate calculation
+- [x] Average resolution time calculation (from statusHistory)
+- [x] Date range filtering (7/30/90 days)
 
 ### Map
 - [x] Integrate Google Maps JavaScript API with a custom premium dark styling configuration
