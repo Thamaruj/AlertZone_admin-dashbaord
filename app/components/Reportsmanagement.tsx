@@ -10,6 +10,8 @@ import { sriLankaGeographics, resolveSrilankaRegion } from "@/lib/constants/sriL
 import { useAuth } from "@/lib/hooks/useAuth";
 import MiniMap from "./MiniMap";
 import UserDetailsModal from "./UserDetailsModal";
+import { collection, getDocs, doc, getDoc, orderBy, query } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 interface CalendarProps {
     value: string; // YYYY-MM-DD
@@ -27,6 +29,16 @@ function formatDateOnly(dateStr: string) {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     return `${months[parseInt(month, 10) - 1]} ${parseInt(day, 10)}, ${year}`;
 }
+
+const getInitials = (name: string) => {
+    if (!name) return "?";
+    return name
+        .split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase();
+};
 
 function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
     const today = new Date();
@@ -489,6 +501,96 @@ export default function ReportsManagement() {
         }
     };
 
+    const [comments, setComments] = useState<any[]>([]);
+    const [loadingComments, setLoadingComments] = useState(false);
+    const [upvoters, setUpvoters] = useState<any[]>([]);
+    const [loadingUpvoters, setLoadingUpvoters] = useState(false);
+
+    const fetchComments = async (reportId: string) => {
+        setLoadingComments(true);
+        try {
+            const commentsRef = collection(db, "reports", reportId, "comments");
+            const q = query(commentsRef, orderBy("createdAt", "asc"));
+            const snap = await getDocs(q);
+            const commentsData = await Promise.all(
+                snap.docs.map(async (docSnap) => {
+                    const data = docSnap.data();
+                    let commenterName = "Anonymous Citizen";
+                    let commenterAvatar = "";
+                    let commenterUser: UserProfile | null = null;
+                    if (data.uid) {
+                        try {
+                            const userDoc = await getDoc(doc(db, "users", data.uid));
+                            if (userDoc.exists()) {
+                                commenterUser = { uid: data.uid, ...userDoc.data() } as UserProfile;
+                                commenterName = commenterUser.fullName || "Anonymous Citizen";
+                                commenterAvatar = commenterUser.avatarUrl || "";
+                            }
+                        } catch (err) {
+                            console.error("Error fetching commenter profile:", err);
+                        }
+                    }
+                    return {
+                        id: docSnap.id,
+                        body: data.body || "",
+                        upvoteCount: data.upvoteCount || 0,
+                        createdAt: data.createdAt,
+                        uid: data.uid,
+                        commenterName,
+                        commenterAvatar,
+                        commenterUser,
+                    };
+                })
+            );
+            setComments(commentsData);
+        } catch (err) {
+            console.error("Error loading comments:", err);
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
+    const fetchUpvoters = async (reportId: string) => {
+        setLoadingUpvoters(true);
+        try {
+            const upvotesRef = collection(db, "reports", reportId, "upvotes");
+            const snap = await getDocs(upvotesRef);
+            const upvotersData = await Promise.all(
+                snap.docs.map(async (docSnap) => {
+                    const data = docSnap.data();
+                    const uid = docSnap.id;
+                    let name = "Anonymous Citizen";
+                    let avatar = "";
+                    let upvoterUser: UserProfile | null = null;
+                    if (uid) {
+                        try {
+                            const userDoc = await getDoc(doc(db, "users", uid));
+                            if (userDoc.exists()) {
+                                upvoterUser = { uid, ...userDoc.data() } as UserProfile;
+                                name = upvoterUser.fullName || "Anonymous Citizen";
+                                avatar = upvoterUser.avatarUrl || "";
+                            }
+                        } catch (err) {
+                            console.error("Error fetching upvoter profile:", err);
+                        }
+                    }
+                    return {
+                        uid,
+                        name,
+                        avatar,
+                        upvoterUser,
+                        createdAt: data.createdAt,
+                    };
+                })
+            );
+            setUpvoters(upvotersData);
+        } catch (err) {
+            console.error("Error loading upvoters:", err);
+        } finally {
+            setLoadingUpvoters(false);
+        }
+    };
+
     const handleReporterClick = () => {
         if (selectedReporter) {
             setShowReporterModal(true);
@@ -540,6 +642,8 @@ export default function ReportsManagement() {
         setSelectedReporter(null);
         setShowReporterModal(false);
         fetchReporterProfile(report.uid);
+        fetchComments(report.id);
+        fetchUpvoters(report.id);
     };
 
     useEffect(() => {
@@ -1306,6 +1410,125 @@ export default function ReportsManagement() {
                                         </div>
                                         );
                                     })}
+                                </div>
+                            </div>
+
+                            {/* Community Interaction Section */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-white/5 pt-6 sm:pt-8">
+                                {/* Upvoters List */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                        <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2">
+                                            <span>Community Upvotes</span>
+                                            <span className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-0.5 rounded-full font-mono">
+                                                {upvoters.length}
+                                            </span>
+                                        </h3>
+                                    </div>
+                                    
+                                    {loadingUpvoters ? (
+                                        <div className="flex justify-center py-8">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-500"></div>
+                                        </div>
+                                    ) : upvoters.length === 0 ? (
+                                        <p className="text-xs text-slate-500 italic py-4">No community upvotes yet.</p>
+                                    ) : (
+                                        <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                                            {upvoters.map((upvoter, idx) => (
+                                                <div 
+                                                    key={idx} 
+                                                    onClick={() => {
+                                                        if (upvoter.upvoterUser) {
+                                                            setSelectedReporter(upvoter.upvoterUser);
+                                                            setShowReporterModal(true);
+                                                        }
+                                                    }}
+                                                    className="flex items-center justify-between bg-white/2 hover:bg-white/5 border border-white/5 hover:border-teal-500/20 p-2.5 rounded-xl cursor-pointer transition-all group"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        {upvoter.avatar ? (
+                                                            <img src={upvoter.avatar} alt={upvoter.name} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                                        ) : (
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center text-teal-400 text-xs font-bold font-mono border border-teal-500/10">
+                                                                {getInitials(upvoter.name)}
+                                                            </div>
+                                                        )}
+                                                        <div>
+                                                            <p className="text-xs font-bold text-slate-200 group-hover:text-teal-400 transition-colors">{upvoter.name}</p>
+                                                            {upvoter.upvoterUser?.email && (
+                                                                <p className="text-[10px] text-slate-500">{upvoter.upvoterUser.email}</p>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-[9px] text-slate-500 font-mono">
+                                                        {upvoter.createdAt ? new Date(upvoter.createdAt.toDate ? upvoter.createdAt.toDate() : upvoter.createdAt).toLocaleDateString() : ""}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Comments List */}
+                                <div className="space-y-4">
+                                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                        <h3 className="text-sm font-bold text-slate-300 flex items-center gap-2">
+                                            <span>Community Comments</span>
+                                            <span className="text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 px-2 py-0.5 rounded-full font-mono">
+                                                {comments.length}
+                                            </span>
+                                        </h3>
+                                    </div>
+                                    
+                                    {loadingComments ? (
+                                        <div className="flex justify-center py-8">
+                                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-500"></div>
+                                        </div>
+                                    ) : comments.length === 0 ? (
+                                        <p className="text-xs text-slate-500 italic py-4">No comments posted yet.</p>
+                                    ) : (
+                                        <div className="space-y-3.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
+                                            {comments.map((comment) => (
+                                                <div 
+                                                    key={comment.id}
+                                                    className="bg-white/2 border border-white/5 p-3 rounded-xl space-y-2 text-left"
+                                                >
+                                                    <div className="flex items-center justify-between">
+                                                        <div 
+                                                            onClick={() => {
+                                                                if (comment.commenterUser) {
+                                                                    setSelectedReporter(comment.commenterUser);
+                                                                    setShowReporterModal(true);
+                                                                }
+                                                            }}
+                                                            className="flex items-center gap-2.5 cursor-pointer group"
+                                                        >
+                                                            {comment.commenterAvatar ? (
+                                                                <img src={comment.commenterAvatar} alt={comment.commenterName} className="w-6.5 h-6.5 rounded-full object-cover border border-white/10" />
+                                                            ) : (
+                                                                <div className="w-6.5 h-6.5 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center text-teal-400 text-[10px] font-bold font-mono border border-teal-500/10">
+                                                                    {getInitials(comment.commenterName)}
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <p className="text-xs font-bold text-slate-200 group-hover:text-teal-400 transition-colors">{comment.commenterName}</p>
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-[9px] text-slate-500 font-mono">
+                                                            {comment.createdAt ? new Date(comment.createdAt.toDate ? comment.createdAt.toDate() : comment.createdAt).toLocaleString() : ""}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-300 leading-relaxed pl-9">
+                                                        {comment.body}
+                                                    </p>
+                                                    <div className="flex items-center gap-1 pl-9 text-[10px] text-slate-500 font-medium">
+                                                        <span className="text-teal-500/80">👍</span>
+                                                        <span>{comment.upvoteCount} upvotes</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
