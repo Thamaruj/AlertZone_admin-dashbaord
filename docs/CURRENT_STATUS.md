@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-27 (Admin scopes, profile pictures, activity logs, and login auditing implemented)
+> **Last Updated:** 2026-05-28 (Added real-time new issue toast notification, click-to-view redirection, dashboard/sidebar notification badges, deterministic logs, and success feedback modal overlay on status change)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -74,12 +74,16 @@
 - [x] Unread badge count — syncs the home screen bell icon badge in real-time with user notifications
 - [x] Tap Redirect — clicking on a notification redirects the user to the Map view and centers on the corresponding report coordinate
 - [x] Expo Go compatibility — safely bypassed remote push registration side effects in Expo Go via static subpath imports to allow testing in both environments without bundler crashes or startup warnings
+- [x] Real-time Admin Toast Notifications — shows a floating alert to the admin in real-time when a citizen submits an issue
+- [x] Click-to-View Navigation — clicking the toast alert or notification card navigates to the Reports Management page and opens the report details modal
+- [x] Unread Count Badges — displays a red dot badge in the sidebar navigation item and in the Dashboard Overview page header
 
 
 ### Reports Management (Live)
 - [x] Reports fetched via secure server-side API endpoints (`/api/reports`) using the Firebase Admin SDK, resolving Vercel unauthenticated permission errors and bypassing composite index requirements.
-- [x] Full UI detail modal with dynamic timeline styles matching report statuses
+- [x] Full UI detail modal with dynamic timeline styles, and a prominent status badge (colored box matching status style) under the main heading
 - [x] Status updates and mutations processed securely via backend PATCH route (`/api/reports/[id]`), appending to `statusHistory` and rewarding contribution points to citizens (+10 pts) for validated fixes.
+- [x] Status change success feedback modal — displays a success modal overlay when status is updated, showing transition details, notification statuses, and rewards info, including a manual close button
 - [x] Automatic user notification generation within Firestore on the backend when an admin changes a report status
 - [x] Robust reverse geographical lookup (`resolveSrilankaRegion`) mapping suburbs and GPS directly to formal Provinces, Districts, and LGAs using the centralized 341-LGA coordinates database.
 - [x] Centroid-based fallback: uses coordinates to calculate the nearest LGA center if text matching is sparse or absent.
@@ -109,7 +113,8 @@
 - [x] Recent Activity Feed — last 10 status-change events sourced from `statusHistory` arrays
 - [x] Quick-nav shortcut cards — 5 navigation shortcuts with live counts to Reports, Map, Citizens, Analytics, Notifications
 - [x] `/api/dashboard` server route — secured aggregation endpoint returning KPIs, status distribution, category snapshot, pending reports, activity feed
-- [x] Live greeting + clock in header (updates every 30 seconds)
+- [x] Live greeting + clock in header (updates every 30 seconds, displays admin's name, and shows geographic view scope badge matching their assigned visibility scope)
+- [x] Date serialization fix (normalized Firestore Timestamp fields to standard ISO strings to prevent client-side "Invalid Date" errors)
 - [x] Refresh button with loading state
 
 ### Admin Login (`Adminlogin.tsx`)
@@ -180,7 +185,7 @@
 - [x] Report status updates with `statusHistory` append
 - [x] Notification creation on status change (critical for mobile app)
 - [x] User management — read users, suspend/activate
-- [ ] Report archival (soft-delete with `isArchived`)
+- [x] Report archival (soft-delete with `isArchived`)
 - [ ] Report assignment (`assignedTo` field)
 - [x] Resolution notes (`resolutionNote` field)
 

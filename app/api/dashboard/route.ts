@@ -203,7 +203,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
           district = district || resolved2.district;
         }
 
-        const createdAt = data.createdAt ?? null;
+        const createdAt = data.createdAt?.toDate 
+          ? data.createdAt.toDate().toISOString() 
+          : (data.createdAt ?? null);
 
         const catId2 = data.categoryId ?? "other";
         const catMeta = CATEGORY_META[catId2] ?? CATEGORY_META["other"];
@@ -227,7 +229,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       for (let i = 1; i < statusHistory.length; i++) {
         const entry = statusHistory[i];
         if (!entry) continue;
-        const changedAt = entry.changedAt ?? null;
+        const changedAt = entry.changedAt?.toDate
+          ? entry.changedAt.toDate().toISOString()
+          : (entry.changedAt ?? null);
 
         if (!changedAt) continue;
 

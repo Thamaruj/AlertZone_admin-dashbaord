@@ -25,6 +25,7 @@ export type ClientNotification = {
   type: NotificationType;
   time: string;
   isRead: boolean;
+  reportId?: string;
 };
 
 // ─── Constants & Meta ─────────────────────────────────────────────────────────
@@ -157,7 +158,7 @@ function Toast({
 export default function Notifications() {
   const [notifications, setNotifications] = useState<ClientNotification[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTab, setSelectedTab] = useState<"All" | "Unread" | NotificationType>("All");
+  const [selectedTab, setSelectedTab] = useState<"All" | "Unread" | NotificationType>("Unread");
   
   // Broadcast states
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
@@ -181,6 +182,7 @@ export default function Notifications() {
             type: mapDbType(data.type),
             time: formatTime(data.createdAt),
             isRead: data.isRead ?? false,
+            reportId: data.reportId,
           } as ClientNotification;
         });
 
@@ -240,6 +242,36 @@ export default function Notifications() {
       await deleteDoc(doc(db, "notifications", id));
     } catch (e) {
       console.error("❌ Error deleting notification:", e);
+    }
+  };
+ 
+  const handleNotificationClick = async (notif: ClientNotification) => {
+    if (!notif.reportId) return;
+ 
+    // Mark as read automatically when clicked
+    if (!notif.isRead) {
+      await handleMarkAsRead(notif.id);
+    }
+ 
+    try {
+      const res = await fetch("/api/reports");
+      if (!res.ok) throw new Error("Failed to fetch reports");
+      const body = await res.json();
+      const reportsList = body.reports ?? body ?? [];
+      const found = reportsList.find((r: any) => r.id === notif.reportId);
+      
+      if (found) {
+        if (typeof window !== "undefined") {
+          (window as any).pendingReportDetail = found;
+          window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }));
+          window.dispatchEvent(new CustomEvent("openReportDetail", { detail: { report: found } }));
+        }
+      } else {
+        alert("The reported issue could not be found or has been deleted.");
+      }
+    } catch (err: any) {
+      console.error("Error opening report from notification:", err);
+      alert("Failed to load report details.");
     }
   };
 
@@ -333,7 +365,7 @@ export default function Notifications() {
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-slide-up stagger-1 flex-shrink-0">
-        {["All", "Unread", "Alert", "Report", "System", "User"].map((tab) => {
+        {["Unread", "All", "Alert", "Report", "System", "User"].map((tab) => {
           const isSelected = selectedTab === tab;
           let count = 0;
           if (tab === "All") count = notifications.length;
@@ -395,9 +427,12 @@ export default function Notifications() {
               return (
                 <div
                   key={notif.id}
+                  onClick={() => notif.reportId && handleNotificationClick(notif)}
                   className={`group relative bg-[#0f2233]/80 backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg ${
+                    notif.reportId ? "cursor-pointer hover:border-teal-500/40" : "border-white/5"
+                  } ${
                     notif.isRead
-                      ? "border-white/5 opacity-85 hover:opacity-100 hover:border-white/10"
+                      ? "opacity-85 hover:opacity-100 hover:border-white/10"
                       : "border-teal-500/30 shadow-[0_0_20px_rgba(20,184,166,0.05)] hover:border-teal-500/50"
                   }`}
                 >
@@ -405,14 +440,14 @@ export default function Notifications() {
                   {!notif.isRead && (
                     <div className="absolute top-1/2 -translate-y-1/2 left-0 w-1 h-1/2 bg-teal-400 rounded-r-full shadow-[0_0_10px_rgba(20,184,166,0.8)]" />
                   )}
-
+ 
                   <div className="flex items-start gap-3 sm:gap-4 pl-1 sm:pl-2">
                     <div
                       className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center flex-shrink-0 border border-white/5 group-hover:scale-110 transition-transform duration-300 ${meta.bg} ${meta.color}`}
                     >
                       {meta.icon}
                     </div>
-
+ 
                     <div className="flex-1 min-w-0 pt-0.5">
                       <div className="flex items-start justify-between gap-2">
                         <h3
@@ -429,19 +464,33 @@ export default function Notifications() {
                       <p className="text-xs text-slate-400 mt-1 leading-relaxed line-clamp-2">
                         {notif.message}
                       </p>
-
+ 
                       <div className="flex items-center justify-between mt-3">
-                        <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${meta.bg} ${meta.color} border border-white/5`}
-                        >
-                          {notif.type}
-                        </span>
-
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${meta.bg} ${meta.color} border border-white/5`}
+                          >
+                            {notif.type}
+                          </span>
+                          {notif.reportId && (
+                            <span className="text-[10px] text-teal-400 font-semibold group-hover:underline flex items-center gap-1">
+                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                              Click to view issue
+                            </span>
+                          )}
+                        </div>
+ 
                         {/* Actions */}
                         <div className="flex items-center gap-2 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                           {!notif.isRead && (
                             <button
-                              onClick={() => handleMarkAsRead(notif.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkAsRead(notif.id);
+                              }}
                               className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center hover:bg-teal-500 hover:text-white transition-all cursor-pointer"
                               title="Mark as read"
                             >
@@ -451,7 +500,10 @@ export default function Notifications() {
                             </button>
                           )}
                           <button
-                            onClick={() => handleDelete(notif.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(notif.id);
+                            }}
                             className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
                             title="Delete notification log"
                           >

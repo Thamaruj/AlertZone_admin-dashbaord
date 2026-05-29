@@ -1,6 +1,6 @@
 "use client";
-
-import { useState, useEffect } from "react";
+ 
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import logo1 from "../assets/logo1.png";
 import ReportsManagement from "./Reportsmanagement";
@@ -13,6 +13,9 @@ import Settings from "./Settings";
 import AdminUserManagement from "./AdminUserManagement";
 import { useAuth } from "@/lib/hooks/useAuth";
 import Dashboard from "./Dashboard";
+import { db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot, setDoc, doc, serverTimestamp, orderBy, limit } from "firebase/firestore";
+import { Report } from "@/lib/types/report";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -114,7 +117,7 @@ function DonutChart_UNUSED() {
 
 // (Legacy StatCard removed — replaced by live Dashboard component)
 
-function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; onClick: () => void }) {
+function NavLink({ item, active, badgeCount, onClick }: { item: NavItem; active: boolean; badgeCount?: number; onClick: () => void }) {
     return (
         <button
             onClick={onClick}
@@ -137,11 +140,15 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
             }`}>
                 {item.icon}
             </div>
-
+ 
             {/* Label */}
-            <span className={`transition-all duration-300 ${
+            <span className={`flex-1 transition-all duration-300 ${
                 active ? "translate-x-0.5 text-white" : "group-hover:translate-x-1"
             }`}>{item.label}</span>
+ 
+            {badgeCount !== undefined && badgeCount > 0 && (
+                <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_#f43f5e] mr-1" />
+            )}
         </button>
     );
 }
@@ -157,7 +164,76 @@ export default function AdminDashboard() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
+ 
+    const [unreadCount, setUnreadCount] = useState(0);
+    const [activeToast, setActiveToast] = useState<Report | null>(null);
+    const mountedTime = useRef(new Date());
+ 
+    // 1. Subscribe to real-time unread notifications count
+    useEffect(() => {
+        const q = query(collection(db, "notifications"), where("isRead", "==", false));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            setUnreadCount(snapshot.size);
+        }, (error) => {
+            console.error("❌ Error subscribing to unread notifications count:", error);
+        });
+        return unsubscribe;
+    }, []);
+ 
+    // 2. Subscribe to real-time reports creation to show toast notification
+    useEffect(() => {
+        const q = query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(5));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            snapshot.docChanges().forEach(async (change) => {
+                if (change.type === "added") {
+                    const data = change.doc.data();
+                    const createdAt = data.createdAt;
+                    let createdDate: Date;
+                    if (typeof createdAt?.toDate === "function") {
+                        createdDate = createdAt.toDate();
+                    } else {
+                        createdDate = new Date(createdAt);
+                    }
+ 
+                    // Only trigger if report is created after dashboard mounted
+                    if (createdDate.getTime() > mountedTime.current.getTime() - 2000) {
+                        const report = { id: change.doc.id, ...data } as Report;
+                        setActiveToast(report);
+ 
+                        // Auto-create a deterministic notification in the notifications collection for the admin logs
+                        try {
+                            const notifId = `new_report_${report.id}`;
+                            await setDoc(doc(db, "notifications", notifId), {
+                                recipientUid: "admin",
+                                type: "Report",
+                                title: "New Issue Received",
+                                body: `A new ${report.category} Incident has been reported by ${report.authorName} in ${report.location.area || "unknown region"}.`,
+                                reportId: report.id,
+                                isRead: false,
+                                createdAt: serverTimestamp(),
+                            });
+                        } catch (err) {
+                            console.error("❌ Failed to log new issue notification:", err);
+                        }
+                    }
+                }
+            });
+        }, (error) => {
+            console.error("❌ Error subscribing to reports feed:", error);
+        });
+        return unsubscribe;
+    }, []);
+ 
+    const handleToastClick = (report: Report) => {
+        if (typeof window !== "undefined") {
+            (window as any).pendingReportDetail = report;
+            setActiveNav("reports");
+            window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }));
+            window.dispatchEvent(new CustomEvent("openReportDetail", { detail: { report } }));
+            setActiveToast(null);
+        }
+    };
+ 
     // Derive initials from displayName for the avatar
     const initials = user?.displayName
         ? user.displayName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
@@ -274,23 +350,23 @@ export default function AdminDashboard() {
                     <div className="space-y-1.5">
                         <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">Overview</span>
                         {navItems.filter(item => ["dashboard", "map"].includes(item.id)).map((item) => (
-                            <NavLink key={item.id} item={item} active={activeNav === item.id} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
+                            <NavLink key={item.id} item={item} active={activeNav === item.id} badgeCount={item.id === "notifications" ? unreadCount : undefined} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
                         ))}
                     </div>
-
+ 
                     {/* Operations / Management */}
                     <div className="space-y-1.5">
                         <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">Management</span>
                         {navItems.filter(item => ["reports", "users", "notifications", "analytics"].includes(item.id)).map((item) => (
-                            <NavLink key={item.id} item={item} active={activeNav === item.id} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
+                            <NavLink key={item.id} item={item} active={activeNav === item.id} badgeCount={item.id === "notifications" ? unreadCount : undefined} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
                         ))}
                     </div>
-
+ 
                     {/* System Section */}
                     <div className="space-y-1.5">
                         <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">System</span>
                         {navItems.filter(item => ["admin-users", "settings"].includes(item.id)).map((item) => (
-                            <NavLink key={item.id} item={item} active={activeNav === item.id} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
+                            <NavLink key={item.id} item={item} active={activeNav === item.id} badgeCount={item.id === "notifications" ? unreadCount : undefined} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
                         ))}
                     </div>
                 </nav>
@@ -429,6 +505,40 @@ export default function AdminDashboard() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+ 
+            {/* Real-time New Issue Toast Notification */}
+            {activeToast && (
+                <div
+                    onClick={() => handleToastClick(activeToast)}
+                    className="fixed bottom-6 right-6 z-[120] w-full max-w-sm bg-[#0f2233]/95 backdrop-blur-2xl border border-teal-500/30 hover:border-teal-500/60 rounded-2xl p-4 shadow-[0_10px_40px_rgba(20,184,166,0.15)] animate-in fade-in slide-in-from-bottom-5 duration-300 cursor-pointer group"
+                >
+                    <div className="flex items-start gap-3.5">
+                        <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center text-xl flex-shrink-0 group-hover:scale-110 transition-transform">
+                            📢
+                        </div>
+                        <div className="flex-1 min-w-0 pt-0.5">
+                            <h4 className="text-xs font-bold text-teal-400 uppercase tracking-wider">New Issue Received</h4>
+                            <p className="text-sm font-semibold text-white mt-1 group-hover:text-teal-300 transition-colors">
+                                {activeToast.category} Incident
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1 leading-relaxed line-clamp-2">
+                                {activeToast.description}
+                            </p>
+                        </div>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveToast(null);
+                            }}
+                            className="flex-shrink-0 p-1 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
                 </div>
             )}

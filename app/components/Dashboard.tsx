@@ -1,6 +1,9 @@
 "use client";
-
+ 
 import React, { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/lib/hooks/useAuth";
+import { db } from "@/lib/firebase";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -383,10 +386,23 @@ function Skeleton({ className }: { className: string }) {
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
 export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void }) {
+  const { user } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(new Date());
+  const [unreadCount, setUnreadCount] = useState(0);
+ 
+  // Subscribe to real-time unread notifications count
+  useEffect(() => {
+    const q = query(collection(db, "notifications"), where("isRead", "==", false));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setUnreadCount(snapshot.size);
+    }, (error) => {
+      console.error("❌ Error subscribing to unread notifications count inside Dashboard:", error);
+    });
+    return unsubscribe;
+  }, []);
 
   // Live clock tick
   useEffect(() => {
@@ -477,30 +493,64 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   const kpis = data?.kpis;
   const totalReports = kpis?.total ?? 0;
 
+  const scopeLabel = (() => {
+    if (!user) return "Loading view...";
+    const scope = user.scope ?? "all";
+    if (scope === "all") return "All Island View";
+    if (scope === "province") return `Province: ${user.province ?? "Unknown"} View`;
+    if (scope === "district") return `District: ${user.district ?? "Unknown"} View`;
+    if (scope === "lga") return `LGA: ${user.lga ?? "Unknown"} View`;
+    return "Assigned View";
+  })();
+
   return (
     <>
       {/* ── Page Header ───────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between flex-wrap gap-3 animate-slide-up">
         <div>
           <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-100 to-teal-300 tracking-tight pb-0.5">
-            {greeting} 👋
+            {greeting}, {user?.displayName ?? "Admin"} 👋
           </h1>
-          <p className="text-xs text-slate-400 mt-1 font-medium">
-            {dateString}
-            <span className="mx-2 text-slate-600">·</span>
-            <span className="font-mono text-teal-400/70">{timeString}</span>
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 text-xs text-slate-400 mt-1 font-medium">
+            <div className="flex items-center">
+              <span>{dateString}</span>
+              <span className="mx-2 text-slate-600">·</span>
+              <span className="font-mono text-teal-400/70">{timeString}</span>
+            </div>
+            <span className="hidden sm:inline text-slate-600">·</span>
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-teal-500/10 border border-teal-500/20 text-teal-300 w-fit">
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {scopeLabel}
+            </span>
+          </div>
         </div>
-        <button
-          onClick={fetchDashboard}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all disabled:opacity-40"
-        >
-          <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onNavigate("notifications")}
+            className="relative flex items-center justify-center p-2.5 text-slate-400 hover:text-teal-400 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all cursor-pointer"
+            title="View Notifications"
+          >
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full shadow-[0_0_10px_#f43f5e] animate-pulse" />
+            )}
+          </button>
+          <button
+            onClick={fetchDashboard}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-all disabled:opacity-40"
+          >
+            <svg className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* ── KPI Strip ─────────────────────────────────────────────────────────── */}

@@ -4,6 +4,50 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 13: Real-time New Issue Notifications & Dashboard Badge
+**Date:** 2026-05-28
+**Branch:** `fix-feat/dashboard`
+
+**Objective:** Support real-time toast notifications for admins when new reports are submitted, click-to-view redirection from alerts/notification cards to Reports Management details modals, and unread badges on the sidebar and dashboard overview header.
+
+**What was built:**
+- **Real-time Report Listener:** Subscribed the main dashboard to the `reports` Firestore collection in real-time, showing a premium floating toast notification for new incident submissions.
+- **Click-to-View Navigation:** Enabled clicking on the toast notification or any report notification card on the Notifications page to automatically navigate and open that report's details modal inside Reports Management.
+- **Unread Notification Badge:** Subscribed both `Maindashboard.tsx` and `Dashboard.tsx` to unread notification count, rendering a glassmorphic bell button in the dashboard page header and a red dot on the sidebar "Notifications" tab when unread items exist.
+- **Deterministic Notification Writing:** Handled document writing for new issues using a deterministic `new_report_{reportId}` key format to guarantee no duplicate notifications are logged in multi-admin client environments.
+- **Status Change Feedback Modal:** Replaced the inline success banner with a premium glassmorphic modal overlay that displays status change transitions, notifications sent to citizens, reward point summaries, and includes manual close options.
+
+---
+
+## ✅ Phase 12: Report Archival & Soft-Delete Support
+**Date:** 2026-05-28
+**Branch:** `fix-feat/dashboard`
+
+**Objective:** Implement soft-deletion (archival) of reports that are RESOLVED or REJECTED, with a toggleable Archive page, comprehensive filters (Location, Time, Admin who changed the status), and recovery support.
+
+**What was built:**
+- **Backend API Updates:** Enhanced `/api/reports` to support filtering by `archived=true/false` query parameter, and `/api/reports/[id]` PATCH endpoint to handle `isArchived` toggle, writing audit logs for archive/unarchive operations.
+- **Client Services & Hooks:** Added `archiveReport` utility in `lib/services/report.service.ts` and `lib/hooks/useReports.ts` to execute PATCH requests and trigger local state refreshes.
+- **UI & Navigation:** Integrated a "Go to Archive" button in Reports Management. Restructured filters list to dynamically show an "Admin" filter when viewing the archive (sourced from statusHistory data).
+- **Archive Action Controls:** Added Archive/Restore buttons in incident card rows and the detail modal footer for reports in `RESOLVED` or `REJECTED` state.
+- **Archive Confirmation Modal:** Implemented a glassmorphic modal overlay to confirm archival or recovery action.
+
+---
+
+## ✅ Phase 11: Dashboard Bugfixes & Scoped Header Upgrades
+**Date:** 2026-05-28
+**Branch:** `fix-feat/dashboard`
+
+**Objective:** Fix "Invalid Date" bug in Reports Needing Action / Recent Activity feed, display the admin's name and geographic view scope badge, and add a prominent colored status badge inside the report details modal.
+
+**What was built:**
+- **Date Serialization Normalization:** Updated `app/api/dashboard/route.ts` to convert Firestore Timestamp fields (`createdAt` and `changedAt`) using `.toDate().toISOString()` to prevent client-side "Invalid Date" errors.
+- **Admin Greeting & Geoscope view badge:** Modified `app/components/Dashboard.tsx` to read user context from `useAuth()` and display the logged-in admin's `displayName` in the page greeting (e.g. `Good morning, Thamaruj 👋`).
+- **Geographic View Scope Badge:** Added a visual badge indicator below the date & time showing which regional scope the admin is looking at (`All Island View`, `Province: [Name] View`, `District: [Name] View`, or `LGA: [Name] View`) with a location icon and themed background color.
+- **Report Details Modal Status Badge:** Added a prominent, color-themed status badge box directly under the main heading (e.g., `{selectedReport.category} Incident`) inside the report details modal in `Reportsmanagement.tsx` showing the current status matching the dashboard's design guidelines.
+
+---
+
 ## ✅ Phase 10: Admin Scopes, Profiling, and Audit Logs
 **Date:** 2026-05-27
 **Branch:** `feat/admin-scoping-logging`

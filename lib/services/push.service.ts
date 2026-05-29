@@ -8,6 +8,8 @@ interface PushPayload {
   title: string;
   body: string;
   data?: Record<string, any>;
+  channelId?: string;
+  priority?: "default" | "normal" | "high";
 }
 
 /**
@@ -37,6 +39,8 @@ export async function sendPushNotification(
       title,
       body,
       data,
+      channelId: "alertzone-alerts",
+      priority: "high",
     };
 
     console.log(`📤 Sending push notification to token ${expoPushToken.substring(0, 25)}...`);
@@ -106,6 +110,8 @@ export async function sendBulkPushNotifications(
         title,
         body,
         data,
+        channelId: "alertzone-alerts",
+        priority: "high",
       }));
 
       console.log(`📤 Sending batch of ${chunk.length} push notifications...`);
