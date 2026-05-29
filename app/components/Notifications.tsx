@@ -73,7 +73,7 @@ const typeMeta: Record<NotificationType, { color: string; bg: string; icon: Reac
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const mapDbType = (dbType: string): NotificationType => {
-  if (dbType === "status_change") return "Report";
+  if (dbType === "status_change" || dbType === "comment") return "Report";
   if (dbType === "upvote") return "User";
   if (dbType === "badge_earned") return "User";
   if (dbType === "system" || dbType === "alert") return "Alert";
@@ -167,24 +167,34 @@ export default function Notifications() {
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // 1. Subscribe to Firestore notification logs in real-time
+  // ⚠️ We use orderBy("createdAt") only (no where clause) to avoid requiring a composite
+  //    Firestore index. Filtering by recipientUid === "admin" is done client-side below.
   useEffect(() => {
-    const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"), limit(100));
+    const q = query(
+      collection(db, "notifications"),
+      orderBy("createdAt", "desc"),
+      limit(200)
+    );
     
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const list = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            title: data.title ?? "Notification",
-            message: data.body ?? "",
-            type: mapDbType(data.type),
-            time: formatTime(data.createdAt),
-            isRead: data.isRead ?? false,
-            reportId: data.reportId,
-          } as ClientNotification;
-        });
+        const list = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              title: data.title ?? "Notification",
+              message: data.body ?? "",
+              type: mapDbType(data.type),
+              time: formatTime(data.createdAt),
+              isRead: data.isRead ?? false,
+              reportId: data.reportId,
+              recipientUid: data.recipientUid,
+            } as ClientNotification & { recipientUid?: string };
+          })
+          // Filter only admin notifications client-side (avoids composite index)
+          .filter((n) => (n as any).recipientUid === "admin");
 
         setNotifications(list);
         setLoading(false);

@@ -520,11 +520,13 @@ export default function ReportsManagement() {
                     let commenterUser: UserProfile | null = null;
                     if (data.uid) {
                         try {
-                            const userDoc = await getDoc(doc(db, "users", data.uid));
-                            if (userDoc.exists()) {
-                                commenterUser = { uid: data.uid, ...userDoc.data() } as UserProfile;
-                                commenterName = commenterUser.fullName || "Anonymous Citizen";
-                                commenterAvatar = commenterUser.avatarUrl || "";
+                            // Use Admin SDK API route to bypass client-side Firestore security rules
+                            const res = await fetch(`/api/users/${data.uid}`);
+                            if (res.ok) {
+                                const body = await res.json();
+                                commenterUser = body.user as UserProfile;
+                                commenterName = commenterUser?.fullName || "Anonymous Citizen";
+                                commenterAvatar = commenterUser?.avatarUrl || "";
                             }
                         } catch (err) {
                             console.error("Error fetching commenter profile:", err);
@@ -564,11 +566,13 @@ export default function ReportsManagement() {
                     let upvoterUser: UserProfile | null = null;
                     if (uid) {
                         try {
-                            const userDoc = await getDoc(doc(db, "users", uid));
-                            if (userDoc.exists()) {
-                                upvoterUser = { uid, ...userDoc.data() } as UserProfile;
-                                name = upvoterUser.fullName || "Anonymous Citizen";
-                                avatar = upvoterUser.avatarUrl || "";
+                            // Use Admin SDK API route to bypass client-side Firestore security rules
+                            const res = await fetch(`/api/users/${uid}`);
+                            if (res.ok) {
+                                const body = await res.json();
+                                upvoterUser = body.user as UserProfile;
+                                name = upvoterUser?.fullName || "Anonymous Citizen";
+                                avatar = upvoterUser?.avatarUrl || "";
                             }
                         } catch (err) {
                             console.error("Error fetching upvoter profile:", err);
@@ -1065,8 +1069,15 @@ export default function ReportsManagement() {
                                                     <span className="text-slate-300">{loc.lga}</span>
                                                 </p>
                                             </div>
-                                            <div className="flex items-center gap-2 pt-0.5">
+                                            <div className="flex flex-wrap items-center gap-3 pt-1">
                                                 <span className="text-[10px] text-slate-500 font-mono">Incident ID: {report.id}</span>
+                                                <span className="w-1.5 h-1.5 rounded-full bg-slate-700/50" />
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-teal-400 bg-teal-500/10 border border-teal-500/20 px-2 py-0.5 rounded-md">
+                                                    👍 {report.upvoteCount ?? 0} upvotes
+                                                </span>
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-2 py-0.5 rounded-md">
+                                                    💬 {report.commentCount ?? 0} comments
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1443,26 +1454,37 @@ export default function ReportsManagement() {
                                                             setShowReporterModal(true);
                                                         }
                                                     }}
-                                                    className="flex items-center justify-between bg-white/2 hover:bg-white/5 border border-white/5 hover:border-teal-500/20 p-2.5 rounded-xl cursor-pointer transition-all group"
+                                                    className={`flex items-center justify-between bg-white/2 border border-white/5 p-2.5 rounded-xl transition-all group ${
+                                                        upvoter.upvoterUser
+                                                            ? "hover:bg-teal-500/5 hover:border-teal-500/20 cursor-pointer"
+                                                            : "cursor-default opacity-60"
+                                                    }`}
                                                 >
-                                                    <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-3 flex-1 min-w-0">
                                                         {upvoter.avatar ? (
-                                                            <img src={upvoter.avatar} alt={upvoter.name} className="w-8 h-8 rounded-full object-cover border border-white/10" />
+                                                            <img src={upvoter.avatar} alt={upvoter.name} className="w-8 h-8 rounded-full object-cover border border-white/10 flex-shrink-0" />
                                                         ) : (
-                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center text-teal-400 text-xs font-bold font-mono border border-teal-500/10">
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center text-teal-400 text-xs font-bold font-mono border border-teal-500/10 flex-shrink-0">
                                                                 {getInitials(upvoter.name)}
                                                             </div>
                                                         )}
-                                                        <div>
-                                                            <p className="text-xs font-bold text-slate-200 group-hover:text-teal-400 transition-colors">{upvoter.name}</p>
+                                                        <div className="min-w-0">
+                                                            <p className="text-xs font-bold text-slate-200 group-hover:text-teal-400 transition-colors truncate">{upvoter.name}</p>
                                                             {upvoter.upvoterUser?.email && (
-                                                                <p className="text-[10px] text-slate-500">{upvoter.upvoterUser.email}</p>
+                                                                <p className="text-[10px] text-slate-500 truncate">{upvoter.upvoterUser.email}</p>
                                                             )}
                                                         </div>
                                                     </div>
-                                                    <span className="text-[9px] text-slate-500 font-mono">
-                                                        {upvoter.createdAt ? new Date(upvoter.createdAt.toDate ? upvoter.createdAt.toDate() : upvoter.createdAt).toLocaleDateString() : ""}
-                                                    </span>
+                                                    <div className="flex items-center gap-2 flex-shrink-0">
+                                                        <span className="text-[9px] text-slate-500 font-mono">
+                                                            {upvoter.createdAt ? new Date(upvoter.createdAt.toDate ? upvoter.createdAt.toDate() : upvoter.createdAt).toLocaleDateString() : ""}
+                                                        </span>
+                                                        {upvoter.upvoterUser && (
+                                                            <span className="text-[9px] text-teal-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                View →
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -1501,17 +1523,20 @@ export default function ReportsManagement() {
                                                                     setShowReporterModal(true);
                                                                 }
                                                             }}
-                                                            className="flex items-center gap-2.5 cursor-pointer group"
+                                                            className={`flex items-center gap-2.5 group min-w-0 ${comment.commenterUser ? "cursor-pointer" : "cursor-default"}`}
                                                         >
                                                             {comment.commenterAvatar ? (
-                                                                <img src={comment.commenterAvatar} alt={comment.commenterName} className="w-6.5 h-6.5 rounded-full object-cover border border-white/10" />
+                                                                <img src={comment.commenterAvatar} alt={comment.commenterName} className="w-7 h-7 rounded-full object-cover border border-white/10 flex-shrink-0" />
                                                             ) : (
-                                                                <div className="w-6.5 h-6.5 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center text-teal-400 text-[10px] font-bold font-mono border border-teal-500/10">
+                                                                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-teal-500/20 to-cyan-500/20 flex items-center justify-center text-teal-400 text-[10px] font-bold font-mono border border-teal-500/10 flex-shrink-0">
                                                                     {getInitials(comment.commenterName)}
                                                                 </div>
                                                             )}
-                                                            <div>
-                                                                <p className="text-xs font-bold text-slate-200 group-hover:text-teal-400 transition-colors">{comment.commenterName}</p>
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-bold text-slate-200 group-hover:text-teal-400 transition-colors truncate">{comment.commenterName}</p>
+                                                                {comment.commenterUser && (
+                                                                    <p className="text-[9px] text-teal-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity">View profile →</p>
+                                                                )}
                                                             </div>
                                                         </div>
                                                         <span className="text-[9px] text-slate-500 font-mono">

@@ -395,7 +395,11 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
  
   // Subscribe to real-time unread notifications count
   useEffect(() => {
-    const q = query(collection(db, "notifications"), where("isRead", "==", false));
+    const q = query(
+      collection(db, "notifications"),
+      where("recipientUid", "==", "admin"),
+      where("isRead", "==", false)
+    );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setUnreadCount(snapshot.size);
     }, (error) => {

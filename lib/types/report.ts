@@ -45,6 +45,7 @@ export interface Report {
   assignedTo?: string;
   resolutionNote?: string;
   upvoteCount: number;
+  commentCount?: number;
   isArchived: boolean;
   createdAt: any;      // Firestore Timestamp or ISO string
   updatedAt?: any;     // Firestore Timestamp or ISO string

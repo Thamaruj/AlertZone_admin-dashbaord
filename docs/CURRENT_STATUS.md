@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-28 (Added real-time new issue toast notification, click-to-view redirection, dashboard/sidebar notification badges, deterministic logs, and success feedback modal overlay on status change)
+> **Last Updated:** 2026-05-30 (Fixed real-time admin toast notifications using Admin SDK polling; resolved Firestore security rule blocks on client SDK; fixed commenter/upvoter profile fetching; added clickable user profiles from reports community section; fixed Notifications.tsx composite index bypass)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -13,9 +13,9 @@
 | Phase 0: Project Scaffolding | 🟢 Done | Next.js 16 project created with Tailwind CSS v4 |
 | Phase 1: UI Shell & Mock Dashboard | 🟢 Done | All screens built; Dashboard Overview now live with real Firestore data |
 | Phase 2: Firebase Integration | 🟢 Done | Firebase Client & Admin SDKs fully integrated across auth, users, and reports |
-| Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes and notifications |
+| Phase 3: Reports Management (Live) | 🟢 Done | UI wired to real Firestore data, handles status changes, upvote/comment counts, and notifications |
 | Phase 4: User Management (Live) | 🟢 Done | Live citizen listing, cascading Province/District filters, status toggle, and details modal |
-| Phase 5: Notifications System | 🟢 Done | Real-time notifications tab with Firestore logs and megaphone broadcast modal |
+| Phase 5: Notifications System | 🟢 Done | Real-time notifications tab with Firestore logs, megaphone broadcast modal, and real-time upvote/comment toast alerts |
 | Phase 6: Analytics (Live) | 🟢 Done | Live Firestore data; year/month filters; exact Province/District/LGA mapping; most-reported highlights; orange/green chart; complete LGA counts modal; Regional & Report Type Comparison Playground with custom side-by-side SVG comparison charts & category distributions. |
 | Phase 7: Map View (Live) | 🟢 Done | Google Maps integration complete with active report Firestore live data and status/type filters |
 | Phase 8: Push Notifications (Expo) | 🟢 Done | Integrated using Expo Push API, successfully sending status mutations and megaphone broadcasts |
@@ -74,9 +74,10 @@
 - [x] Unread badge count — syncs the home screen bell icon badge in real-time with user notifications
 - [x] Tap Redirect — clicking on a notification redirects the user to the Map view and centers on the corresponding report coordinate
 - [x] Expo Go compatibility — safely bypassed remote push registration side effects in Expo Go via static subpath imports to allow testing in both environments without bundler crashes or startup warnings
-- [x] Real-time Admin Toast Notifications — shows a floating alert to the admin in real-time when a citizen submits an issue
+- [x] Real-time Admin Toast Notifications — shows a floating alert to the admin in real-time when a citizen submits an issue, upvotes, or comments (with thumbs-up, chat bubbles, or announcement icons).
+- [x] Scoped Notifications & Firestore Index — configured the notifications listeners across the dashboard to query by `recipientUid == "admin"` directly, resolving the index error via Firebase composite index and securing citizen notification privacy.
 - [x] Click-to-View Navigation — clicking the toast alert or notification card navigates to the Reports Management page and opens the report details modal
-- [x] Unread Count Badges — displays a red dot badge in the sidebar navigation item and in the Dashboard Overview page header
+- [x] Unread Count Badges — displays a red dot badge in the sidebar navigation item and in the Dashboard Overview page header (properly filtered to admin notifications only)
 
 
 ### Reports Management (Live)

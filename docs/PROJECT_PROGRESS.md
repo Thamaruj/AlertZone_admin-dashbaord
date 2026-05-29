@@ -4,6 +4,40 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 14: Community Upvotes, Comments & Real-Time Admin Alerts — Final
+**Date:** 2026-05-30
+**Branch:** `fix-feat/community-feedback`
+
+**Objective:** Implement reliable real-time toast notifications for new reports, upvotes, and comments in the admin dashboard. Fix Firestore security rule and composite index errors. Add clickable commenter/upvoter profiles in Reports Management.
+
+**What was built / fixed:**
+
+### Notification System (Root Cause Fix)
+- **Root Cause Identified:** The admin dashboard uses **custom cookie-based session auth** (not Firebase Auth). The client-side Firebase SDK therefore has `request.auth == null` in Firestore security rules, causing all `notifications` collection reads to be silently blocked — no errors in some cases, silent failures in others.
+- **Solution — Admin SDK Polling:** Created `/api/notifications/recent` — a Next.js API route that uses the **Firebase Admin SDK** (which bypasses all Firestore security rules). The client polls this endpoint every **5 seconds** using a `setInterval`, passing a `since` ISO timestamp to only fetch notifications newer than the last seen one. This returns both new notifications (for toasts) and the total unread count (for badge).
+- **SSE Approach Deprecated:** The earlier Server-Sent Events (SSE) route (`/api/notifications/stream`) was removed in favor of polling. SSE was dropping connections on Next.js hot reloads in dev mode, causing missed notifications.
+- **`shownIds` Set:** Tracks which notification IDs have already been toasted to prevent duplicates even across poll cycles.
+- **Toast types:** 👍 for upvotes, 💬 for comments, 📢 for new reports — each triggering a click-to-inspect bottom-right toast.
+
+### Notifications Page Fix (`Notifications.tsx`)
+- Removed `where("recipientUid", "==", "admin")` from the `onSnapshot` query (it combined `where + orderBy` which required a composite Firestore index that wasn't active yet).
+- Now uses `orderBy("createdAt", "desc").limit(200)` only, filtering `recipientUid === "admin"` client-side in JS.
+
+### Reports Management Fixes (`Reportsmanagement.tsx`)
+- **Commenter/Upvoter Profile Fetch Fix:** The original `getDoc(doc(db, "users", uid))` calls were blocked by Firestore security rules (unauthenticated client SDK). Replaced both `fetchComments` and `fetchUpvoters` with `fetch("/api/users/{uid}")` calls, which route through the Admin SDK server-side.
+- **Clickable Profiles:** Added hover-revealed "View →" / "View profile →" indicators on upvoter rows and comment author rows. Clicking opens the full `UserDetailsModal` with the citizen's profile, report history, and badges.
+- **Graceful Degradation:** If a user profile can't be loaded, the row shows `opacity-60 cursor-default` instead of a broken click handler.
+
+### Mobile App (Verified — No Changes Needed)
+- `app/(tabs)/report.tsx`: Confirmed it writes `{recipientUid: "admin", type: "status_change", title: "New Issue Received"}` to `notifications` on every new report submission. ✅
+- `components/ReportDetailSheet.tsx`: Confirmed it writes `{recipientUid: "admin", type: "upvote"}` and `{recipientUid: "admin", type: "comment"}` notifications on every upvote and comment action. ✅
+
+### New API Routes
+- **`GET /api/notifications/recent?since=<ISO>`** — Polls for admin notifications newer than a given timestamp using Admin SDK. Returns `{ notifications[], unreadCount }`.
+- **`GET /api/notifications/stream`** — SSE route (retained in codebase but no longer used by dashboard; can be removed later).
+
+---
+
 ## ✅ Phase 13: Real-time New Issue Notifications & Dashboard Badge
 **Date:** 2026-05-28
 **Branch:** `fix-feat/dashboard`

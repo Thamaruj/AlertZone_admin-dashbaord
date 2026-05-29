@@ -30,34 +30,47 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       .orderBy("createdAt", "desc")
       .get();
 
-    let reports = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      
-      // Normalize document data: convert all Firestore Timestamp objects to ISO strings
-      // to ensure clean JSON serialization and prevent client-side parsing failures.
-      const createdAt = data.createdAt?.toDate 
-        ? data.createdAt.toDate().toISOString() 
-        : data.createdAt;
+    let reports = (await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        const reportId = doc.id;
 
-      const updatedAt = data.updatedAt?.toDate 
-        ? data.updatedAt.toDate().toISOString() 
-        : data.updatedAt;
+        // Get comments count using count query (very fast & efficient)
+        const commentsSnapshot = await adminDb
+          .collection("reports")
+          .doc(reportId)
+          .collection("comments")
+          .count()
+          .get();
+        const commentCount = commentsSnapshot.data().count;
+        
+        // Normalize document data: convert all Firestore Timestamp objects to ISO strings
+        // to ensure clean JSON serialization and prevent client-side parsing failures.
+        const createdAt = data.createdAt?.toDate 
+          ? data.createdAt.toDate().toISOString() 
+          : data.createdAt;
 
-      const statusHistory = (data.statusHistory || []).map((history: any) => ({
-        ...history,
-        changedAt: history.changedAt?.toDate 
-          ? history.changedAt.toDate().toISOString() 
-          : history.changedAt,
-      }));
+        const updatedAt = data.updatedAt?.toDate 
+          ? data.updatedAt.toDate().toISOString() 
+          : data.updatedAt;
 
-      return {
-        id: doc.id,
-        ...data,
-        createdAt,
-        updatedAt,
-        statusHistory,
-      };
-    }) as Report[];
+        const statusHistory = (data.statusHistory || []).map((history: any) => ({
+          ...history,
+          changedAt: history.changedAt?.toDate 
+            ? history.changedAt.toDate().toISOString() 
+            : history.changedAt,
+        }));
+
+        return {
+          id: reportId,
+          ...data,
+          commentCount,
+          createdAt,
+          updatedAt,
+          statusHistory,
+        };
+      })
+    )) as Report[];
 
     // In-memory filter for archived or non-archived reports
     reports = reports.filter((r) => (r.isArchived === true) === showArchived);

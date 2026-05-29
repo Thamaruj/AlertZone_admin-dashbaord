@@ -13,9 +13,8 @@ import Settings from "./Settings";
 import AdminUserManagement from "./AdminUserManagement";
 import { useAuth } from "@/lib/hooks/useAuth";
 import Dashboard from "./Dashboard";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, setDoc, doc, serverTimestamp, orderBy, limit } from "firebase/firestore";
-import { Report } from "@/lib/types/report";
+// Notifications are fetched via Admin SDK API route (polling) — avoids Firestore security rules
+// and composite index requirements on the client-side SDK.
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -166,70 +165,103 @@ export default function AdminDashboard() {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
  
     const [unreadCount, setUnreadCount] = useState(0);
-    const [activeToast, setActiveToast] = useState<Report | null>(null);
+    const [activeToast, setActiveToast] = useState<{
+        id: string;
+        title: string;
+        body: string;
+        type: string;
+        reportId?: string;
+    } | null>(null);
     const mountedTime = useRef(new Date());
  
-    // 1. Subscribe to real-time unread notifications count
+    // ── Real-time admin notifications via polling (Admin SDK) ─────────────────
+    // The client-side Firebase SDK cannot read the notifications collection
+    // because the admin dashboard uses custom cookie auth (not Firebase Auth).
+    // Firestore security rules block unauthenticated reads.
+    // Solution: poll /api/notifications/recent (Admin SDK route) every 5 seconds.
+    // This bypasses security rules AND composite index requirements entirely.
     useEffect(() => {
-        const q = query(collection(db, "notifications"), where("isRead", "==", false));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setUnreadCount(snapshot.size);
-        }, (error) => {
-            console.error("❌ Error subscribing to unread notifications count:", error);
-        });
-        return unsubscribe;
-    }, []);
- 
-    // 2. Subscribe to real-time reports creation to show toast notification
-    useEffect(() => {
-        const q = query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(5));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            snapshot.docChanges().forEach(async (change) => {
-                if (change.type === "added") {
-                    const data = change.doc.data();
-                    const createdAt = data.createdAt;
-                    let createdDate: Date;
-                    if (typeof createdAt?.toDate === "function") {
-                        createdDate = createdAt.toDate();
-                    } else {
-                        createdDate = new Date(createdAt);
-                    }
- 
-                    // Only trigger if report is created after dashboard mounted
-                    if (createdDate.getTime() > mountedTime.current.getTime() - 2000) {
-                        const report = { id: change.doc.id, ...data } as Report;
-                        setActiveToast(report);
- 
-                        // Auto-create a deterministic notification in the notifications collection for the admin logs
-                        try {
-                            const notifId = `new_report_${report.id}`;
-                            await setDoc(doc(db, "notifications", notifId), {
-                                recipientUid: "admin",
-                                type: "Report",
-                                title: "New Issue Received",
-                                body: `A new ${report.category} Incident has been reported by ${report.authorName} in ${report.location.area || "unknown region"}.`,
-                                reportId: report.id,
-                                isRead: false,
-                                createdAt: serverTimestamp(),
-                            });
-                        } catch (err) {
-                            console.error("❌ Failed to log new issue notification:", err);
-                        }
-                    }
+        const shownIds = new Set<string>();
+        // Mark the start time so we only toast notifications created AFTER mount
+        const since = new Date(mountedTime.current.getTime() - 3000);
+        let latestSince = since;
+
+        const poll = async () => {
+            try {
+                const res = await fetch(
+                    `/api/notifications/recent?since=${latestSince.toISOString()}`,
+                    { credentials: "include" }
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+
+                // Update unread badge count
+                if (typeof data.unreadCount === "number") {
+                    setUnreadCount(data.unreadCount);
                 }
-            });
-        }, (error) => {
-            console.error("❌ Error subscribing to reports feed:", error);
-        });
-        return unsubscribe;
+
+                // Show toasts for new notifications
+                if (Array.isArray(data.notifications) && data.notifications.length > 0) {
+                    // Update latestSince to the most recent createdAt we received
+                    const newest = data.notifications[0]; // already sorted desc
+                    latestSince = new Date(newest.createdAt);
+
+                    data.notifications.forEach((notif: {
+                        id: string;
+                        title: string;
+                        body: string;
+                        type: string;
+                        reportId?: string;
+                        createdAt: string;
+                    }) => {
+                        if (shownIds.has(notif.id)) return;
+                        shownIds.add(notif.id);
+
+                        // Show the most recent one as the active toast
+                        setActiveToast({
+                            id: notif.id,
+                            title: notif.title,
+                            body: notif.body,
+                            type: notif.type,
+                            reportId: notif.reportId ?? undefined,
+                        });
+                    });
+                }
+            } catch {
+                // Network error — silently skip, will retry on next poll
+            }
+        };
+
+        // Initial poll immediately on mount
+        poll();
+        // Then poll every 5 seconds
+        const interval = setInterval(poll, 5000);
+
+        return () => clearInterval(interval);
     }, []);
  
-    const handleToastClick = (report: Report) => {
-        if (typeof window !== "undefined") {
-            (window as any).pendingReportDetail = report;
-            setActiveNav("reports");
-            window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }));
-            window.dispatchEvent(new CustomEvent("openReportDetail", { detail: { report } }));
+    const handleToastClick = async (toastObj: any) => {
+        if (!toastObj.reportId) {
+            setActiveToast(null);
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/reports");
+            if (!res.ok) throw new Error("Failed to fetch reports");
+            const body = await res.json();
+            const reportsList = body.reports ?? body ?? [];
+            const found = reportsList.find((r: any) => r.id === toastObj.reportId);
+            
+            if (found && typeof window !== "undefined") {
+                (window as any).pendingReportDetail = found;
+                setActiveNav("reports");
+                window.dispatchEvent(new CustomEvent("changeNavTab", { detail: "reports" }));
+                window.dispatchEvent(new CustomEvent("openReportDetail", { detail: { report: found } }));
+            }
+        } catch (err) {
+            console.error("Error opening report from toast click:", err);
+        } finally {
             setActiveToast(null);
         }
     };
@@ -509,7 +541,7 @@ export default function AdminDashboard() {
                 </div>
             )}
  
-            {/* Real-time New Issue Toast Notification */}
+            {/* Real-time Admin Toast Notification */}
             {activeToast && (
                 <div
                     onClick={() => handleToastClick(activeToast)}
@@ -517,16 +549,20 @@ export default function AdminDashboard() {
                 >
                     <div className="flex items-start gap-3.5">
                         <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center text-xl flex-shrink-0 group-hover:scale-110 transition-transform">
-                            📢
+                            {activeToast.type === "upvote" ? "👍" : activeToast.type === "comment" ? "💬" : "📢"}
                         </div>
                         <div className="flex-1 min-w-0 pt-0.5">
-                            <h4 className="text-xs font-bold text-teal-400 uppercase tracking-wider">New Issue Received</h4>
-                            <p className="text-sm font-semibold text-white mt-1 group-hover:text-teal-300 transition-colors">
-                                {activeToast.category} Incident
+                            <h4 className="text-xs font-bold text-teal-400 uppercase tracking-wider">
+                                {activeToast.title}
+                            </h4>
+                            <p className="text-xs text-slate-300 mt-1 leading-relaxed line-clamp-2">
+                                {activeToast.body}
                             </p>
-                            <p className="text-xs text-slate-400 mt-1 leading-relaxed line-clamp-2">
-                                {activeToast.description}
-                            </p>
+                            {activeToast.reportId && (
+                                <p className="text-[10px] text-teal-400 mt-1 font-semibold group-hover:underline">
+                                    Click to inspect details
+                                </p>
+                            )}
                         </div>
                         <button
                             onClick={(e) => {
