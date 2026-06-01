@@ -4,6 +4,25 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 15: Forced Password Change on First Login
+**Date:** 2026-06-01
+**Branch:** `feat-update/auth-admin`
+
+**Objective:** Require newly created admins and the superadmin to change their password on initial login for security.
+
+**What was built / fixed:**
+- **Types Update (`auth.ts`):** Added optional `requirePasswordChange?: boolean` field to `AdminUser` and `AdminSession` interfaces.
+- **Service Updates (`auth.service.ts`):** 
+  - Added `requirePasswordChange: true` to the payload inside `createAdminUser` when registering a new admin.
+  - Merged `requirePasswordChange` from Firestore document data into the returned user session in `validateFirestoreAdmin`.
+  - Updated `validateSuperadmin` to query Firestore for a `superadmin` document. If it doesn't exist, it creates the document with `requirePasswordChange: true` (first login trigger). If it does exist, it validates logins against its password hash if a custom hash is set, supporting superadmin runtime password updates.
+- **Session API Update (`session/route.ts`):** Integrated retrieval and mapping of the `requirePasswordChange` field from Firestore for both admins and superadmins to return it to the frontend AuthContext.
+- **Profile API Update (`profile/route.ts`):** Allowed password changes for superadmins (saved to Firestore `superadmin` document). Cleared the `requirePasswordChange` flag (`false`) and updated password hashes in Firestore for all admins upon a successful password change request.
+- **UI Screen Gate (`page.tsx`):** Added checking for `user?.requirePasswordChange` inside the page router gate to render the new password update view instead of the main dashboard.
+- **Forced Password Change Component (`ForcePasswordChange.tsx`):** Designed and built a premium glassmorphic credentials reset view featuring temporary password confirmation, strength meter validation, mismatch warnings, error/success banners, and a fallback "Cancel & Logout" option.
+
+---
+
 ## ✅ Phase 14: Community Upvotes, Comments & Real-Time Admin Alerts — Final
 **Date:** 2026-05-30
 **Branch:** `fix-feat/community-feedback`

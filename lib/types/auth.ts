@@ -22,6 +22,7 @@ export interface AdminUser {
   lga?: string;
   scope?: "all" | "province" | "district" | "lga";
   avatarUrl?: string | null;
+  requirePasswordChange?: boolean;
 }
 
 /** Stored in the JWT session cookie */
@@ -37,6 +38,7 @@ export interface AdminSession {
   scope?: "all" | "province" | "district" | "lga";
   avatarUrl?: string | null;
   loginLogId?: string; // embedded login log document ID
+  requirePasswordChange?: boolean;
   iat?: number; // JWT issued at
   exp?: number; // JWT expiry
 }

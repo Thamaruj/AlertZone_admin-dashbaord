@@ -34,10 +34,10 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     avatarUrl?: string | null;
   } = await req.json();
 
-  // 3. Superadmin cannot change password or display name via profile API
-  if (session.id === "superadmin" && (body.displayName !== undefined || body.newPassword !== undefined)) {
+  // 3. Superadmin cannot change display name via profile API
+  if (session.id === "superadmin" && body.displayName !== undefined) {
     return NextResponse.json(
-      { error: "Superadmin credentials are managed via environment variables." },
+      { error: "Superadmin display name is managed via environment variables." },
       { status: 403 }
     );
   }
@@ -82,8 +82,26 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Fetch stored hash (only if not superadmin)
-    if (session.id !== "superadmin") {
+    // Fetch stored hash
+    let storedHash = "";
+    
+    if (session.id === "superadmin") {
+      const { getSuperadminCredentials } = await import("@/lib/services/auth.service");
+      const creds = getSuperadminCredentials();
+      storedHash = creds.passwordHash;
+
+      // Clean up escaped dollar signs (as done in auth.service)
+      storedHash = storedHash.replace(/\\\$/g, "$");
+
+      const docSnap = await adminDb
+        .collection(ADMIN_USERS_COLLECTION)
+        .doc("superadmin")
+        .get();
+      
+      if (docSnap.exists && docSnap.data()?.passwordHash) {
+        storedHash = docSnap.data()!.passwordHash;
+      }
+    } else {
       const docSnap = await adminDb
         .collection(ADMIN_USERS_COLLECTION)
         .doc(session.id)
@@ -93,18 +111,20 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: "Admin account not found." }, { status: 404 });
       }
 
-      const data = docSnap.data()!;
-      const passwordMatch = await bcrypt.compare(body.currentPassword, data.passwordHash);
-      if (!passwordMatch) {
-        return NextResponse.json(
-          { error: "Current password is incorrect." },
-          { status: 400 }
-        );
-      }
-
-      updates.passwordHash = await bcrypt.hash(body.newPassword, 12);
-      isProfileUpdate = true;
+      storedHash = docSnap.data()!.passwordHash;
     }
+
+    const passwordMatch = await bcrypt.compare(body.currentPassword, storedHash);
+    if (!passwordMatch) {
+      return NextResponse.json(
+        { error: "Current password is incorrect." },
+        { status: 400 }
+      );
+    }
+
+    updates.passwordHash = await bcrypt.hash(body.newPassword, 12);
+    updates.requirePasswordChange = false;
+    isProfileUpdate = true;
   }
 
   // 6. Apply updates if any
