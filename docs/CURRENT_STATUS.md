@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-30 (Fixed real-time admin toast notifications using Admin SDK polling; resolved Firestore security rule blocks on client SDK; fixed commenter/upvoter profile fetching; added clickable user profiles from reports community section; fixed Notifications.tsx composite index bypass)
+> **Last Updated:** 2026-06-04 (Added sizes prop to next/image logo components to resolve browser performance warnings; added content-type checks in AuthContext to handle non-JSON responses gracefully and prevent client-side parsing crashes)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -123,7 +123,7 @@
 - [x] Server-side credential validation (superadmin from `.env.local`, other admins from Firestore)
 - [x] Session persistence via HttpOnly JWT cookie (8-hour standard duration)
 - [x] AuthContext provider wraps the app — all components can use `useAuth()`
-- [x] Superadmin hardcoded in `.env.local` (SUPERADMIN_USERNAME, SUPERADMIN_PASSWORD_HASH)
+- [x] Superadmin credentials hardcoded in `.env.local` (SUPERADMIN_USERNAME, SUPERADMIN_PASSWORD_HASH) as defaults; password updates are saved to Firestore in the `adminUsers/superadmin` document (which overrides `.env.local` on subsequent validations), and the superadmin account cannot be deactivated or deleted via both frontend UI and backend API validations.
 - [x] Additional admins stored in Firestore `adminUsers` collection with bcrypt hashes
 - [x] Role-based access: `admin` and `superadmin` roles
 - [x] Username-only login (email removed — can be added later)
@@ -133,6 +133,7 @@
 - [x] Forced logout with 2-minute countdown timer and blur overlay on deactivation
 - [x] Superadmin active admin warning popup: alerts superadmin if they attempt to deactivate an admin who has been active in the last 20 seconds
 - [x] Superadmin active admin deletion block: prevents deletion of admin accounts that are active or online, requiring deactivation and logout first.
+- [x] Forced password change on initial login: newly created admin accounts and superadmin (on first login) are forced to change their password via a premium ForcePasswordChange component before accessing dashboard tabs.
 - [ ] "Forgot password" — not implemented (hardcoded credentials don't support reset)
 
 ### Map View (`Mapview.tsx`)

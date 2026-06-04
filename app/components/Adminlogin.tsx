@@ -72,6 +72,7 @@ export default function AdminLogin() {
                   src={logo1}
                   alt="AlertZone Logo"
                   fill
+                  sizes="(max-width: 768px) 180px, 180px"
                   className="opacity-95 object-contain drop-shadow-2xl"
                   priority
                 />

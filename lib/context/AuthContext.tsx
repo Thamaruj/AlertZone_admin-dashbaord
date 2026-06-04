@@ -81,8 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch("/api/auth/session", { credentials: "include" });
         if (res.ok) {
-          const data = await res.json();
-          if (data.user) setUser(data.user);
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (data.user) setUser(data.user);
+          }
         }
       } catch (err) {
         console.error("❌ Session restore failed:", err);
@@ -105,12 +108,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const res = await fetch("/api/auth/heartbeat", { method: "POST", credentials: "include" });
         if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.isActive === false) {
-            setDeactivatedState((prev) => {
-              if (prev.isDeactivated) return prev;
-              return { isDeactivated: true, countdown: 120 };
-            });
+          const contentType = res.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            const data = await res.json();
+            if (data.success && data.isActive === false) {
+              setDeactivatedState((prev) => {
+                if (prev.isDeactivated) return prev;
+                return { isDeactivated: true, countdown: 120 };
+              });
+            }
           }
         }
       } catch (err) {
@@ -154,6 +160,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           credentials: "include",
           body: JSON.stringify(credentials),
         });
+
+        const contentType = res.headers.get("content-type");
+        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+          return `Server error (${res.status}). Please try again.`;
+        }
 
         const data: LoginResponse = await res.json();
 
