@@ -5,6 +5,7 @@ import { UserProfile } from "@/lib/types/user";
 import { Report } from "@/lib/types/report";
 import { categoryStyleMeta } from "@/lib/constants/categories";
 import { statusStyleMeta } from "@/lib/constants/statuses";
+import { BADGE_DEFINITIONS } from "@/lib/constants/badges";
 
 const reportStatusMeta: Record<string, { color: string; bg: string; border: string; label: string }> = {
     PENDING: { color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20", label: "Pending" },
@@ -145,10 +146,47 @@ export default function UserDetailsModal({
                                         <p className="text-lg font-extrabold text-slate-200 font-mono">{(user.contributionPoints || 0).toLocaleString()} pts</p>
                                     </div>
                                 </div>
-                                <div className="text-xs space-y-2">
+                                <div className="text-xs space-y-3">
                                     <div className="flex justify-between items-center bg-white/5 border border-white/5 rounded-lg px-3 py-2">
                                         <span className="text-slate-500">Reports Validated</span><span className="font-bold text-slate-200 font-mono">{user.reportsValidated || 0}</span>
                                     </div>
+
+                                    {user.badges && user.badges.length > 0 && (
+                                        <div className="space-y-2 pt-1 border-t border-white/5">
+                                            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Earned Badges ({user.badges.length})</span>
+                                            <div className="grid grid-cols-1 gap-1.5 max-h-[160px] overflow-y-auto custom-scrollbar pr-1">
+                                                {user.badges.map((badgeId) => {
+                                                    const badgeDef = BADGE_DEFINITIONS.find(b => b.id === badgeId);
+                                                    if (!badgeDef) {
+                                                        return (
+                                                            <div key={badgeId} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/5 border border-white/5 text-[10px] text-slate-400">
+                                                                <span>🏆</span>
+                                                                <span className="font-semibold">{badgeId}</span>
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <div 
+                                                            key={badgeId} 
+                                                            className="flex items-center justify-between p-2 rounded-lg border bg-white/[0.01] border-white/5 hover:border-teal-500/20 hover:bg-white/[0.03] transition-all duration-200 group/badge"
+                                                            title={badgeDef.description}
+                                                        >
+                                                            <div className="flex items-center gap-2 min-w-0">
+                                                                <span className="text-sm">{badgeDef.icon}</span>
+                                                                <div className="min-w-0">
+                                                                    <p className="text-[10px] font-bold text-white leading-tight truncate">{badgeDef.name}</p>
+                                                                    <p className="text-[8px] text-slate-400 leading-tight truncate max-w-[120px]">{badgeDef.description}</p>
+                                                                </div>
+                                                            </div>
+                                                            <span className={`px-1.5 py-0.2 rounded text-[7px] font-black uppercase border tracking-wider flex-shrink-0 ${badgeDef.tierColor}`}>
+                                                                {badgeDef.tier}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

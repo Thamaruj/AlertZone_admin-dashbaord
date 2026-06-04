@@ -77,12 +77,22 @@ export interface ActivityEntry {
   note?: string;
 }
 
+export interface LeaderboardItem {
+  uid: string;
+  fullName: string;
+  avatarUrl: string | null;
+  contributionPoints: number;
+  level: number;
+  reportsResolved: number;
+}
+
 export interface DashboardPayload {
   kpis: DashboardKPIs;
   statusDistribution: StatusDistributionItem[];
   categorySnapshot: CategorySnapshotItem[];
   recentPending: RecentPendingReport[];
   recentActivity: ActivityEntry[];
+  leaderboard: LeaderboardItem[];
 }
 
 // ─── GET handler ──────────────────────────────────────────────────────────────
@@ -278,12 +288,29 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       count: categoryCount.get(id) ?? 0,
     })).filter(c => c.count > 0).sort((a, b) => b.count - a.count);
 
+    // ── Build leaderboard (top 5 citizens sorted by points) ────────────────
+    const leaderboard: LeaderboardItem[] = usersSnap.docs
+      .map((doc) => {
+        const uData = doc.data();
+        return {
+          uid: doc.id,
+          fullName: uData.fullName || "Anonymous Citizen",
+          avatarUrl: uData.avatarUrl || null,
+          contributionPoints: uData.contributionPoints || 0,
+          level: uData.level || 1,
+          reportsResolved: uData.reportsResolved || uData.reportsValidated || 0,
+        };
+      })
+      .sort((a, b) => b.contributionPoints - a.contributionPoints)
+      .slice(0, 5);
+
     const payload: DashboardPayload = {
       kpis: { total, pending, inProgress, resolved, rejected, totalCitizens, activeCitizens, suspendedCitizens },
       statusDistribution,
       categorySnapshot,
       recentPending: recentPendingReports,
       recentActivity,
+      leaderboard,
     };
 
     return NextResponse.json(payload);
