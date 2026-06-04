@@ -1,8 +1,9 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-05-28 (Added real-time new issue toast notification, click-to-view redirection, dashboard/sidebar notification badges, deterministic logs, and success feedback modal overlay on status change)
+> **Last Updated:** 2026-06-04 (Fixed `FirebaseError: Missing or insufficient permissions` and `INTERNAL ASSERTION FAILED: Unexpected state` crashes by eliminating all direct client-side Firestore SDK reads and writes. All Firestore access now routes through Admin SDK-backed API endpoints. Also fixed real-time new report toast popup and added optimistic UI for notification actions.)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
+
 
 ---
 
@@ -229,6 +230,10 @@
 | console.log in firebase.ts | 🟢 Low | `lib/firebase.ts` | Remove before production |
 | No Firebase Storage import | 🟡 Medium | `lib/firebase.ts` | Needed for report image URLs |
 | No `.env.local` in `.gitignore` check | 🟡 Medium | `.gitignore` | Verify Firebase keys aren't committed |
+| FirebaseError: Missing or insufficient permissions | 🟢 Fixed | All components | Eliminated all direct client-side Firestore SDK reads — all access now via Admin SDK API routes |
+| INTERNAL ASSERTION FAILED: Unexpected state (ID: ca9) | 🟢 Fixed | Maindashboard/Dashboard | Cascade crash caused by failed onSnapshot; resolved with the permission fix above |
+| Real-time new report toast not firing | 🟢 Fixed | Maindashboard.tsx | Replaced onSnapshot with dedicated polling loop against /api/reports?since=mountTime |
+| Next.js Image missing sizes prop warning | 🟢 Fixed | Adminlogin.tsx, Maindashboard.tsx | Added sizes prop to all fill-mode Image components |
 
 ---
 
@@ -236,12 +241,12 @@
 
 | Service | Status | Notes |
 |---|---|---|
-| **Authentication** | 🟡 SDK Ready | Firebase Auth initialized but not used in login |
-| **Firestore** | 🟡 SDK Ready | Firestore initialized but no queries run |
+| **Authentication** | 🟢 Done | Cookie-based JWT auth; no Firebase Auth used for admin sessions |
+| **Firestore** | 🟢 Done | All reads/writes go through Admin SDK API routes — no client-side Firestore SDK calls remain in any component |
 | **Storage** | 🔴 Not Imported | Needed for report image display |
 | **Cloud Messaging** | 🟢 Done | Integrated with Expo Push API for mobile remote notifications |
 | **Cloud Functions** | 🔴 Not Set Up | May be needed for automated notifications |
-| **Security Rules** | 🔴 Not Configured | Must support admin read/write access |
+| **Security Rules** | 🟡 Partial | Client SDK never hits rules (Admin SDK bypasses them); rules only matter for mobile app |
 
 ---
 

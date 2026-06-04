@@ -4,7 +4,35 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 14: Firestore Permission Fix — Full Admin SDK Migration
+**Date:** 2026-06-04
+**Branch:** `main`
+
+**Objective:** Eliminate `FirebaseError: Missing or insufficient permissions` and `FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state` crashes that appeared for all non-superadmin admin accounts. Root cause: the dashboard uses cookie-based JWT auth (not Firebase Auth), so `request.auth` is always `null` in Firestore Security Rules, blocking every direct client-side Firestore read/write.
+
+**What was built:**
+
+- **`app/api/notifications/recent/route.ts`** (new) — Serves unread badge count (`recipientUid == "admin"` filter) and recent notifications. Added `?full=true` mode that returns all 100 most recent notifications across all recipients for the Notifications page.
+- **`app/api/notifications/[id]/route.ts`** (new) — `PATCH` to mark a single notification as read; `DELETE` to remove it. Both use Admin SDK.
+- **`app/api/notifications/mark-all-read/route.ts`** (new) — `POST` endpoint to batch-mark selected or all unread notifications as read in a single Admin SDK batch write.
+- **`app/api/reports/[id]/comments/route.ts`** (new) — `GET` returns all comments on a report with commenter profiles, batch-fetched from `users` collection via Admin SDK.
+- **`app/api/reports/[id]/upvotes/route.ts`** (new) — `GET` returns all upvoters with user profiles via Admin SDK.
+- **`app/api/reports/route.ts`** (modified) — Added `?since=<ISO>` query param for efficient new-report polling (returns only reports newer than the timestamp, limited to 20 docs).
+
+**Components fixed (all direct Firestore client SDK calls removed):**
+
+- **`Maindashboard.tsx`** — Removed two `onSnapshot` subscriptions (`notifications`, `reports`). Replaced with two dedicated polling loops: (1) badge count via `/api/notifications/recent` every 5s; (2) new report toast detector via `/api/reports?since=mountTime` every 5s with a 5s initial delay. Also fixed `sizes` prop on logo `Image`.
+- **`Dashboard.tsx`** — Removed `onSnapshot` for unread count + dead `db`/`firebase/firestore` imports. Replaced with polling `/api/notifications/recent` every 5s.
+- **`Notifications.tsx`** — Removed `onSnapshot`, `updateDoc`, `writeBatch`, `deleteDoc` + all firebase imports. Replaced with: polling `/api/notifications/recent?full=true` every 5s for the list; PATCH/DELETE to `/api/notifications/[id]` for individual actions; POST to `/api/notifications/mark-all-read` for bulk read. Added **optimistic UI updates** for mark-read and delete so the UI feels instant.
+- **`Reportsmanagement.tsx`** — Removed `collection`, `getDocs`, `getDoc`, `orderBy`, `query` imports + `db` import. Replaced `fetchComments` and `fetchUpvoters` with simple `fetch()` calls to the new Admin SDK routes.
+- **`Adminlogin.tsx`** — Added missing `sizes` prop to fill-mode `Image` component.
+
+**Architecture principle established:** The admin dashboard MUST NOT use the Firebase client SDK for any Firestore reads or writes. All Firestore operations go through `/api/*` server routes that use `firebase-admin`, which bypasses security rules entirely.
+
+---
+
 ## ✅ Phase 13: Real-time New Issue Notifications & Dashboard Badge
+
 **Date:** 2026-05-28
 **Branch:** `fix-feat/dashboard`
 
