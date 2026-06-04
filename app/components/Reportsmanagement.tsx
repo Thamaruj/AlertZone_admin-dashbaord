@@ -10,8 +10,7 @@ import { sriLankaGeographics, resolveSrilankaRegion } from "@/lib/constants/sriL
 import { useAuth } from "@/lib/hooks/useAuth";
 import MiniMap from "./MiniMap";
 import UserDetailsModal from "./UserDetailsModal";
-import { collection, getDocs, doc, getDoc, orderBy, query } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+
 
 interface CalendarProps {
     value: string; // YYYY-MM-DD
@@ -509,40 +508,10 @@ export default function ReportsManagement() {
     const fetchComments = async (reportId: string) => {
         setLoadingComments(true);
         try {
-            const commentsRef = collection(db, "reports", reportId, "comments");
-            const q = query(commentsRef, orderBy("createdAt", "asc"));
-            const snap = await getDocs(q);
-            const commentsData = await Promise.all(
-                snap.docs.map(async (docSnap) => {
-                    const data = docSnap.data();
-                    let commenterName = "Anonymous Citizen";
-                    let commenterAvatar = "";
-                    let commenterUser: UserProfile | null = null;
-                    if (data.uid) {
-                        try {
-                            const userDoc = await getDoc(doc(db, "users", data.uid));
-                            if (userDoc.exists()) {
-                                commenterUser = { uid: data.uid, ...userDoc.data() } as UserProfile;
-                                commenterName = commenterUser.fullName || "Anonymous Citizen";
-                                commenterAvatar = commenterUser.avatarUrl || "";
-                            }
-                        } catch (err) {
-                            console.error("Error fetching commenter profile:", err);
-                        }
-                    }
-                    return {
-                        id: docSnap.id,
-                        body: data.body || "",
-                        upvoteCount: data.upvoteCount || 0,
-                        createdAt: data.createdAt,
-                        uid: data.uid,
-                        commenterName,
-                        commenterAvatar,
-                        commenterUser,
-                    };
-                })
-            );
-            setComments(commentsData);
+            const res = await fetch(`/api/reports/${reportId}/comments`, { credentials: "include" });
+            if (!res.ok) throw new Error(`Failed to load comments (${res.status})`);
+            const data = await res.json();
+            setComments(data.comments ?? []);
         } catch (err) {
             console.error("Error loading comments:", err);
         } finally {
@@ -553,37 +522,10 @@ export default function ReportsManagement() {
     const fetchUpvoters = async (reportId: string) => {
         setLoadingUpvoters(true);
         try {
-            const upvotesRef = collection(db, "reports", reportId, "upvotes");
-            const snap = await getDocs(upvotesRef);
-            const upvotersData = await Promise.all(
-                snap.docs.map(async (docSnap) => {
-                    const data = docSnap.data();
-                    const uid = docSnap.id;
-                    let name = "Anonymous Citizen";
-                    let avatar = "";
-                    let upvoterUser: UserProfile | null = null;
-                    if (uid) {
-                        try {
-                            const userDoc = await getDoc(doc(db, "users", uid));
-                            if (userDoc.exists()) {
-                                upvoterUser = { uid, ...userDoc.data() } as UserProfile;
-                                name = upvoterUser.fullName || "Anonymous Citizen";
-                                avatar = upvoterUser.avatarUrl || "";
-                            }
-                        } catch (err) {
-                            console.error("Error fetching upvoter profile:", err);
-                        }
-                    }
-                    return {
-                        uid,
-                        name,
-                        avatar,
-                        upvoterUser,
-                        createdAt: data.createdAt,
-                    };
-                })
-            );
-            setUpvoters(upvotersData);
+            const res = await fetch(`/api/reports/${reportId}/upvotes`, { credentials: "include" });
+            if (!res.ok) throw new Error(`Failed to load upvoters (${res.status})`);
+            const data = await res.json();
+            setUpvoters(data.upvoters ?? []);
         } catch (err) {
             console.error("Error loading upvoters:", err);
         } finally {

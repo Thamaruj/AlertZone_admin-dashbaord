@@ -1,18 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  query,
-  orderBy,
-  limit,
-  onSnapshot,
-  doc,
-  updateDoc,
-  deleteDoc,
-  writeBatch,
-} from "firebase/firestore";
+import { useState, useEffect, useCallback } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -166,37 +154,34 @@ export default function Notifications() {
   const [broadcastLoading, setBroadcastLoading] = useState(false);
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // 1. Subscribe to Firestore notification logs in real-time
-  useEffect(() => {
-    const q = query(collection(db, "notifications"), orderBy("createdAt", "desc"), limit(100));
-    
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const list = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            title: data.title ?? "Notification",
-            message: data.body ?? "",
-            type: mapDbType(data.type),
-            time: formatTime(data.createdAt),
-            isRead: data.isRead ?? false,
-            reportId: data.reportId,
-          } as ClientNotification;
-        });
-
-        setNotifications(list);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("❌ Error reading notifications:", error);
-        setLoading(false);
-      }
-    );
-
-    return unsubscribe;
+  // Poll /api/notifications/recent?full=true via Admin SDK to avoid Firestore permission errors.
+  // The admin dashboard uses cookie-based JWT auth, so request.auth == null in Firestore rules,
+  // meaning all direct client-side reads are blocked.
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const res = await fetch("/api/notifications/recent?full=true", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list: ClientNotification[] = (data.notifications ?? []).map((n: any) => ({
+        id: n.id,
+        title: n.title ?? "Notification",
+        message: n.body ?? "",
+        type: mapDbType(n.type),
+        time: formatTime(n.createdAt),
+        isRead: n.isRead ?? false,
+        reportId: n.reportId ?? undefined,
+      }));
+      setNotifications(list);
+    } catch { /* non-critical */ } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
 
   // 2. Auto dismiss toast
   useEffect(() => {
@@ -215,8 +200,13 @@ export default function Notifications() {
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   const handleMarkAsRead = async (id: string) => {
+    // Optimistic update
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
     try {
-      await updateDoc(doc(db, "notifications", id), { isRead: true });
+      await fetch(`/api/notifications/${id}`, {
+        method: "PATCH",
+        credentials: "include",
+      });
     } catch (e) {
       console.error("❌ Error marking notification as read:", e);
     }
@@ -225,21 +215,28 @@ export default function Notifications() {
   const handleMarkAllAsRead = async () => {
     const unread = notifications.filter((n) => !n.isRead);
     if (unread.length === 0) return;
-
+    // Optimistic update
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     try {
-      const batch = writeBatch(db);
-      unread.forEach((n) => {
-        batch.update(doc(db, "notifications", n.id), { isRead: true });
+      await fetch("/api/notifications/mark-all-read", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: unread.map((n) => n.id) }),
       });
-      await batch.commit();
     } catch (e) {
       console.error("❌ Error marking all as read:", e);
     }
   };
 
   const handleDelete = async (id: string) => {
+    // Optimistic update
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
     try {
-      await deleteDoc(doc(db, "notifications", id));
+      await fetch(`/api/notifications/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
     } catch (e) {
       console.error("❌ Error deleting notification:", e);
     }

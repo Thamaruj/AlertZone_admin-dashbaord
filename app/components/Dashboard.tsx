@@ -2,8 +2,6 @@
  
 import React, { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -393,15 +391,23 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
   const [now, setNow] = useState(new Date());
   const [unreadCount, setUnreadCount] = useState(0);
  
-  // Subscribe to real-time unread notifications count
+  // Poll /api/notifications/recent via Admin SDK to get unread count.
+  // We do NOT use onSnapshot here because the admin dashboard uses cookie-based JWT auth,
+  // meaning request.auth == null in Firestore security rules, which blocks all client reads.
   useEffect(() => {
-    const q = query(collection(db, "notifications"), where("isRead", "==", false));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUnreadCount(snapshot.size);
-    }, (error) => {
-      console.error("❌ Error subscribing to unread notifications count inside Dashboard:", error);
-    });
-    return unsubscribe;
+    const poll = async () => {
+      try {
+        const res = await fetch("/api/notifications/recent", { credentials: "include" });
+        if (!res.ok) return;
+        const body = await res.json();
+        if (typeof body.unreadCount === "number") {
+          setUnreadCount(body.unreadCount);
+        }
+      } catch { /* non-critical */ }
+    };
+    poll();
+    const interval = setInterval(poll, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Live clock tick
