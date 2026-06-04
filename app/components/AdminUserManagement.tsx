@@ -233,8 +233,9 @@ function AdminFormModal({ adminToEdit, onClose, onCreated }: AdminFormModalProps
                 <label className="text-xs font-medium text-slate-300">Role</label>
                 <select
                   value={form.role}
+                  disabled={adminToEdit?.id === "superadmin"}
                   onChange={(e) => setForm({ ...form, role: e.target.value as AdminRole })}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer font-medium"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all cursor-pointer font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <option value="admin" className="bg-[#0f2233]">Admin</option>
                   <option value="superadmin" className="bg-[#0f2233]">Super Admin</option>
@@ -669,32 +670,38 @@ export default function AdminUserManagement() {
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-1">
-                            {/* Toggle active */}
-                            <button
-                              onClick={() => handleToggleActiveClick(admin.id, admin.username, admin.displayName, admin.isActive)}
-                              disabled={actionLoading === admin.id}
-                              title={admin.isActive ? "Deactivate" : "Activate"}
-                              className={`p-1.5 rounded-lg transition-all duration-150 ${
-                                admin.isActive
-                                  ? "text-yellow-400 hover:bg-yellow-500/10"
-                                  : "text-teal-400 hover:bg-teal-500/10"
-                              } disabled:opacity-50`}
-                            >
-                              {actionLoading === admin.id ? (
-                                <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                                </svg>
-                              ) : admin.isActive ? (
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                                </svg>
-                              ) : (
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              )}
-                            </button>
+                             {/* Toggle active */}
+                             {admin.id !== "superadmin" ? (
+                               <button
+                                 onClick={() => handleToggleActiveClick(admin.id, admin.username, admin.displayName, admin.isActive)}
+                                 disabled={actionLoading === admin.id}
+                                 title={admin.isActive ? "Deactivate" : "Activate"}
+                                 className={`p-1.5 rounded-lg transition-all duration-150 ${
+                                   admin.isActive
+                                     ? "text-yellow-400 hover:bg-yellow-500/10"
+                                     : "text-teal-400 hover:bg-teal-500/10"
+                                 } disabled:opacity-50`}
+                               >
+                                 {actionLoading === admin.id ? (
+                                   <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                                   </svg>
+                                 ) : admin.isActive ? (
+                                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                   </svg>
+                                 ) : (
+                                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                   </svg>
+                                 )}
+                               </button>
+                             ) : (
+                               <div className="w-8 h-8 flex items-center justify-center text-slate-500" title="Superadmin account cannot be deactivated">
+                                 🔒
+                               </div>
+                             )}
 
                             {/* Edit Admin Scope / Info */}
                             <button
@@ -721,16 +728,18 @@ export default function AdminUserManagement() {
                             </button>
 
                             {/* Delete */}
-                            <button
-                              onClick={() => handleDeleteClick(admin.id, admin.username, admin.displayName)}
-                              disabled={actionLoading === admin.id}
-                              title="Delete admin"
-                              className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-50"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
+                            {admin.id !== "superadmin" && (
+                              <button
+                                onClick={() => handleDeleteClick(admin.id, admin.username, admin.displayName)}
+                                disabled={actionLoading === admin.id}
+                                title="Delete admin"
+                                className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all duration-150 disabled:opacity-50"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

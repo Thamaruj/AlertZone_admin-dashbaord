@@ -2,10 +2,11 @@
 
 import AdminLogin from "./components/Adminlogin";
 import Maindashboard from "./components/Maindashboard";
+import ForcePasswordChange from "./components/ForcePasswordChange";
 import { useAuth } from "@/lib/hooks/useAuth";
 
 export default function Home() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, user, loading } = useAuth();
 
   // While checking session cookie on first mount, show a minimal loading screen
   if (loading) {
@@ -39,5 +40,17 @@ export default function Home() {
     );
   }
 
-  return <>{isAuthenticated ? <Maindashboard /> : <AdminLogin />}</>;
+  return (
+    <>
+      {isAuthenticated ? (
+        user?.requirePasswordChange ? (
+          <ForcePasswordChange />
+        ) : (
+          <Maindashboard />
+        )
+      ) : (
+        <AdminLogin />
+      )}
+    </>
+  );
 }

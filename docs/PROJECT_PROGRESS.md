@@ -4,7 +4,36 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
-## ✅ Phase 14: Firestore Permission Fix — Full Admin SDK Migration
+## ✅ Phase 16: Image Component Performance Optimization & Robust Fetch Error Handling
+**Date:** 2026-06-04
+**Branch:** `main`
+
+**Objective:** Add `sizes` attributes to responsive `Image` components using `fill` to resolve Next.js rendering warnings and improve page performance. Enhance `AuthContext` API fetching to gracefully handle non-JSON server error responses (like 404s and 500s).
+
+**What was built / fixed:**
+- **Image Performance Opts:** Added `sizes` attribute to the `Image` component referencing `logo1` in `Adminlogin.tsx` and `ForcePasswordChange.tsx` to optimize layout shifts and prevent console warnings.
+- **Robust Auth API Fetching (`AuthContext.tsx`):** Added content-type checks (`contentType.includes("application/json")`) and `.ok` checks prior to parsing JSON responses in `restoreSession`, `checkStatus` (heartbeat), and `login` methods to prevent `SyntaxError` crashes during network or server routing errors (such as 404s).
+
+---
+
+## ✅ Phase 15: Forced Password Change on First Login
+**Date:** 2026-06-01
+**Branch:** `feat-update/auth-admin`
+
+**Objective:** Require newly created admins and the superadmin to change their password on initial login for security.
+
+**What was built / fixed:**
+- **Types Update (`auth.ts`):** Added optional `requirePasswordChange?: boolean` field to `AdminUser` and `AdminSession` interfaces.
+- **Service Updates (`auth.service.ts`):** Added `requirePasswordChange: true` to the payload inside `createAdminUser` when registering a new admin. Merged `requirePasswordChange` from Firestore document data into the returned user session in `validateFirestoreAdmin`. Updated `validateSuperadmin` to query Firestore for a `superadmin` document.
+- **Session API Update (`session/route.ts`):** Integrated retrieval and mapping of the `requirePasswordChange` field from Firestore for both admins and superadmins.
+- **Profile API Update (`profile/route.ts`):** Allowed password changes for superadmins (saved to Firestore `superadmin` document). Cleared the `requirePasswordChange` flag upon a successful password change.
+- **Deactivation/Deletion Protection:** Added checks in the `PATCH` and `DELETE` endpoints for `/api/admin-users/[id]` to reject attempts to deactivate, delete, or change the role of the default `superadmin` account.
+- **UI Screen Gate (`page.tsx`):** Added checking for `user?.requirePasswordChange` to render the forced password update view instead of the main dashboard.
+- **Forced Password Change Component (`ForcePasswordChange.tsx`):** Premium glassmorphic credentials reset view featuring temporary password confirmation, strength meter validation, mismatch warnings, error/success banners, and a fallback "Cancel & Logout" option.
+
+---
+
+## ✅ Phase 17: Firestore Permission Fix — Full Admin SDK Migration
 **Date:** 2026-06-04
 **Branch:** `main`
 

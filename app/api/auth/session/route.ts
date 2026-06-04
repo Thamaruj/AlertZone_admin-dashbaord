@@ -43,6 +43,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       session.lga = data.lga ?? "";
       session.scope = data.scope ?? "all";
       session.avatarUrl = data.avatarUrl ?? null;
+      session.requirePasswordChange = data.requirePasswordChange ?? false;
     } catch (error) {
       console.error("❌ Session active check error:", error);
       return NextResponse.json({ user: null }, { status: 500 });
@@ -58,6 +59,9 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
         session.district = data.district ?? "";
         session.lga = data.lga ?? "";
         session.scope = data.scope ?? "all";
+        session.requirePasswordChange = data.requirePasswordChange ?? false;
+      } else {
+        session.requirePasswordChange = true;
       }
     } catch (e) {
       console.error("❌ Superadmin doc load error:", e);

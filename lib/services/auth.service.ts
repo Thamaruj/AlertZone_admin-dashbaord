@@ -82,7 +82,7 @@ export function buildClearSessionCookie(): string {
 // Superadmin — hardcoded server-side (from .env.local)
 // ---------------------------------------------------------------------------
 
-function getSuperadminCredentials(): { username: string; passwordHash: string } {
+export function getSuperadminCredentials(): { username: string; passwordHash: string } {
   const username = process.env.SUPERADMIN_USERNAME;
   let passwordHash = process.env.SUPERADMIN_PASSWORD_HASH;
 
@@ -116,16 +116,47 @@ async function validateSuperadmin(
   const creds = getSuperadminCredentials();
   if (creds.username.toLowerCase() !== username.toLowerCase()) return null;
 
-  const match = await bcrypt.compare(password, creds.passwordHash);
+  let passwordHash = creds.passwordHash;
+  let requirePasswordChange = true;
+
+  try {
+    const userDoc = await adminDb.collection(ADMIN_USERS_COLLECTION).doc("superadmin").get();
+    if (userDoc.exists) {
+      const data = userDoc.data();
+      if (data?.passwordHash) {
+        passwordHash = data.passwordHash;
+      }
+      if (data?.requirePasswordChange !== undefined) {
+        requirePasswordChange = data.requirePasswordChange;
+      }
+    } else {
+      // First login: create doc in Firestore for superadmin
+      await adminDb.collection(ADMIN_USERS_COLLECTION).doc("superadmin").set({
+        username: creds.username.toLowerCase(),
+        displayName: process.env.SUPERADMIN_DISPLAY_NAME ?? "Super Admin",
+        role: "superadmin",
+        isActive: true,
+        requirePasswordChange: true,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  } catch (e) {
+    console.error("❌ Superadmin doc read/create error:", e);
+  }
+
+  // Clean up escaped dollar signs (as done in auth.service for env var fallback)
+  passwordHash = passwordHash.replace(/\\\$/g, "$");
+
+  const match = await bcrypt.compare(password, passwordHash);
   if (!match) return null;
 
   return {
     id: "superadmin",
     username: creds.username,
-    displayName:
-      process.env.SUPERADMIN_DISPLAY_NAME ?? "Super Admin",
+    displayName: process.env.SUPERADMIN_DISPLAY_NAME ?? "Super Admin",
     role: "superadmin",
     isActive: true,
+    requirePasswordChange,
   };
 }
 
@@ -178,6 +209,7 @@ async function validateFirestoreAdmin(
         lga: (data as any).lga ?? "",
         scope: (data as any).scope ?? "all",
         avatarUrl: (data as any).avatarUrl ?? null,
+        requirePasswordChange: (data as any).requirePasswordChange ?? false,
       },
     };
   } catch (error) {
@@ -296,6 +328,7 @@ export async function createAdminUser(
     passwordHash,
     role: payload.role,
     isActive: true,
+    requirePasswordChange: true,
     createdAt: admin.firestore.FieldValue.serverTimestamp(),
     createdBy,
     province: payload.province || "",
