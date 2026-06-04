@@ -122,6 +122,7 @@ export default function ForcePasswordChange() {
                   src={logo1}
                   alt="AlertZone Logo"
                   fill
+                  sizes="(max-width: 768px) 140px, 140px"
                   className="opacity-95 object-contain drop-shadow-2xl"
                   priority
                 />

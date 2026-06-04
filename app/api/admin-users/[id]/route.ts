@@ -46,6 +46,15 @@ export async function PATCH(
       return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
     }
 
+    if (id === "superadmin") {
+      if (updates.isActive === false) {
+        return NextResponse.json({ error: "The default super admin account cannot be deactivated." }, { status: 400 });
+      }
+      if (updates.role !== undefined && updates.role !== "superadmin") {
+        return NextResponse.json({ error: "The role of the default super admin account cannot be changed." }, { status: 400 });
+      }
+    }
+
     // Fetch target user's username for logging
     const userDoc = await adminDb.collection("adminUsers").doc(id).get();
     const targetUsername = userDoc.exists ? userDoc.data()?.username : "unknown";
@@ -80,6 +89,10 @@ export async function DELETE(
   const { id } = await params;
   if (!id) {
     return NextResponse.json({ error: "User ID required" }, { status: 400 });
+  }
+
+  if (id === "superadmin") {
+    return NextResponse.json({ error: "The default super admin account cannot be deleted." }, { status: 400 });
   }
 
   try {

@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-06-01 (Implemented forced password change on initial login for new admins and superadmins; added Firestore-backed credential updates for superadmin password changes; added premium glassmorphic ForcePasswordChange component and integrated it into the auth gate router)
+> **Last Updated:** 2026-06-04 (Added sizes prop to next/image logo components to resolve browser performance warnings; added content-type checks in AuthContext to handle non-JSON responses gracefully and prevent client-side parsing crashes)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
@@ -123,7 +123,7 @@
 - [x] Server-side credential validation (superadmin from `.env.local`, other admins from Firestore)
 - [x] Session persistence via HttpOnly JWT cookie (8-hour standard duration)
 - [x] AuthContext provider wraps the app — all components can use `useAuth()`
-- [x] Superadmin credentials hardcoded in `.env.local` (SUPERADMIN_USERNAME, SUPERADMIN_PASSWORD_HASH) as defaults; password updates are saved to Firestore in the `adminUsers/superadmin` document (which overrides `.env.local` on subsequent validations).
+- [x] Superadmin credentials hardcoded in `.env.local` (SUPERADMIN_USERNAME, SUPERADMIN_PASSWORD_HASH) as defaults; password updates are saved to Firestore in the `adminUsers/superadmin` document (which overrides `.env.local` on subsequent validations), and the superadmin account cannot be deactivated or deleted via both frontend UI and backend API validations.
 - [x] Additional admins stored in Firestore `adminUsers` collection with bcrypt hashes
 - [x] Role-based access: `admin` and `superadmin` roles
 - [x] Username-only login (email removed — can be added later)
