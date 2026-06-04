@@ -13,9 +13,8 @@ import Settings from "./Settings";
 import AdminUserManagement from "./AdminUserManagement";
 import { useAuth } from "@/lib/hooks/useAuth";
 import Dashboard from "./Dashboard";
-import { db } from "@/lib/firebase";
-import { collection, query, where, onSnapshot, setDoc, doc, serverTimestamp, orderBy, limit } from "firebase/firestore";
 import { Report } from "@/lib/types/report";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,61 +167,71 @@ export default function AdminDashboard() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [activeToast, setActiveToast] = useState<Report | null>(null);
     const mountedTime = useRef(new Date());
- 
-    // 1. Subscribe to real-time unread notifications count
+    const shownReportIds = useRef<Set<string>>(new Set());
+
+    // ── Poller 1: Unread notification badge count ─────────────────────────────
+    // Polls /api/notifications/recent (Admin SDK) every 5s for the unread count.
+    // Direct Firestore client SDK reads are blocked because request.auth == null in rules.
     useEffect(() => {
-        const q = query(collection(db, "notifications"), where("isRead", "==", false));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            setUnreadCount(snapshot.size);
-        }, (error) => {
-            console.error("❌ Error subscribing to unread notifications count:", error);
-        });
-        return unsubscribe;
-    }, []);
- 
-    // 2. Subscribe to real-time reports creation to show toast notification
-    useEffect(() => {
-        const q = query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(5));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            snapshot.docChanges().forEach(async (change) => {
-                if (change.type === "added") {
-                    const data = change.doc.data();
-                    const createdAt = data.createdAt;
-                    let createdDate: Date;
-                    if (typeof createdAt?.toDate === "function") {
-                        createdDate = createdAt.toDate();
-                    } else {
-                        createdDate = new Date(createdAt);
-                    }
- 
-                    // Only trigger if report is created after dashboard mounted
-                    if (createdDate.getTime() > mountedTime.current.getTime() - 2000) {
-                        const report = { id: change.doc.id, ...data } as Report;
-                        setActiveToast(report);
- 
-                        // Auto-create a deterministic notification in the notifications collection for the admin logs
-                        try {
-                            const notifId = `new_report_${report.id}`;
-                            await setDoc(doc(db, "notifications", notifId), {
-                                recipientUid: "admin",
-                                type: "Report",
-                                title: "New Issue Received",
-                                body: `A new ${report.category} Incident has been reported by ${report.authorName} in ${report.location.area || "unknown region"}.`,
-                                reportId: report.id,
-                                isRead: false,
-                                createdAt: serverTimestamp(),
-                            });
-                        } catch (err) {
-                            console.error("❌ Failed to log new issue notification:", err);
-                        }
-                    }
+        const pollBadge = async () => {
+            try {
+                const res = await fetch("/api/notifications/recent", { credentials: "include" });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (typeof data.unreadCount === "number") {
+                    setUnreadCount(data.unreadCount);
                 }
-            });
-        }, (error) => {
-            console.error("❌ Error subscribing to reports feed:", error);
-        });
-        return unsubscribe;
+            } catch { /* non-critical */ }
+        };
+        pollBadge();
+        const interval = setInterval(pollBadge, 5000);
+        return () => clearInterval(interval);
     }, []);
+
+    // ── Poller 2: New report toast detector ───────────────────────────────────
+    // Polls /api/reports?since=<mountTime> every 5s.
+    // When a report created AFTER the dashboard mounted is found (and not yet shown),
+    // it fires the bottom-right toast popup. This runs independently of notifications
+    // so it works even if no admin notification document exists for the new report.
+    useEffect(() => {
+        // Give the page 3 seconds to settle before watching for new reports,
+        // so we don't toast on reports that existed before the admin logged in.
+        const startTime = new Date(mountedTime.current.getTime() + 3000).toISOString();
+
+        const pollNewReports = async () => {
+            try {
+                const res = await fetch(
+                    `/api/reports?since=${encodeURIComponent(startTime)}`,
+                    { credentials: "include" }
+                );
+                if (!res.ok) return;
+                const data = await res.json();
+                const newReports: Report[] = data.reports ?? [];
+
+                for (const report of newReports) {
+                    if (shownReportIds.current.has(report.id)) continue;
+                    shownReportIds.current.add(report.id);
+                    // Show only the most recent new report as a toast
+                    setActiveToast(report);
+                    // Only show one toast at a time — break after the first new one
+                    break;
+                }
+            } catch { /* non-critical */ }
+        };
+
+        // First poll after 5 seconds (let the page settle), then every 5 seconds
+        let intervalId: ReturnType<typeof setInterval> | null = null;
+        const timerId = setTimeout(() => {
+            pollNewReports();
+            intervalId = setInterval(pollNewReports, 5000);
+        }, 5000);
+
+        return () => {
+            clearTimeout(timerId);
+            if (intervalId !== null) clearInterval(intervalId);
+        };
+    }, []);
+
  
     const handleToastClick = (report: Report) => {
         if (typeof window !== "undefined") {
@@ -336,7 +345,7 @@ export default function AdminDashboard() {
                 {/* Brand */}
                 <div className="px-5 py-6 flex items-center gap-3 border-b border-white/5 bg-white/[0.01]">
                     <div className="p-1.5 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-                        <Image src={logo1} alt="AlertZone Logo" width={22} height={22} className="object-contain" />
+                        <Image src={logo1} alt="AlertZone Logo" width={22} height={22} sizes="22px" className="object-contain" />
                     </div>
                     <div className="flex flex-col">
                         <span className="text-white font-extrabold text-sm tracking-wider uppercase font-sans">AlertZone</span>
