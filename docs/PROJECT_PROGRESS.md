@@ -4,6 +4,22 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Phase 18: Gamification Integration & Top Contributors Leaderboard
+**Date:** 2026-06-04
+**Branch:** `feat/gamification`
+
+**Objective:** Wire full gamification synchronization into the admin dashboard backend and frontend, displaying user points and earned badges beautifully, and adding a leaderboard widget to the landing page.
+
+**What was built / fixed:**
+- **Shared Badge Metadata (`lib/constants/badges.ts`):** Defined the full list of badge definition schemas, including tier styling classes (colors, borders), and descriptive emoji-based icons to map raw IDs (e.g. `first_report`) to user-friendly titles and tooltips.
+- **Backend Status-Change Gamification (`app/api/reports/[id]/route.ts`):** Migrated backend points awarding to match the mobile app's model:
+  - Updates to `ASSIGNED` (accepted) award +10 points to `contributionPoints` and increment `reportsAccepted` by 1.
+  - Updates to `RESOLVED` increment `reportsResolved` and `reportsValidated` by 1.
+  - Recalculates citizen level and earned badges synchronously using Firestore timestamp histories.
+- **Top Contributors Leaderboard API (`app/api/dashboard/route.ts`):** Aggregates registered citizens to dynamically compute, sort in-memory, and return the top 5 contributors with their levels, resolved counts, and points.
+- **Dashboard Widget Integration (`app/components/Dashboard.tsx`):** Restructured the dashboard overview bottom row into a 3-way layout (Report Categories, Top Contributors Leaderboard, and Recent Activity Feed). Created a custom scrollable `LeaderboardWidget` showing rank badges (🥇, 🥈, 🥉), citizen initials/avatars, level chips, and points.
+- **Citizen Detail View Upgrades (`Users.tsx` and `UserDetailsModal.tsx`):** Integrated `BADGE_DEFINITIONS` to show badge counts in the user table, and render premium, styled badge chips with titles, descriptions, and custom tier colors in the citizen profile popups.
+
 ## ✅ Phase 16: Image Component Performance Optimization & Robust Fetch Error Handling
 **Date:** 2026-06-04
 **Branch:** `main`

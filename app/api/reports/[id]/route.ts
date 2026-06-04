@@ -137,12 +137,101 @@ export async function PATCH(
       );
     }
 
-    // If status is RESOLVED, award contribution points and increment validated count
-    if (status === "RESOLVED" && userSnap.exists) {
-      await userRef.update({
-        reportsValidated: (userData.reportsValidated || 0) + 1,
-        contributionPoints: (userData.contributionPoints || 0) + 10, // 10 points
-      });
+    // ── Gamification processing ──
+    if (userSnap.exists) {
+      let contributionPoints = userData.contributionPoints || 0;
+      let reportsAccepted = userData.reportsAccepted || 0;
+      let reportsResolved = userData.reportsResolved || 0;
+      let reportsValidated = userData.reportsValidated || 0;
+      let userUpdated = false;
+
+      // 1. Check ASSIGNED status change (award points)
+      if (status === "ASSIGNED" && !reportData.pointsAwarded) {
+        contributionPoints += 10;
+        reportsAccepted += 1;
+        await reportRef.update({ pointsAwarded: true });
+        userUpdated = true;
+      }
+
+      // 2. Check RESOLVED status change (increment resolved count)
+      if (status === "RESOLVED" && !reportData.resolvedCounted) {
+        reportsResolved += 1;
+        reportsValidated += 1; // legacy alias
+        await reportRef.update({ resolvedCounted: true });
+        userUpdated = true;
+      }
+
+      // 3. Recalculate level and badges if any changes occurred
+      if (userUpdated) {
+        // Fetch all reports submitted by this user to compute badges accurately
+        const userReportsSnap = await adminDb
+          .collection("reports")
+          .where("uid", "==", reportData.uid)
+          .get();
+
+        const totalReports = userReportsSnap.size;
+
+        // Timestamps mapping
+        const reportTimestamps = userReportsSnap.docs.map((doc) => {
+          const rData = doc.data();
+          const rawCreated = rData.createdAt;
+          if (rawCreated && typeof rawCreated.toDate === "function") {
+            return rawCreated.toDate();
+          }
+          return rawCreated ? new Date(rawCreated) : new Date();
+        });
+
+        // Badge definitions matching gamification.service.ts
+        const earnedBadges: string[] = [];
+
+        // Bronze
+        if (totalReports >= 1) earnedBadges.push("first_report");
+        if (reportTimestamps.some(d => {
+          const lkaHour = new Date(d.getTime() + 5.5 * 60 * 60 * 1000).getUTCHours();
+          return lkaHour < 7;
+        })) {
+          earnedBadges.push("early_bird");
+        }
+        if (reportTimestamps.some(d => {
+          const lkaHour = new Date(d.getTime() + 5.5 * 60 * 60 * 1000).getUTCHours();
+          return lkaHour >= 22;
+        })) {
+          earnedBadges.push("night_watch");
+        }
+
+        // Silver
+        if (reportsAccepted >= 5) earnedBadges.push("accepted_5");
+        if (reportsResolved >= 5) earnedBadges.push("resolved_5");
+        if (contributionPoints >= 500) earnedBadges.push("points_500");
+
+        // Gold
+        if (reportsAccepted >= 25) earnedBadges.push("accepted_25");
+        if (reportsResolved >= 20) earnedBadges.push("resolved_20");
+        if (contributionPoints >= 2000) earnedBadges.push("points_2000");
+
+        // Diamond
+        if (reportsAccepted >= 100) earnedBadges.push("accepted_100");
+        if (reportsResolved >= 50) earnedBadges.push("resolved_50");
+        if (contributionPoints >= 5000) earnedBadges.push("points_5000");
+
+        // Level calculation
+        let level = 1;
+        if (contributionPoints >= 1000) level = 5;
+        else if (contributionPoints >= 600) level = 4;
+        else if (contributionPoints >= 300) level = 3;
+        else if (contributionPoints >= 100) level = 2;
+
+        // Save back to user profile doc
+        await userRef.update({
+          contributionPoints,
+          reportsAccepted,
+          reportsResolved,
+          reportsValidated,
+          badges: earnedBadges,
+          level,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
     }
 
     return NextResponse.json({ success: true });

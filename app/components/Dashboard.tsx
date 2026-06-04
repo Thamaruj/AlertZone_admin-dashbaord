@@ -52,12 +52,22 @@ interface ActivityEntry {
   note?: string;
 }
 
+interface LeaderboardItem {
+  uid: string;
+  fullName: string;
+  avatarUrl: string | null;
+  contributionPoints: number;
+  level: number;
+  reportsResolved: number;
+}
+
 interface DashboardData {
   kpis: DashboardKPIs;
   statusDistribution: StatusDistributionItem[];
   categorySnapshot: CategorySnapshotItem[];
   recentPending: RecentPendingReport[];
   recentActivity: ActivityEntry[];
+  leaderboard: LeaderboardItem[];
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -381,6 +391,105 @@ function Skeleton({ className }: { className: string }) {
   return <div className={`bg-white/5 rounded-xl animate-pulse ${className}`} />;
 }
 
+function LeaderboardWidget({ data, loading, onNavigate }: { data: LeaderboardItem[]; loading: boolean; onNavigate: (tab: string) => void }) {
+  const getInitials = (name: string) => {
+    if (!name) return "?";
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase();
+  };
+
+  return (
+    <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-teal-500/20 transition-all duration-300 flex flex-col overflow-hidden w-full">
+      <div className="flex items-center justify-between mb-5 flex-shrink-0">
+        <div>
+          <h2 className="text-sm font-bold text-white flex items-center gap-1.5">
+            <span>🏆</span> Top Contributors
+          </h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">Community leaderboards by points</p>
+        </div>
+        <button
+          onClick={() => onNavigate("users")}
+          className="text-xs text-[#4CC2D1] font-bold hover:text-white transition-colors flex items-center gap-1 cursor-pointer"
+        >
+          View All
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="divide-y divide-white/5 overflow-y-auto custom-scrollbar flex-1 pr-1" style={{ maxHeight: 380 }}>
+        {loading ? (
+          <div className="space-y-3.5 py-2">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={i} className="flex items-center gap-3 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-white/10" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 bg-white/10 rounded-full w-1/3" />
+                  <div className="h-2 bg-white/5 rounded-full w-1/4" />
+                </div>
+                <div className="h-4 bg-white/10 rounded-full w-12" />
+              </div>
+            ))}
+          </div>
+        ) : !data || data.length === 0 ? (
+          <div className="text-center py-12 text-xs text-slate-500 font-medium">No contributor data available</div>
+        ) : (
+          data.map((item, idx) => {
+            const ranks = ["🥇", "🥈", "🥉", "4th", "5th"];
+            const rankGlows = [
+              "bg-amber-500/10 border-amber-500/30 text-amber-300",
+              "bg-slate-300/10 border-slate-300/30 text-slate-200",
+              "bg-orange-600/10 border-orange-600/30 text-orange-400",
+              "bg-white/5 border-white/5 text-slate-400",
+              "bg-white/5 border-white/5 text-slate-400",
+            ];
+            return (
+              <div key={item.uid} className="flex items-center justify-between py-3 group/item hover:bg-white/[0.02] px-2 rounded-xl transition-all">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black border select-none flex-shrink-0 ${rankGlows[idx] || rankGlows[3]}`}>
+                    {ranks[idx] || `${idx + 1}`}
+                  </span>
+                  
+                  <div className="w-8 h-8 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0">
+                    {item.avatarUrl ? (
+                      <img src={item.avatarUrl} alt={item.fullName} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-[10px] font-bold font-mono">
+                        {getInitials(item.fullName)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-white group-hover/item:text-teal-400 transition-colors truncate max-w-[100px]" title={item.fullName}>{item.fullName}</p>
+                    <div className="flex items-center gap-1 text-[9px] text-slate-500 mt-0.5 font-semibold">
+                      <span className="inline-flex items-center px-1 rounded bg-teal-500/5 text-teal-400/80 border border-teal-500/10 text-[8px] font-black">
+                        Lvl {item.level}
+                      </span>
+                      <span>•</span>
+                      <span>Res: {item.reportsResolved}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-right flex-shrink-0 ml-2">
+                  <p className="text-xs font-extrabold text-teal-400 font-mono">{item.contributionPoints.toLocaleString()}</p>
+                  <p className="text-[8px] text-slate-500 uppercase tracking-widest font-bold -mt-0.5">pts</p>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 
 export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) => void }) {
@@ -693,11 +802,11 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
         </div>
       </div>
 
-      {/* ── Bottom Row: Category Snapshot + Activity Feed ──────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 animate-slide-up stagger-3">
+      {/* ── Bottom Row: Category Snapshot + Leaderboard + Activity Feed ──────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-5 animate-slide-up stagger-3">
 
         {/* Category Snapshot */}
-        <div className="lg:col-span-5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all duration-300">
+        <div className="lg:col-span-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 hover:border-white/20 transition-all duration-300">
           <div className="mb-5">
             <h2 className="text-sm font-bold text-white">Report Categories</h2>
             <p className="text-[11px] text-slate-400 mt-0.5">All-time incident volume by type</p>
@@ -721,8 +830,13 @@ export default function Dashboard({ onNavigate }: { onNavigate: (tab: string) =>
           )}
         </div>
 
+        {/* Top Contributors Leaderboard */}
+        <div className="lg:col-span-4 flex">
+          <LeaderboardWidget data={data?.leaderboard ?? []} loading={loading} onNavigate={onNavigate} />
+        </div>
+
         {/* Recent Activity Feed */}
-        <div className="lg:col-span-7 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col overflow-hidden hover:border-white/20 transition-all duration-300">
+        <div className="lg:col-span-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col overflow-hidden hover:border-white/20 transition-all duration-300">
           <div className="px-6 py-4 border-b border-white/5 flex-shrink-0">
             <h2 className="text-sm font-bold text-white">Recent Activity</h2>
             <p className="text-[11px] text-slate-400 mt-0.5">Latest status changes across all reports</p>
