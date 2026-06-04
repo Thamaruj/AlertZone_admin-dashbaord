@@ -18,6 +18,9 @@ async function requireAdmin(req: NextRequest) {
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const session = await requireAdmin(req);
   const showArchived = req.nextUrl.searchParams.get("archived") === "true";
+  // ?since=<ISO> — used by the dashboard toast poller to only fetch reports newer than a timestamp
+  const sinceParam = req.nextUrl.searchParams.get("since");
+  const sinceDate = sinceParam ? new Date(sinceParam) : null;
   if (!session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
@@ -25,12 +28,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   try {
     // Single-field order by "createdAt" desc does not require a composite index,
     // and we filter out archived reports in-memory to prevent composite index requirements on Vercel.
-    const snapshot = await adminDb
-      .collection("reports")
-      .orderBy("createdAt", "desc")
-      .get();
+    let query = adminDb.collection("reports").orderBy("createdAt", "desc");
 
-    let reports = snapshot.docs.map((doc) => {
+    // If polling for new reports since a timestamp, limit to last 20 for performance
+    if (sinceDate) {
+      query = query.limit(20) as any;
+    }
+
+    const snapshot = await (query as any).get();
+
+    let reports = snapshot.docs.map((doc: FirebaseFirestore.QueryDocumentSnapshot) => {
       const data = doc.data();
       
       // Normalize document data: convert all Firestore Timestamp objects to ISO strings
@@ -61,6 +68,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
     // In-memory filter for archived or non-archived reports
     reports = reports.filter((r) => (r.isArchived === true) === showArchived);
+
+    // If ?since= was provided, filter to only reports newer than that timestamp
+    if (sinceDate) {
+      reports = reports.filter((r) => {
+        if (!r.createdAt) return false;
+        return new Date(r.createdAt as string).getTime() > sinceDate.getTime();
+      });
+    }
 
     // Apply admin regional scope filter
     if (session.scope && session.scope !== "all") {
