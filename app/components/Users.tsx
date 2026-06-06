@@ -423,7 +423,116 @@ export default function Users() {
                     </div>
                 </div>
 
-                <div className="w-full">
+                {/* ── Mobile card list (hidden on md+) ── */}
+                <div className="md:hidden divide-y divide-white/5">
+                    {loading ? (
+                        <div className="px-6 py-16 flex flex-col items-center gap-4">
+                            <div className="w-10 h-10 rounded-full border-2 border-slate-700 border-t-teal-400 animate-spin" />
+                            <p className="text-slate-400 text-sm font-medium">Fetching registered citizens...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="px-6 py-16 text-center">
+                            <p className="text-rose-400 text-sm font-semibold">⚠️ {error}</p>
+                        </div>
+                    ) : paginatedUsers.length > 0 ? (
+                        paginatedUsers.map((user) => (
+                            <div
+                                key={user.uid}
+                                className={`p-4 transition-all ${
+                                    user.status === "suspended"
+                                        ? "bg-rose-950/25 shadow-[inset_4px_0_0_0_#ef4444]"
+                                        : "hover:bg-white/[0.03]"
+                                }`}
+                            >
+                                {/* Top row: avatar + name + status badge */}
+                                <div className="flex items-center justify-between gap-3 mb-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div
+                                            className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0 cursor-pointer"
+                                            onClick={() => setSelectedUser(user)}
+                                        >
+                                            {user.avatarUrl ? (
+                                                <img src={user.avatarUrl} alt={user.fullName} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white text-xs font-bold font-mono">
+                                                    {getInitials(user.fullName)}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p
+                                                className="text-sm font-bold text-white truncate cursor-pointer"
+                                                onClick={() => setSelectedUser(user)}
+                                            >
+                                                {user.fullName}
+                                            </p>
+                                            <p className="text-xs text-slate-400 truncate">{user.email}</p>
+                                            <p className="text-[10px] text-teal-400 font-bold font-mono mt-0.5">NIC: {user.nic || "N/A"}</p>
+                                        </div>
+                                    </div>
+                                    <span className={`flex-shrink-0 inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusMeta[user.status || 'active'].bg} ${statusMeta[user.status || 'active'].color} ${statusMeta[user.status || 'active'].border}`}>
+                                        {(user.status || 'active').toUpperCase()}
+                                    </span>
+                                </div>
+
+                                {/* Middle row: contact + gamification */}
+                                <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
+                                    <div className="space-y-0.5">
+                                        <p className="font-bold text-slate-200">{user.phoneNumber || "No Phone"}</p>
+                                        <p className="text-slate-400">{user.province ? `${user.province} • ${user.district}` : "No Region"}</p>
+                                        <p className="text-[10px] text-slate-500 truncate">{user.localGovernmentArea || user.address || "No Address"}</p>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 text-[10px] font-bold">
+                                                Lvl {user.level || 1}
+                                            </span>
+                                            <span className="font-bold text-slate-200 font-mono text-[11px]">
+                                                {new Intl.NumberFormat().format(user.contributionPoints || 0)} pts
+                                            </span>
+                                        </div>
+                                        <p className="text-[10px] text-slate-400">
+                                            Validated: <span className="font-bold text-slate-300 font-mono">{user.reportsValidated || 0}</span>
+                                            {user.badges && user.badges.length > 0 && (
+                                                <span className="text-teal-400 font-bold ml-1">{user.badges.length} 🏆</span>
+                                            )}
+                                        </p>
+                                        <p className="text-[10px] text-slate-500">
+                                            {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : "N/A"}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Bottom row: action buttons */}
+                                <div className="flex gap-2 text-xs font-bold">
+                                    <button
+                                        onClick={() => setSelectedUser(user)}
+                                        className="flex-1 py-1.5 rounded bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/20 transition-colors cursor-pointer"
+                                    >
+                                        Manage
+                                    </button>
+                                    <button
+                                        onClick={() => handleToggleStatusClick(user.uid, user.fullName, user.status || 'active')}
+                                        className={`flex-1 py-1.5 rounded border transition-colors cursor-pointer ${
+                                            (user.status || 'active') === "suspended"
+                                                ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20"
+                                                : "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border-rose-500/20"
+                                        }`}
+                                    >
+                                        {(user.status || 'active') === "suspended" ? "Unsuspend" : "Suspend"}
+                                    </button>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        <div className="px-6 py-16 text-center">
+                            <p className="text-slate-400 text-sm font-medium">No citizens found matching your filter criteria.</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Desktop table (hidden below md) ── */}
+                <div className="hidden md:block w-full">
                     <table className="w-full text-left table-fixed">
                         <thead>
                             <tr className="text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
