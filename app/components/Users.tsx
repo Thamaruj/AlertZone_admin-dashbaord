@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { UserProfile } from "@/lib/types/user";
 import { Report } from "@/lib/types/report";
 import { sriLankaGeographics } from "@/lib/constants/sriLankaRegions";
@@ -90,6 +91,20 @@ export default function Users() {
         userName: string;
         currentStatus: "active" | "suspended";
     } | null>(null);
+
+    // Portal root — always document.body on client
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => { setMounted(true); }, []);
+
+    // Lock body scroll while any modal is open
+    useEffect(() => {
+        if (selectedUser || confirmAction) {
+            document.body.style.overflow = "hidden";
+        } else {
+            document.body.style.overflow = "";
+        }
+        return () => { document.body.style.overflow = ""; };
+    }, [selectedUser, confirmAction]);
 
     // Debounce search input to avoid hitting backend on every keystroke
     const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
@@ -730,9 +745,9 @@ export default function Users() {
                 )}
             </div>
 
-            {/* User Detail Popup Modal */}
-            {selectedUser && (
-                <div className="fixed inset-0 z-40 flex items-center justify-center p-4">
+            {/* User Detail Popup Modal — portalled to document.body */}
+            {mounted && selectedUser && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/75 backdrop-blur-md"
@@ -1004,12 +1019,13 @@ export default function Users() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
-            {/* Action Confirmation Modal */}
-            {confirmAction && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Action Confirmation Modal — portalled to document.body */}
+            {mounted && confirmAction && createPortal(
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
                     {/* Backdrop */}
                     <div
                         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
@@ -1068,7 +1084,8 @@ export default function Users() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </div>
     );
