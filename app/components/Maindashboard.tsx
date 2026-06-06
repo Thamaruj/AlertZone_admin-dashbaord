@@ -1,5 +1,5 @@
 "use client";
- 
+
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import logo1 from "../assets/logo1.png";
@@ -120,31 +120,27 @@ function NavLink({ item, active, badgeCount, onClick }: { item: NavItem; active:
     return (
         <button
             onClick={onClick}
-            className={`group relative w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide uppercase transition-all duration-300 text-left outline-none border cursor-pointer ${
-                active
-                    ? "bg-gradient-to-r from-teal-500/10 to-teal-500/[0.01] border-teal-500/25 text-teal-300 shadow-[0_4px_12px_rgba(45,212,191,0.03)]"
-                    : "border-transparent text-slate-400 hover:bg-white/[0.02] hover:border-white/5 hover:text-slate-200"
-            }`}
+            className={`group relative w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold tracking-wide uppercase transition-all duration-300 text-left outline-none border cursor-pointer ${active
+                ? "bg-gradient-to-r from-teal-500/10 to-teal-500/[0.01] border-teal-500/25 text-teal-300 shadow-[0_4px_12px_rgba(45,212,191,0.03)]"
+                : "border-transparent text-slate-400 hover:bg-white/[0.02] hover:border-white/5 hover:text-slate-200"
+                }`}
         >
             {/* Left indicator bar */}
-            <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.75 rounded-r-full bg-gradient-to-b from-teal-400 to-cyan-500 transition-all duration-300 ${
-                active ? "h-6 opacity-100 shadow-[0_0_10px_rgba(45,212,191,0.6)]" : "h-0 opacity-0"
-            }`} />
-            
+            <div className={`absolute left-0 top-1/2 -translate-y-1/2 w-0.75 rounded-r-full bg-gradient-to-b from-teal-400 to-cyan-500 transition-all duration-300 ${active ? "h-6 opacity-100 shadow-[0_0_10px_rgba(45,212,191,0.6)]" : "h-0 opacity-0"
+                }`} />
+
             {/* Icon container */}
-            <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${
-                active 
-                    ? "bg-teal-500/15 border border-teal-500/30 text-teal-400 scale-105" 
-                    : "bg-white/5 border border-white/5 text-slate-500 group-hover:bg-white/10 group-hover:text-slate-300 group-hover:border-white/10"
-            }`}>
+            <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 ${active
+                ? "bg-teal-500/15 border border-teal-500/30 text-teal-400 scale-105"
+                : "bg-white/5 border border-white/5 text-slate-500 group-hover:bg-white/10 group-hover:text-slate-300 group-hover:border-white/10"
+                }`}>
                 {item.icon}
             </div>
- 
+
             {/* Label */}
-            <span className={`flex-1 transition-all duration-300 ${
-                active ? "translate-x-0.5 text-white" : "group-hover:translate-x-1"
-            }`}>{item.label}</span>
- 
+            <span className={`flex-1 transition-all duration-300 ${active ? "translate-x-0.5 text-white" : "group-hover:translate-x-1"
+                }`}>{item.label}</span>
+
             {badgeCount !== undefined && badgeCount > 0 && (
                 <span className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_10px_#f43f5e] mr-1" />
             )}
@@ -163,7 +159,7 @@ export default function AdminDashboard() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
- 
+
     const [unreadCount, setUnreadCount] = useState(0);
     const [activeToast, setActiveToast] = useState<Report | null>(null);
     const mountedTime = useRef(new Date());
@@ -232,7 +228,7 @@ export default function AdminDashboard() {
         };
     }, []);
 
- 
+
     const handleToastClick = (report: Report) => {
         if (typeof window !== "undefined") {
             (window as any).pendingReportDetail = report;
@@ -242,7 +238,7 @@ export default function AdminDashboard() {
             setActiveToast(null);
         }
     };
- 
+
     // Derive initials from displayName for the avatar
     const initials = user?.displayName
         ? user.displayName.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2)
@@ -343,13 +339,15 @@ export default function AdminDashboard() {
             {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
             <aside className={`fixed md:relative z-30 h-full w-56 flex-shrink-0 bg-[#0f2233] md:bg-[#0f2233]/90 backdrop-blur-2xl border-r border-white/10 flex flex-col transition-transform duration-300 md:translate-x-0 ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}>
                 {/* Brand */}
-                <div className="px-5 py-6 flex items-center gap-3 border-b border-white/5 bg-white/[0.01]">
-                    <div className="p-1.5 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
-                        <Image src={logo1} alt="AlertZone Logo" width={22} height={22} sizes="22px" className="object-contain" />
+                <div className="px-5 py-5 flex items-center gap-3.5 border-b border-white/5 bg-white/[0.01]">
+                    <div className="w-11 h-11 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        <Image src={logo1} alt="AlertZone Logo" width={44} height={44} sizes="44px" className="object-contain w-full h-full" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-white font-extrabold text-sm tracking-wider uppercase font-sans">AlertZone</span>
-                        <span className="text-[9px] text-teal-400/80 font-bold uppercase tracking-widest font-mono -mt-0.5">Admin Dashboard</span>
+                        <span className="font-bold text-xl tracking-wide font-sans leading-tight">
+                            <span className="text-white">Alert</span><span className="text-teal-400">Zone</span>
+                        </span>
+                        <span className="text-[10px] text-teal-400/80 font-bold uppercase tracking-widest font-mono mt-0.5">Admin Dashboard</span>
                     </div>
                 </div>
 
@@ -362,7 +360,7 @@ export default function AdminDashboard() {
                             <NavLink key={item.id} item={item} active={activeNav === item.id} badgeCount={item.id === "notifications" ? unreadCount : undefined} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
                         ))}
                     </div>
- 
+
                     {/* Operations / Management */}
                     <div className="space-y-1.5">
                         <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">Management</span>
@@ -370,7 +368,7 @@ export default function AdminDashboard() {
                             <NavLink key={item.id} item={item} active={activeNav === item.id} badgeCount={item.id === "notifications" ? unreadCount : undefined} onClick={() => { setActiveNav(item.id); setIsMobileMenuOpen(false); }} />
                         ))}
                     </div>
- 
+
                     {/* System Section */}
                     <div className="space-y-1.5">
                         <span className="px-4 text-[9px] font-black text-slate-500 uppercase tracking-widest block font-mono">System</span>
@@ -468,16 +466,16 @@ export default function AdminDashboard() {
             {showLogoutConfirm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     {/* Backdrop */}
-                    <div 
+                    <div
                         className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
                         onClick={() => setShowLogoutConfirm(false)}
                     />
-                    
+
                     {/* Modal Content Card */}
                     <div className="relative bg-[#0f2233] border border-white/10 rounded-2xl max-w-sm w-full p-6 shadow-2xl shadow-black/85 animate-in fade-in zoom-in-95 duration-200 z-10">
                         {/* Glow effect */}
                         <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-red-500/5 to-transparent pointer-events-none" />
-                        
+
                         <div className="flex flex-col items-center text-center">
                             {/* Icon */}
                             <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-4 shadow-inner shadow-red-900/10">
@@ -485,17 +483,17 @@ export default function AdminDashboard() {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                                 </svg>
                             </div>
-                            
+
                             {/* Header */}
                             <h3 className="text-base font-bold text-slate-100 tracking-wide mb-2">
                                 Confirm Sign Out
                             </h3>
-                            
+
                             {/* Message */}
                             <p className="text-xs text-slate-400 leading-relaxed mb-6">
                                 Are you sure you want to sign out of the AlertZone Administration Portal? You will need to enter your credentials to log in again.
                             </p>
-                            
+
                             {/* Buttons */}
                             <div className="flex w-full gap-3">
                                 <button
@@ -517,7 +515,7 @@ export default function AdminDashboard() {
                     </div>
                 </div>
             )}
- 
+
             {/* Real-time New Issue Toast Notification */}
             {activeToast && (
                 <div

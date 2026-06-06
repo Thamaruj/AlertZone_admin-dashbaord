@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type NotificationType = "System" | "Report" | "User" | "Alert";
+export type NotificationType = "Report" | "Alert" | "Upvote" | "Comment";
 
 export type ClientNotification = {
   id: string;
@@ -19,13 +19,12 @@ export type ClientNotification = {
 // ─── Constants & Meta ─────────────────────────────────────────────────────────
 
 const typeMeta: Record<NotificationType, { color: string; bg: string; icon: React.ReactNode }> = {
-  System: {
+  Comment: {
     color: "text-blue-400",
     bg: "bg-blue-500/10",
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <circle cx="12" cy="12" r="3" strokeWidth="2" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
       </svg>
     ),
   },
@@ -38,7 +37,7 @@ const typeMeta: Record<NotificationType, { color: string; bg: string; icon: Reac
       </svg>
     ),
   },
-  User: {
+  Upvote: {
     color: "text-purple-400",
     bg: "bg-purple-500/10",
     icon: (
@@ -62,15 +61,16 @@ const typeMeta: Record<NotificationType, { color: string; bg: string; icon: Reac
 
 const mapDbType = (dbType: string): NotificationType => {
   if (dbType === "status_change") return "Report";
-  if (dbType === "upvote") return "User";
-  if (dbType === "badge_earned") return "User";
+  if (dbType === "upvote") return "Upvote";
+  if (dbType === "badge_earned") return "Upvote";
+  if (dbType === "comment" || dbType === "new_comment") return "Comment";
   if (dbType === "system" || dbType === "alert") return "Alert";
   
   // Fallbacks
-  if (dbType === "Report" || dbType === "System" || dbType === "User" || dbType === "Alert") {
+  if (dbType === "Report" || dbType === "Alert" || dbType === "Upvote" || dbType === "Comment") {
     return dbType as NotificationType;
   }
-  return "System";
+  return "Alert";
 };
 
 const formatTime = (createdAt: any) => {
@@ -147,6 +147,7 @@ export default function Notifications() {
   const [notifications, setNotifications] = useState<ClientNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState<"All" | "Unread" | NotificationType>("Unread");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   
   // Broadcast states
   const [showBroadcastModal, setShowBroadcastModal] = useState(false);
@@ -192,7 +193,7 @@ export default function Notifications() {
   }, [toast]);
 
   const filteredNotifications = notifications.filter((n) => {
-    if (selectedTab === "All") return true;
+    if (selectedTab === "All") return n.type !== "Alert";
     if (selectedTab === "Unread") return !n.isRead;
     return n.type === selectedTab;
   });
@@ -361,29 +362,53 @@ export default function Notifications() {
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-full sm:w-fit overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] animate-slide-up stagger-1 flex-shrink-0">
-        {["Unread", "All", "Alert", "Report", "System", "User"].map((tab) => {
-          const isSelected = selectedTab === tab;
-          let count = 0;
-          if (tab === "All") count = notifications.length;
-          else if (tab === "Unread") count = unreadCount;
-          else count = notifications.filter((n) => n.type === tab).length;
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 animate-slide-up stagger-1 flex-shrink-0 w-full overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {/* User Notifications */}
+        <div className="flex items-center gap-1 p-1 bg-[#0f2233]/60 backdrop-blur-md border border-white/5 rounded-xl w-max">
+          {["Unread", "All", "Report", "Upvote", "Comment"].map((tab) => {
+            const isSelected = selectedTab === tab;
+            let count = 0;
+            if (tab === "All") count = notifications.filter((n) => n.type !== "Alert").length;
+            else if (tab === "Unread") count = unreadCount;
+            else count = notifications.filter((n) => n.type === tab).length;
 
-          return (
-            <button
-              key={tab}
-              onClick={() => setSelectedTab(tab as any)}
-              className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all duration-200 whitespace-nowrap cursor-pointer ${
-                isSelected
-                  ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
-                  : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-              }`}
-            >
-              {tab}
-              {count > 0 && tab !== "All" ? ` (${count})` : ""}
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={tab}
+                onClick={() => setSelectedTab(tab as any)}
+                className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all duration-200 whitespace-nowrap cursor-pointer ${
+                  isSelected
+                    ? "bg-teal-500/20 text-teal-400 border border-teal-500/30"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
+                }`}
+              >
+                {tab}
+                {count > 0 ? ` (${count})` : ""}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Admin Alerts (Separated) */}
+        <div className="flex items-center gap-1 p-1 bg-rose-500/5 backdrop-blur-md border border-rose-500/10 rounded-xl w-max">
+          <button
+            onClick={() => setSelectedTab("Alert")}
+            className={`flex-shrink-0 px-3 sm:px-4 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all duration-200 whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+              selectedTab === "Alert"
+                ? "bg-rose-500/20 text-rose-400 border border-rose-500/30"
+                : "text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10"
+            }`}
+            title="Admin-Sent Broadcasts & Alerts"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+            </svg>
+            Sent Alerts
+            {notifications.filter((n) => n.type === "Alert").length > 0
+              ? ` (${notifications.filter((n) => n.type === "Alert").length})`
+              : ""}
+          </button>
+        </div>
       </div>
 
       {/* Notifications List */}
@@ -499,7 +524,7 @@ export default function Notifications() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDelete(notif.id);
+                              setDeleteConfirmId(notif.id);
                             }}
                             className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all cursor-pointer"
                             title="Delete notification log"
@@ -611,6 +636,46 @@ export default function Notifications() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setDeleteConfirmId(null)}
+          />
+          <div className="relative bg-[#0f2233] border border-rose-500/20 rounded-2xl max-w-sm w-full p-6 shadow-2xl shadow-rose-900/20 z-10 animate-slide-up text-center">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-b from-rose-500/5 to-transparent pointer-events-none" />
+            
+            <div className="w-12 h-12 rounded-full bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mx-auto mb-4">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </div>
+            <h3 className="text-base font-bold text-white mb-2">Delete Notification?</h3>
+            <p className="text-xs text-slate-400 mb-6 leading-relaxed">
+              This action cannot be undone. Are you sure you want to permanently remove this notification from your log?
+            </p>
+            <div className="flex gap-3 relative z-10">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/10 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleDelete(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }}
+                className="flex-1 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-400 hover:to-red-400 text-white rounded-xl text-xs font-semibold shadow-lg shadow-rose-900/40 transition-all cursor-pointer"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}

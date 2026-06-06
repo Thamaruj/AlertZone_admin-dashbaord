@@ -50,6 +50,7 @@ export async function GET(req: NextRequest) {
       // ── Full mode: return ALL recent notifications for the Notifications page ──
       const snap = await adminDb
         .collection("notifications")
+        .where("recipientUid", "==", "admin")
         .orderBy("createdAt", "desc")
         .limit(100)
         .get();

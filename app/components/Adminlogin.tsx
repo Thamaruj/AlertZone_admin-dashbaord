@@ -60,39 +60,40 @@ export default function AdminLogin() {
 
         {/* Card */}
         <div
-          className={`w-full max-w-[760px] flex flex-col justify-center transition-all duration-500 ${
+          className={`w-full max-w-[560px] flex flex-col justify-center transition-all duration-500 ${
             mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
           <div className="flex flex-col md:flex-row bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
             {/* Left Side: Logo */}
-            <div className="md:w-5/12 bg-gradient-to-br from-[#0e2538] to-[#0a1e2e]/80 flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-white/5">
-              <div className="relative w-full aspect-square max-w-[180px] flex items-center justify-center">
+            <div className="md:w-5/12 bg-gradient-to-br from-[#0e2538] to-[#0a1e2e]/80 flex flex-col items-center justify-center p-4 border-b md:border-b-0 md:border-r border-white/5">
+              <div className="relative w-full aspect-square max-w-[120px] flex items-center justify-center">
                 <Image
                   src={logo1}
                   alt="AlertZone Logo"
                   fill
-                  sizes="(max-width: 768px) 180px, 180px"
+                  sizes="(max-width: 768px) 120px, 120px"
                   className="opacity-95 object-contain drop-shadow-2xl"
                   priority
                 />
               </div>
-              <div className="hidden md:block mt-4 text-center space-y-1">
-                <h2 className="text-slate-200 text-lg font-bold tracking-wide">AlertZone</h2>
-                <p className="text-teal-400/80 text-[11px] font-medium uppercase tracking-wider">
+              <div className="mt-2 text-center space-y-0.5">
+                <h2 className="font-bold text-lg tracking-wide font-sans leading-tight">
+                    <span className="text-white">Alert</span><span className="text-teal-400">Zone</span>
+                </h2>
+                <p className="text-teal-400/80 text-[9px] font-medium uppercase tracking-wider">
                   Administration Portal
                 </p>
               </div>
-
             </div>
 
             {/* Right Side: Form */}
             <form
               onSubmit={handleSubmit}
-              className="md:w-7/12 px-6 py-5 sm:px-8 sm:py-6 space-y-3"
+              className="md:w-7/12 px-5 py-4 sm:px-6 sm:py-5 space-y-2.5"
             >
               <div className="mb-1">
-                <h1 className="text-white text-lg font-bold">Sign in</h1>
+                <h1 className="text-white text-base font-bold">Sign in</h1>
                 <p className="text-slate-400 text-xs mt-0.5">Enter your admin credentials to continue</p>
               </div>
 
@@ -108,10 +109,7 @@ export default function AdminLogin() {
 
               {/* Username */}
               <div className="space-y-1">
-                <label
-                  htmlFor="username"
-                  className="block text-xs font-medium text-slate-300 tracking-wide"
-                >
+                <label htmlFor="username" className="block text-xs font-medium text-slate-300 tracking-wide">
                   Username
                 </label>
                 <div className="relative">
@@ -125,10 +123,7 @@ export default function AdminLogin() {
                     type="text"
                     autoComplete="username"
                     value={username}
-                    onChange={(e) => {
-                      setUsername(e.target.value);
-                      if (error) setError(null);
-                    }}
+                    onChange={(e) => { setUsername(e.target.value); if (error) setError(null); }}
                     placeholder="Enter your admin username"
                     disabled={signingIn}
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200 disabled:opacity-60"
@@ -138,10 +133,7 @@ export default function AdminLogin() {
 
               {/* Password */}
               <div className="space-y-1">
-                <label
-                  htmlFor="password"
-                  className="block text-xs font-medium text-slate-300 tracking-wide"
-                >
+                <label htmlFor="password" className="block text-xs font-medium text-slate-300 tracking-wide">
                   Password
                 </label>
                 <div className="relative">
@@ -155,10 +147,7 @@ export default function AdminLogin() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (error) setError(null);
-                    }}
+                    onChange={(e) => { setPassword(e.target.value); if (error) setError(null); }}
                     placeholder="••••••••••"
                     disabled={signingIn}
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200 disabled:opacity-60"
@@ -182,8 +171,6 @@ export default function AdminLogin() {
                   </button>
                 </div>
               </div>
-
-
 
               {/* Submit Button */}
               <div className="pt-1">
@@ -218,19 +205,6 @@ export default function AdminLogin() {
                 <p className="text-[10px] text-slate-400 leading-tight">
                   This is a secure government system. Unauthorized access is prohibited and may be subject to legal action.
                 </p>
-              </div>
-
-              {/* Footer Links */}
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-0.5">
-                {["Privacy Policy", "Security Standards", "Contact Support"].map((link) => (
-                  <button
-                    key={link}
-                    type="button"
-                    className="text-[10px] text-slate-500 hover:text-teal-400 transition-colors duration-150"
-                  >
-                    {link}
-                  </button>
-                ))}
               </div>
             </form>
           </div>
