@@ -107,10 +107,7 @@ export default function AdminLogin() {
 
               {/* Username */}
               <div className="space-y-1">
-                <label
-                  htmlFor="username"
-                  className="block text-xs font-medium text-slate-300 tracking-wide"
-                >
+                <label htmlFor="username" className="block text-xs font-medium text-slate-300 tracking-wide">
                   Username
                 </label>
                 <div className="relative">
@@ -124,10 +121,7 @@ export default function AdminLogin() {
                     type="text"
                     autoComplete="username"
                     value={username}
-                    onChange={(e) => {
-                      setUsername(e.target.value);
-                      if (error) setError(null);
-                    }}
+                    onChange={(e) => { setUsername(e.target.value); if (error) setError(null); }}
                     placeholder="Enter your admin username"
                     disabled={signingIn}
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200 disabled:opacity-60"
@@ -137,10 +131,7 @@ export default function AdminLogin() {
 
               {/* Password */}
               <div className="space-y-1">
-                <label
-                  htmlFor="password"
-                  className="block text-xs font-medium text-slate-300 tracking-wide"
-                >
+                <label htmlFor="password" className="block text-xs font-medium text-slate-300 tracking-wide">
                   Password
                 </label>
                 <div className="relative">
@@ -154,10 +145,7 @@ export default function AdminLogin() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (error) setError(null);
-                    }}
+                    onChange={(e) => { setPassword(e.target.value); if (error) setError(null); }}
                     placeholder="••••••••••"
                     disabled={signingIn}
                     className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-10 py-2 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-teal-500/60 focus:ring-1 focus:ring-teal-500/30 transition-all duration-200 disabled:opacity-60"
@@ -181,8 +169,6 @@ export default function AdminLogin() {
                   </button>
                 </div>
               </div>
-
-
 
               {/* Submit Button */}
               <div className="pt-1">
@@ -217,19 +203,6 @@ export default function AdminLogin() {
                 <p className="text-[10px] text-slate-400 leading-tight">
                   This is a secure government system. Unauthorized access is prohibited and may be subject to legal action.
                 </p>
-              </div>
-
-              {/* Footer Links */}
-              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 pt-0.5">
-                {["Privacy Policy", "Security Standards", "Contact Support"].map((link) => (
-                  <button
-                    key={link}
-                    type="button"
-                    className="text-[10px] text-slate-500 hover:text-teal-400 transition-colors duration-150"
-                  >
-                    {link}
-                  </button>
-                ))}
               </div>
             </form>
           </div>
