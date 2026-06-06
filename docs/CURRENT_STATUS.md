@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-06-04 (Fixed `FirebaseError: Missing or insufficient permissions` and `INTERNAL ASSERTION FAILED: Unexpected state` crashes by eliminating all direct client-side Firestore SDK reads and writes. All Firestore access now routes through Admin SDK-backed API endpoints. Also fixed real-time new report toast popup and added optimistic UI for notification actions.)
+> **Last Updated:** 2026-06-06 (Fixed Vercel build failure: `Property 'System' does not exist on type 'Record<NotificationType, ...>'` in `Notifications.tsx` line 448. Changed invalid `typeMeta.System` fallback to `typeMeta.Alert`, which is a valid `NotificationType` key.)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 

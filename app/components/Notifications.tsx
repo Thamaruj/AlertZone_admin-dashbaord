@@ -445,7 +445,7 @@ export default function Notifications() {
         ) : (
           <div className="space-y-3 pb-6">
             {filteredNotifications.map((notif) => {
-              const meta = typeMeta[notif.type] || typeMeta.System;
+              const meta = typeMeta[notif.type] || typeMeta.Alert;
               return (
                 <div
                   key={notif.id}
