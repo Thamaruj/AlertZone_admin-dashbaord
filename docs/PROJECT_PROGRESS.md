@@ -4,6 +4,17 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Fix: Vercel Build — Notifications.tsx TypeScript Error
+**Date:** 2026-06-06
+**Branch:** `Improve/admin-dashboard`
+
+**What was fixed:**
+- Resolved a Vercel production build failure caused by a TypeScript type error in `app/components/Notifications.tsx` (line 448).
+- The fallback `typeMeta.System` did not exist on `Record<NotificationType, ...>` since `"System"` is not part of the `NotificationType` union (`"Report" | "Alert" | "Upvote" | "Comment"`).
+- Changed the fallback to `typeMeta.Alert`, which is both a valid key and the correct semantic default (matching the existing `mapDbType()` helper that also defaults unknown types to `"Alert"`).
+
+---
+
 ## ✅ Phase 18: Gamification Integration & Top Contributors Leaderboard
 **Date:** 2026-06-04
 **Branch:** `feat/gamification`
