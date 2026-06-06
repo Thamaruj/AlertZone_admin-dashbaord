@@ -87,6 +87,16 @@ export async function POST(req: NextRequest) {
       console.log(`✅ Dispatched broadcast push notifications to ${pushedCount} devices.`);
     }
 
+    // 3. Create a notification record for the admin dashboard
+    await adminDb.collection("notifications").add({
+      recipientUid: "admin",
+      type: notificationType, // will map to "Alert" in frontend
+      title: `📣 Broadcast: ${title}`,
+      body: `${body}\n\n(Delivered to ${usersSnap.size} citizens, ${pushedCount} push notifications)`,
+      isRead: true, // Mark as read so it doesn't increment the unread badge
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
     return NextResponse.json({
       success: true,
       notifiedUsers: usersSnap.size,
