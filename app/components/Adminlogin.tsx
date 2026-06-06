@@ -78,7 +78,9 @@ export default function AdminLogin() {
                 />
               </div>
               <div className="mt-2 text-center space-y-0.5">
-                <h2 className="text-slate-200 text-sm font-bold tracking-wide">AlertZone</h2>
+                <h2 className="font-bold text-lg tracking-wide font-sans leading-tight">
+                    <span className="text-white">Alert</span><span className="text-teal-400">Zone</span>
+                </h2>
                 <p className="text-teal-400/80 text-[9px] font-medium uppercase tracking-wider">
                   Administration Portal
                 </p>

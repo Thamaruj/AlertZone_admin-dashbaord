@@ -344,7 +344,9 @@ export default function AdminDashboard() {
                         <Image src={logo1} alt="AlertZone Logo" width={44} height={44} sizes="44px" className="object-contain w-full h-full" />
                     </div>
                     <div className="flex flex-col">
-                        <span className="text-white font-extrabold text-base tracking-wider uppercase font-sans leading-tight">AlertZone</span>
+                        <span className="font-bold text-xl tracking-wide font-sans leading-tight">
+                            <span className="text-white">Alert</span><span className="text-teal-400">Zone</span>
+                        </span>
                         <span className="text-[10px] text-teal-400/80 font-bold uppercase tracking-widest font-mono mt-0.5">Admin Dashboard</span>
                     </div>
                 </div>
