@@ -60,39 +60,38 @@ export default function AdminLogin() {
 
         {/* Card */}
         <div
-          className={`w-full max-w-[760px] flex flex-col justify-center transition-all duration-500 ${
+          className={`w-full max-w-[560px] flex flex-col justify-center transition-all duration-500 ${
             mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
           }`}
         >
           <div className="flex flex-col md:flex-row bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl shadow-black/60 overflow-hidden">
             {/* Left Side: Logo */}
-            <div className="md:w-5/12 bg-gradient-to-br from-[#0e2538] to-[#0a1e2e]/80 flex flex-col items-center justify-center p-6 border-b md:border-b-0 md:border-r border-white/5">
-              <div className="relative w-full aspect-square max-w-[180px] flex items-center justify-center">
+            <div className="md:w-5/12 bg-gradient-to-br from-[#0e2538] to-[#0a1e2e]/80 flex flex-col items-center justify-center p-4 border-b md:border-b-0 md:border-r border-white/5">
+              <div className="relative w-full aspect-square max-w-[120px] flex items-center justify-center">
                 <Image
                   src={logo1}
                   alt="AlertZone Logo"
                   fill
-                  sizes="(max-width: 768px) 180px, 180px"
+                  sizes="(max-width: 768px) 120px, 120px"
                   className="opacity-95 object-contain drop-shadow-2xl"
                   priority
                 />
               </div>
-              <div className="hidden md:block mt-4 text-center space-y-1">
-                <h2 className="text-slate-200 text-lg font-bold tracking-wide">AlertZone</h2>
-                <p className="text-teal-400/80 text-[11px] font-medium uppercase tracking-wider">
+              <div className="mt-2 text-center space-y-0.5">
+                <h2 className="text-slate-200 text-sm font-bold tracking-wide">AlertZone</h2>
+                <p className="text-teal-400/80 text-[9px] font-medium uppercase tracking-wider">
                   Administration Portal
                 </p>
               </div>
-
             </div>
 
             {/* Right Side: Form */}
             <form
               onSubmit={handleSubmit}
-              className="md:w-7/12 px-6 py-5 sm:px-8 sm:py-6 space-y-3"
+              className="md:w-7/12 px-5 py-4 sm:px-6 sm:py-5 space-y-2.5"
             >
               <div className="mb-1">
-                <h1 className="text-white text-lg font-bold">Sign in</h1>
+                <h1 className="text-white text-base font-bold">Sign in</h1>
                 <p className="text-slate-400 text-xs mt-0.5">Enter your admin credentials to continue</p>
               </div>
 
