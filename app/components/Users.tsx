@@ -310,7 +310,7 @@ export default function Users() {
             </div>
 
             {/* Table Section */}
-            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl animate-slide-up stagger-2">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl animate-slide-up stagger-2">
                 {/* Advanced Filtering Controls */}
                 <div className="p-6 border-b border-white/5 flex flex-col gap-4 lg:flex-row lg:items-center justify-between">
                     {/* Left: Search input & Refresh */}
@@ -423,16 +423,16 @@ export default function Users() {
                     </div>
                 </div>
 
-                <div className="overflow-x-auto min-w-full inline-block align-middle">
-                    <table className="w-full text-left">
+                <div className="w-full">
+                    <table className="w-full text-left table-fixed">
                         <thead>
                             <tr className="text-[11px] font-bold text-slate-500 uppercase tracking-widest border-b border-white/5 bg-white/[0.02]">
-                                <th className="px-6 py-4">User Identity</th>
-                                <th className="px-6 py-4">Contact Details</th>
-                                <th className="px-6 py-4">Gamification</th>
-                                <th className="px-6 py-4">Join Date</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-right">Actions</th>
+                                <th className="px-3 py-4 w-[24%]">User Identity</th>
+                                <th className="px-3 py-4 w-[20%]">Contact Details</th>
+                                <th className="px-3 py-4 w-[16%]">Gamification</th>
+                                <th className="px-3 py-4 w-[12%] whitespace-nowrap">Join Date</th>
+                                <th className="px-3 py-4 w-[10%]">Status</th>
+                                <th className="px-3 py-4 w-[18%] text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -462,7 +462,7 @@ export default function Users() {
                                         }`}
                                     >
                                         {/* User Identity Column */}
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div 
                                                     className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-white/5 flex-shrink-0 cursor-pointer"
@@ -490,7 +490,7 @@ export default function Users() {
                                         </td>
 
                                         {/* Contact Details Column */}
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-4">
                                             <div className="space-y-0.5 text-xs">
                                                 <p className="font-bold text-slate-200">{user.phoneNumber || "No Phone"}</p>
                                                 <p className="text-slate-400">{user.province ? `${user.province} • ${user.district}` : "No Region"}</p>
@@ -503,7 +503,7 @@ export default function Users() {
                                         </td>
 
                                         {/* Gamification Column */}
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-4">
                                             <div className="space-y-0.5 text-xs">
                                                 <div className="flex items-center gap-1.5">
                                                     <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20 text-[10px] font-bold">
@@ -526,7 +526,7 @@ export default function Users() {
                                         </td>
 
                                         {/* Join Date Column */}
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-4 whitespace-nowrap">
                                             <span className="text-xs text-slate-300 font-medium">
                                                 {user.createdAt ? new Date(user.createdAt).toLocaleDateString(undefined, {
                                                     year: 'numeric',
@@ -537,24 +537,24 @@ export default function Users() {
                                         </td>
 
                                         {/* Status Column */}
-                                        <td className="px-6 py-4">
+                                        <td className="px-3 py-4">
                                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${statusMeta[user.status || 'active'].bg} ${statusMeta[user.status || 'active'].color} ${statusMeta[user.status || 'active'].border}`}>
                                                 {(user.status || 'active').toUpperCase()}
                                             </span>
                                         </td>
 
                                         {/* Actions Column */}
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-3.5 text-xs font-bold">
+                                        <td className="px-3 py-4">
+                                            <div className="flex items-center justify-end gap-1.5 text-xs font-bold">
                                                 <button 
                                                     onClick={() => setSelectedUser(user)}
-                                                    className="px-2.5 py-1 rounded bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/20 transition-colors cursor-pointer"
+                                                    className="px-2.5 py-1 rounded bg-teal-500/10 text-teal-400 hover:bg-teal-500/20 border border-teal-500/20 transition-colors cursor-pointer whitespace-nowrap"
                                                 >
                                                     Manage
                                                 </button>
                                                 <button 
                                                     onClick={() => handleToggleStatusClick(user.uid, user.fullName, user.status || 'active')}
-                                                    className={`px-2.5 py-1 rounded border transition-colors cursor-pointer ${
+                                                    className={`px-2.5 py-1 rounded border transition-colors cursor-pointer whitespace-nowrap ${
                                                         (user.status || 'active') === "suspended" 
                                                             ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border-emerald-500/20" 
                                                             : "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 border-rose-500/20"
