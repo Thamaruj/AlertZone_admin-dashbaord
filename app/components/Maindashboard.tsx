@@ -430,7 +430,7 @@ export default function AdminDashboard() {
                 </header>
 
                 {/* ── Scrollable page ── */}
-                <main className={`flex-1 overflow-y-auto ${activeNav === 'map' ? 'md:flex md:flex-col md:overflow-hidden p-4 md:p-0' : 'px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5'}`}>
+                <main className={`flex-1 ${activeNav === 'map' ? 'overflow-y-auto p-2 md:p-0 md:flex md:flex-col md:overflow-hidden' : 'overflow-y-auto px-4 md:px-6 py-4 md:py-5 space-y-4 md:space-y-5'}`}>
 
                     {/* Section Content based on active navigation */}
                     {loading ? (

@@ -4,6 +4,17 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Fix: MapView Mobile Overlap Bug
+**Date:** 2026-06-09
+**Branch:** `main`
+
+**What was fixed:**
+- Resolved a layout issue in `Mapview.tsx` where the Google Map container overlapped the reports list sidebar on mobile viewports.
+- Added `relative` positioning to the sidebar so its `z-[1000]` index properly creates a stacking context over the map's `z-10`.
+- Added a `gap-4 md:gap-0` to the root flex container to provide visual breathing room between the sidebar and the map on mobile.
+
+---
+
 ## ✅ Fix: Admin Login Invalid Credentials Message
 **Date:** 2026-06-09
 **Branch:** `main`

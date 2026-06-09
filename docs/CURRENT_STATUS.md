@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-06-09 (Fixed generic "Server error (401)" login error message to display the actual invalid credentials error from the API response.)
+> **Last Updated:** 2026-06-09 (Fixed mobile MapView overlap bug by applying relative positioning and z-index to sidebar and adding flex gaps to prevent map container from overlaying the sidebar content.)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 

@@ -720,7 +720,7 @@ export default function MapView() {
     }, [selectedReport, selectedProvince, selectedDistrict]);
 
     return (
-        <div className="h-full w-full flex flex-col md:flex-row md:overflow-hidden relative animate-slide-up" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+        <div className="w-full flex flex-col md:flex-row md:h-full md:overflow-hidden relative animate-slide-up gap-3 md:gap-0" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
             <style jsx global>{`
                 .gm-style, .gm-style-iw-c, .gm-style-iw-d, .custom-google-marker, .custom-google-marker * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important; }
                 .custom-google-marker:hover { transform: scale(1.15); z-index: 9999 !important; }
@@ -730,10 +730,10 @@ export default function MapView() {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.2); border-radius: 10px; }
             `}</style>
             
-            <div className={`flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-none overflow-hidden shadow-2xl z-[1000] flex-shrink-0 transition-all duration-300 ease-in-out ${
+            <div className={`relative flex-shrink-0 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-none overflow-hidden shadow-2xl z-10 transition-all duration-300 ease-in-out ${
                 isSidebarCollapsed 
-                    ? 'h-0 opacity-0 pointer-events-none -translate-y-full md:h-full md:w-0 md:min-w-0 md:opacity-0 md:pointer-events-none md:-translate-x-full md:translate-y-0' 
-                    : 'h-[320px] md:h-full w-full md:w-96 md:opacity-100 md:translate-x-0 md:translate-y-0'
+                    ? 'h-0 opacity-0 pointer-events-none md:h-full md:w-0 md:min-w-0 md:opacity-0 md:pointer-events-none md:-translate-x-full' 
+                    : 'h-[420px] md:h-full w-full md:w-96 md:opacity-100 md:translate-x-0'
             }`}>
                 <div className="w-full md:w-[384px] h-full flex flex-col flex-shrink-0">
                     <div className="p-4 border-b border-white/5 space-y-4">
@@ -909,21 +909,22 @@ export default function MapView() {
                 </div>
             </div>
 
-            {isSidebarCollapsed && (
-                <button
-                    onClick={() => setIsSidebarCollapsed(false)}
-                    className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md z-[1001] animate-in fade-in zoom-in-95 duration-200"
-                    title="Expand Sidebar"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                    </svg>
-                </button>
-            )}
-
             {/* ── Main Map Area ── */}
-            <div className="flex-1 min-h-[400px] bg-[#0d1f2d] md:rounded-none rounded-2xl overflow-hidden md:border-none border border-white/10 relative z-10 shadow-inner">
-                
+            <div className="h-[380px] md:h-auto md:flex-1 md:min-h-0 bg-[#0d1f2d] md:rounded-none rounded-2xl overflow-hidden md:border-none border border-white/10 relative shadow-inner">
+
+                {/* Expand sidebar button — shown over map when sidebar is collapsed */}
+                {isSidebarCollapsed && (
+                    <button
+                        onClick={() => setIsSidebarCollapsed(false)}
+                        className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center bg-[#0f2233]/85 hover:bg-[#132d43]/90 hover:text-teal-400 border border-white/10 rounded-xl text-slate-200 shadow-xl transition-all active:scale-95 cursor-pointer backdrop-blur-md z-20 animate-in fade-in zoom-in-95 duration-200"
+                        title="Expand Sidebar"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </button>
+                )}
+
                 <GoogleMapContainer
                     reports={filteredReports}
                     selectedReport={selectedReport}
@@ -947,7 +948,7 @@ export default function MapView() {
 
                 {/* Selection Details Panel overlay - Fixed positioning */}
                 {selectedReport && (
-                    <div className="absolute bottom-4 right-4 left-4 sm:left-auto sm:bottom-6 sm:right-6 sm:max-w-sm bg-[#0f2233]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden animate-in slide-in-from-bottom-10 sm:slide-in-from-right-10 duration-500 z-[1000]">
+                    <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-sm md:absolute md:bottom-4 md:right-4 md:left-auto md:max-w-sm bg-[#0f2233]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden animate-in slide-in-from-bottom-5 duration-300 z-[9999]">
                         <div className="p-5 flex gap-4">
                             <div className={`w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center text-2xl shadow-inner ${categoryMeta[selectedReport.category]?.bg || categoryMeta[selectedReport.categoryId]?.bg || 'bg-white/5'}`}>
                                 {categoryMeta[selectedReport.category]?.icon || categoryMeta[selectedReport.categoryId]?.icon || '📍'}
