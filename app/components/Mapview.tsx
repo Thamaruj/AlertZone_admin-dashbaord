@@ -507,10 +507,7 @@ function GoogleMapContainer({
         markersRef.current.forEach((item) => item.overlay.setMap(null));
         markersRef.current = [];
 
-        if (activeInfoWindowRef.current) {
-            activeInfoWindowRef.current.close();
-            activeInfoWindowRef.current = null;
-        }
+
 
         class CustomHTMLOverlay extends google.maps.OverlayView {
             private latlng: any;
@@ -573,27 +570,10 @@ function GoogleMapContainer({
             const latlng = new google.maps.LatLng(loc.latitude, loc.longitude);
             const handleMarkerClick = () => {
                 setSelectedReport(report);
-                if (activeInfoWindowRef.current) activeInfoWindowRef.current.close();
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `<div class="p-2 min-w-[150px]"><div class="mb-1"><span class="text-xs font-bold text-white">${report.category} Incident</span><p class="text-[9px] text-slate-500 font-mono mt-0.5">ID: ${report.id}</p></div><p class="text-[10px] text-slate-400 leading-normal break-words mt-1.5">${loc.address}</p></div>`,
-                    pixelOffset: new google.maps.Size(0, -20),
-                });
-                infoWindow.open({ map: mapRef.current, shouldFocus: false });
-                infoWindow.setPosition(latlng);
-                activeInfoWindowRef.current = infoWindow;
             };
             const overlay = new CustomHTMLOverlay(latlng, markerHtml, handleMarkerClick);
             overlay.setMap(mapRef.current);
             markersRef.current.push({ id: report.id, overlay, latlng, report });
-            if (isSelected) {
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `<div class="p-2 min-w-[150px]"><div class="mb-1"><span class="text-xs font-bold text-white">${report.category} Incident</span><p class="text-[9px] text-slate-500 font-mono mt-0.5">ID: ${report.id}</p></div><p class="text-[10px] text-slate-400 leading-normal break-words mt-1.5">${loc.address}</p></div>`,
-                    pixelOffset: new google.maps.Size(0, -20),
-                });
-                infoWindow.open({ map: mapRef.current, shouldFocus: false });
-                infoWindow.setPosition(latlng);
-                activeInfoWindowRef.current = infoWindow;
-            }
         });
     }, [reports, selectedReport, googleLoaded]);
 
