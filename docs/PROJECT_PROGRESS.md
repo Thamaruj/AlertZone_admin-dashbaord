@@ -4,6 +4,16 @@ This document tracks the end-to-end development journey of the AlertZone admin d
 
 ---
 
+## ✅ Fix: Admin Login Invalid Credentials Message
+**Date:** 2026-06-09
+**Branch:** `main`
+
+**What was fixed:**
+- Resolved an issue in `lib/context/AuthContext.tsx` where failed login attempts with invalid credentials displayed a generic `Server error (401). Please try again.` message.
+- Updated the `login` function to parse the error JSON payload instead of blindly checking `res.ok`, ensuring that accurate server messages like "Invalid credentials" are shown clearly in the UI.
+
+---
+
 ## ✅ Fix: Vercel Build — Notifications.tsx TypeScript Error
 **Date:** 2026-06-06
 **Branch:** `Improve/admin-dashboard`

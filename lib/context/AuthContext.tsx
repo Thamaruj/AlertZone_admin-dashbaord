@@ -162,11 +162,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
 
         const contentType = res.headers.get("content-type");
-        if (!res.ok || !contentType || !contentType.includes("application/json")) {
+        if (!contentType || !contentType.includes("application/json")) {
           return `Server error (${res.status}). Please try again.`;
         }
 
         const data: LoginResponse = await res.json();
+
+        if (!res.ok) {
+          return data.error ?? `Server error (${res.status}). Please try again.`;
+        }
 
         if (data.success && data.user) {
           setUser(data.user);

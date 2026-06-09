@@ -1,6 +1,6 @@
 # Current Status — AlertZone Admin Dashboard
 
-> **Last Updated:** 2026-06-06 (Fixed Vercel build failure: `Property 'System' does not exist on type 'Record<NotificationType, ...>'` in `Notifications.tsx` line 448. Changed invalid `typeMeta.System` fallback to `typeMeta.Alert`, which is a valid `NotificationType` key.)
+> **Last Updated:** 2026-06-09 (Fixed generic "Server error (401)" login error message to display the actual invalid credentials error from the API response.)
 >
 > This document tracks what is done, what is broken, and what remains. Agents MUST read this before starting work.
 
