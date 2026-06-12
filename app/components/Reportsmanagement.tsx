@@ -715,7 +715,7 @@ export default function ReportsManagement() {
             </div>
 
             {/* Filter Grid */}
-            <div className={`relative z-30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${showArchive ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} gap-3 p-4 bg-[#0f2233]/40 backdrop-blur-md border border-white/5 rounded-2xl animate-slide-up stagger-1.5`}>
+            <div className={`relative z-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${showArchive ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} gap-3 p-4 bg-[#0f2233]/40 backdrop-blur-md border border-white/5 rounded-2xl animate-slide-up stagger-1.5`}>
                 {/* Start Date Filter */}
                 <div className="relative group flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">From Date</label>
