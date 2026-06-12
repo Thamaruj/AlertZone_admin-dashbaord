@@ -296,15 +296,17 @@ export default function ReportsManagement() {
 
             doc.text(`Generated on: ${new Date().toLocaleString()}  |  Total Reports: ${filteredReports.length}`, pageWidth / 2, 46, { align: "center" });
 
-            const tableColumn = ["ID", "Category", "Location", "Status", "Date"];
+            const tableColumn = ["ID", "Category", "Location", "Status", "Date", "Time"];
             const tableRows = filteredReports.map(report => {
                 const loc = resolveLocation(report.location);
+                const dateTime = getFormattedDateTime(report.createdAt);
                 return [
                     report.id || "N/A",
                     report.category || "Unknown",
                     `${loc.address}, ${loc.lga}, ${loc.district}`,
                     report.status,
-                    getFormattedDateTime(report.createdAt).date
+                    dateTime.date,
+                    dateTime.time
                 ];
             });
 
