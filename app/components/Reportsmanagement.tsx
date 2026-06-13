@@ -10,6 +10,7 @@ import { sriLankaGeographics, resolveSrilankaRegion } from "@/lib/constants/sriL
 import { useAuth } from "@/lib/hooks/useAuth";
 import MiniMap from "./MiniMap";
 import UserDetailsModal from "./UserDetailsModal";
+import logo1 from "../assets/logo1.png";
 
 
 interface CalendarProps {
@@ -132,7 +133,7 @@ function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
     const selectedYear = value ? new Date(value).getFullYear() : null;
 
     return (
-        <div 
+        <div
             ref={containerRef}
             className="absolute top-full left-0 mt-2 z-50 w-72 bg-[#091622] border border-teal-500/20 rounded-2xl p-4 shadow-2xl shadow-black/80 ring-1 ring-white/5 animate-in fade-in slide-in-from-top-2 duration-200"
         >
@@ -147,7 +148,7 @@ function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                
+
                 <span className="text-xs font-extrabold text-slate-200 tracking-wide select-none">
                     {monthNames[month]} {year}
                 </span>
@@ -173,11 +174,11 @@ function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
             {/* Days Grid */}
             <div className="grid grid-cols-7 gap-1">
                 {days.map((item, idx) => {
-                    const isSelected = item.isCurrentMonth && 
-                        selectedDay === item.day && 
-                        selectedMonth === month && 
+                    const isSelected = item.isCurrentMonth &&
+                        selectedDay === item.day &&
+                        selectedMonth === month &&
                         selectedYear === year;
-                    
+
                     const isToday = item.isCurrentMonth &&
                         today.getDate() === item.day &&
                         today.getMonth() === month &&
@@ -188,15 +189,14 @@ function CustomCalendar({ value, onChange, onClose }: CalendarProps) {
                             key={idx}
                             type="button"
                             onClick={() => handleSelectDay(item.day, item.isPrevMonth, item.isNextMonth)}
-                            className={`w-8 h-8 text-[11px] rounded-xl font-bold flex items-center justify-center transition-all cursor-pointer ${
-                                !item.isCurrentMonth 
+                            className={`w-8 h-8 text-[11px] rounded-xl font-bold flex items-center justify-center transition-all cursor-pointer ${!item.isCurrentMonth
                                     ? "text-slate-600 opacity-40 hover:bg-white/5 hover:text-slate-400 hover:scale-105"
                                     : isSelected
                                         ? "bg-gradient-to-r from-teal-500 to-emerald-500 text-slate-950 font-extrabold shadow-lg shadow-teal-500/30 scale-105"
                                         : isToday
                                             ? "border border-teal-500/50 text-teal-400 font-semibold"
                                             : "text-slate-300 hover:bg-white/10 hover:text-white hover:scale-105"
-                            }`}
+                                }`}
                         >
                             {item.day}
                         </button>
@@ -248,6 +248,84 @@ export default function ReportsManagement() {
     // User details modal state
     const [selectedReporter, setSelectedReporter] = useState<UserProfile | null>(null);
     const [fetchingReporter, setFetchingReporter] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+
+    const handleExportPDF = async () => {
+        setIsExporting(true);
+        try {
+            const { default: jsPDF } = await import("jspdf");
+            const { default: autoTable } = await import("jspdf-autotable");
+
+            const doc = new jsPDF();
+            const pageWidth = doc.internal.pageSize.getWidth();
+
+            // Load logo
+            try {
+                const img = new window.Image();
+                img.src = logo1.src;
+                await new Promise((resolve) => { img.onload = resolve; img.onerror = resolve; });
+                if (img.complete && img.naturalWidth > 0) {
+                    const logoWidth = 15;
+                    const logoHeight = 15;
+                    const xPos = (pageWidth - logoWidth) / 2;
+                    doc.addImage(img, "PNG", xPos, 10, logoWidth, logoHeight);
+                }
+            } catch (e) {
+                console.log("Logo load failed", e);
+            }
+
+            // Header
+            doc.setFontSize(18);
+            doc.setFont("helvetica", "bold");
+            doc.text("AlertZone Reports", pageWidth / 2, 34, { align: "center" });
+
+            doc.setFontSize(10);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(100);
+
+            // Filtered Dates
+            let dateText = "All Time";
+            if (startDate && endDate) {
+                dateText = `${startDate} to ${endDate}`;
+            } else if (startDate) {
+                dateText = `From ${startDate}`;
+            } else if (endDate) {
+                dateText = `Until ${endDate}`;
+            }
+            doc.text(`Filtered Period: ${dateText}`, pageWidth / 2, 40, { align: "center" });
+
+            doc.text(`Generated on: ${new Date().toLocaleString()}  |  Total Reports: ${filteredReports.length}`, pageWidth / 2, 46, { align: "center" });
+
+            const tableColumn = ["ID", "Category", "Location", "Status", "Date", "Time"];
+            const tableRows = filteredReports.map(report => {
+                const loc = resolveLocation(report.location);
+                const dateTime = getFormattedDateTime(report.createdAt);
+                return [
+                    report.id || "N/A",
+                    report.category || "Unknown",
+                    `${loc.address}, ${loc.lga}, ${loc.district}`,
+                    report.status,
+                    dateTime.date,
+                    dateTime.time
+                ];
+            });
+
+            autoTable(doc, {
+                head: [tableColumn],
+                body: tableRows,
+                startY: 52,
+                styles: { fontSize: 8 },
+                headStyles: { fillColor: [20, 184, 166] }
+            });
+
+            doc.save(`alertzone_reports_${new Date().toISOString().split('T')[0]}.pdf`);
+        } catch (error) {
+            console.error("Failed to export PDF:", error);
+            alert("Failed to export PDF. Please ensure jspdf and jspdf-autotable are installed.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
     const [showReporterModal, setShowReporterModal] = useState(false);
 
     // Filter states
@@ -356,12 +434,12 @@ export default function ReportsManagement() {
         if (filterCategory !== "all") {
             const catLower = report.category.toLowerCase().trim();
             const filterLower = filterCategory.toLowerCase().trim();
-            
+
             const match = catLower === filterLower ||
                 (filterLower === "water & drainage" && catLower === "water and drainage") ||
                 (filterLower === "social safety" && catLower === "social security") ||
                 (filterLower === "waste & environment" && catLower === "waste & env.");
-                
+
             if (!match) {
                 return false;
             }
@@ -416,7 +494,7 @@ export default function ReportsManagement() {
 
         try {
             await changeStatus(selectedReport.id, newStatus, statusReason.trim() ? statusReason : undefined);
-            
+
             // Status changes in Firestore will trigger onSnapshot and update the list,
             // but we also update the local selected report for immediate feedback
             setSelectedReport(prev => {
@@ -435,11 +513,10 @@ export default function ReportsManagement() {
             setStatusChangeFeedback({
                 status: newStatus,
                 previousStatus,
-                message: `Status successfully updated to ${newStatus}. ${
-                    newStatus === "RESOLVED"
+                message: `Status successfully updated to ${newStatus}. ${newStatus === "RESOLVED"
                         ? "Citizen has been notified and rewarded +10 contribution points!"
                         : "Citizen has been notified."
-                }`
+                    }`
             });
         } catch (error) {
             console.error("Failed to save status", error);
@@ -460,12 +537,12 @@ export default function ReportsManagement() {
         try {
             const nextArchiveState = !reportToArchive.isArchived;
             await archiveReport(reportToArchive.id, nextArchiveState);
-            
+
             // If the archived report is currently selected, update its local isArchived state
             if (selectedReport && selectedReport.id === reportToArchive.id) {
                 setSelectedReport(prev => prev ? { ...prev, isArchived: nextArchiveState } : null);
             }
-            
+
             // If we archived it (isArchived === true) and we're not in the archive view,
             // or if we unarchived it (isArchived === false) and we're in the archive view,
             // we should close the selection detail since it won't be in the active list anymore
@@ -541,18 +618,18 @@ export default function ReportsManagement() {
 
     function resolveLocation(location: any) {
         if (!location) return { province: "Unknown Province", district: "Unknown District", lga: "Unknown Area" };
-        
+
         let resolvedProvince = location.province || "";
         let resolvedDistrict = location.district || "";
         let resolvedLGA = location.localGovernmentArea || "";
-        
+
         if (!resolvedProvince || !resolvedDistrict || !resolvedLGA) {
             const areaStr = (location.area || "").trim();
             const addressStr = (location.address || "").trim();
             const fallbackStr = addressStr || areaStr;
             const latitude = typeof location.latitude === 'number' ? location.latitude : parseFloat(location.latitude);
             const longitude = typeof location.longitude === 'number' ? location.longitude : parseFloat(location.longitude);
-            
+
             const res = resolveSrilankaRegion(
                 {
                     region: resolvedProvince,
@@ -654,32 +731,39 @@ export default function ReportsManagement() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <button 
+                    <button
                         onClick={() => {
                             setShowArchive(!showArchive);
                             clearAllFilters();
                         }}
-                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${
-                            showArchive
+                        className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 border ${showArchive
                                 ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
                                 : "bg-teal-500/10 border-teal-500/30 text-teal-400 hover:bg-teal-500/20"
-                        }`}
+                            }`}
                     >
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                         </svg>
                         {showArchive ? "Go to Active Reports" : "Go to Archive"}
                     </button>
-                    <button 
+                    <button
                         onClick={refresh}
                         disabled={loading}
                         className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-semibold text-slate-300 hover:bg-white/10 hover:text-teal-400 hover:border-teal-500/30 transition-all disabled:opacity-50"
                     >
                         {loading ? "Refreshing..." : "Refresh"}
                     </button>
-                    <button className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-semibold text-slate-300 hover:bg-white/10 transition-all flex items-center gap-2">
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                        Export Data
+                    <button
+                        onClick={handleExportPDF}
+                        disabled={isExporting || typeof filteredReports === 'undefined' || filteredReports.length === 0}
+                        className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs font-semibold text-slate-300 hover:bg-white/10 transition-all flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+                    >
+                        {isExporting ? (
+                            <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                        )}
+                        {isExporting ? "Exporting..." : "Export PDF"}
                     </button>
                 </div>
             </div>
@@ -715,7 +799,7 @@ export default function ReportsManagement() {
             </div>
 
             {/* Filter Grid */}
-            <div className={`relative z-30 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${showArchive ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} gap-3 p-4 bg-[#0f2233]/40 backdrop-blur-md border border-white/5 rounded-2xl animate-slide-up stagger-1.5`}>
+            <div className={`relative z-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${showArchive ? 'xl:grid-cols-7' : 'xl:grid-cols-6'} gap-3 p-4 bg-[#0f2233]/40 backdrop-blur-md border border-white/5 rounded-2xl animate-slide-up stagger-1.5`}>
                 {/* Start Date Filter */}
                 <div className="relative group flex flex-col gap-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">From Date</label>
@@ -726,9 +810,8 @@ export default function ReportsManagement() {
                                 setShowStartCalendar(!showStartCalendar);
                                 setShowEndCalendar(false);
                             }}
-                            className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-left flex items-center h-[38px] cursor-pointer ${
-                                startDate ? "pr-8" : "pr-4"
-                            }`}
+                            className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-left flex items-center h-[38px] cursor-pointer ${startDate ? "pr-8" : "pr-4"
+                                }`}
                         >
                             {startDate ? formatDateOnly(startDate) : <span className="text-slate-500 font-medium">Select date</span>}
                         </button>
@@ -771,9 +854,8 @@ export default function ReportsManagement() {
                                 setShowEndCalendar(!showEndCalendar);
                                 setShowStartCalendar(false);
                             }}
-                            className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-left flex items-center h-[38px] cursor-pointer ${
-                                endDate ? "pr-8" : "pr-4"
-                            }`}
+                            className={`w-full bg-white/5 border border-white/10 rounded-xl pl-10 py-2.5 text-xs font-semibold text-slate-300 hover:bg-white/10 focus:outline-none focus:border-teal-500/50 focus:ring-1 focus:ring-teal-500/25 transition-all text-left flex items-center h-[38px] cursor-pointer ${endDate ? "pr-8" : "pr-4"
+                                }`}
                         >
                             {endDate ? formatDateOnly(endDate) : <span className="text-slate-500 font-medium">Select date</span>}
                         </button>
@@ -951,7 +1033,7 @@ export default function ReportsManagement() {
                         <div className="text-red-400 text-3xl mb-3">⚠️</div>
                         <h3 className="text-red-200 font-semibold text-sm">Failed to Load Reports</h3>
                         <p className="text-slate-400 text-xs mt-1">{error}</p>
-                        <button 
+                        <button
                             onClick={refresh}
                             className="mt-4 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold text-slate-300 transition-colors"
                         >
@@ -1025,11 +1107,10 @@ export default function ReportsManagement() {
                                                     handleArchiveToggle(report);
                                                 }}
                                                 title={report.isArchived ? "Restore from Archive" : "Archive Report"}
-                                                className={`p-2.5 border rounded-xl transition-all group/btn cursor-pointer ${
-                                                    report.isArchived
+                                                className={`p-2.5 border rounded-xl transition-all group/btn cursor-pointer ${report.isArchived
                                                         ? "bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20"
                                                         : "bg-white/5 border-white/10 text-slate-400 hover:text-amber-400 hover:bg-white/10"
-                                                }`}
+                                                    }`}
                                             >
                                                 {report.isArchived ? (
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1220,7 +1301,7 @@ export default function ReportsManagement() {
                             {/* Citizen Details & Management */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
                                 {/* Reporter Card */}
-                                <div 
+                                <div
                                     onClick={handleReporterClick}
                                     className="p-5 bg-white/2 hover:bg-white/5 border border-white/5 rounded-2xl space-y-4 flex flex-col justify-between cursor-pointer transition-all group relative overflow-hidden"
                                 >
@@ -1275,7 +1356,7 @@ export default function ReportsManagement() {
                                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" strokeWidth="2.5" /></svg>
                                                     </div>
                                                 </div>
- 
+
                                                 <button
                                                     onClick={() => setShowConfirm(true)}
                                                     disabled={isSaving || tempStatus === selectedReport.status}
@@ -1287,7 +1368,7 @@ export default function ReportsManagement() {
                                                     Review Change
                                                 </button>
                                             </div>
- 
+
                                             <div className="relative">
                                                 <textarea
                                                     value={statusReason}
@@ -1339,17 +1420,17 @@ export default function ReportsManagement() {
                                     {selectedReport.statusHistory?.slice().reverse().map((entry, idx) => {
                                         const stColor = statusStyleMeta[entry.status]?.color || "text-teal-400";
                                         return (
-                                        <div key={idx} className="p-4 border rounded-2xl space-y-2 relative transition-all bg-white/3 border-white/5">
-                                            <div className="flex items-center justify-between">
-                                                <span className={`text-[10px] font-bold ${stColor}`}>Status changed to {entry.status}</span>
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-[9px] text-slate-500 font-mono">{formatDate(entry.changedAt)}</span>
+                                            <div key={idx} className="p-4 border rounded-2xl space-y-2 relative transition-all bg-white/3 border-white/5">
+                                                <div className="flex items-center justify-between">
+                                                    <span className={`text-[10px] font-bold ${stColor}`}>Status changed to {entry.status}</span>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="text-[9px] text-slate-500 font-mono">{formatDate(entry.changedAt)}</span>
+                                                    </div>
                                                 </div>
+                                                {entry.note && (
+                                                    <p className="text-[11px] text-slate-300 leading-relaxed italic">Note: "{entry.note}"</p>
+                                                )}
                                             </div>
-                                            {entry.note && (
-                                                <p className="text-[11px] text-slate-300 leading-relaxed italic">Note: "{entry.note}"</p>
-                                            )}
-                                        </div>
                                         );
                                     })}
                                 </div>
@@ -1367,7 +1448,7 @@ export default function ReportsManagement() {
                                             </span>
                                         </h3>
                                     </div>
-                                    
+
                                     {loadingUpvoters ? (
                                         <div className="flex justify-center py-8">
                                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-500"></div>
@@ -1377,8 +1458,8 @@ export default function ReportsManagement() {
                                     ) : (
                                         <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
                                             {upvoters.map((upvoter, idx) => (
-                                                <div 
-                                                    key={idx} 
+                                                <div
+                                                    key={idx}
                                                     onClick={() => {
                                                         if (upvoter.upvoterUser) {
                                                             setSelectedReporter(upvoter.upvoterUser);
@@ -1421,7 +1502,7 @@ export default function ReportsManagement() {
                                             </span>
                                         </h3>
                                     </div>
-                                    
+
                                     {loadingComments ? (
                                         <div className="flex justify-center py-8">
                                             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-teal-500"></div>
@@ -1431,12 +1512,12 @@ export default function ReportsManagement() {
                                     ) : (
                                         <div className="space-y-3.5 max-h-[250px] overflow-y-auto pr-1 custom-scrollbar">
                                             {comments.map((comment) => (
-                                                <div 
+                                                <div
                                                     key={comment.id}
                                                     className="bg-white/2 border border-white/5 p-3 rounded-xl space-y-2 text-left"
                                                 >
                                                     <div className="flex items-center justify-between">
-                                                        <div 
+                                                        <div
                                                             onClick={() => {
                                                                 if (comment.commenterUser) {
                                                                     setSelectedReporter(comment.commenterUser);
@@ -1480,11 +1561,10 @@ export default function ReportsManagement() {
                             {(selectedReport.status === "RESOLVED" || selectedReport.status === "REJECTED") && (
                                 <button
                                     onClick={() => handleArchiveToggle(selectedReport)}
-                                    className={`mr-3 px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
-                                        selectedReport.isArchived
+                                    className={`mr-3 px-6 py-3 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${selectedReport.isArchived
                                             ? "bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
                                             : "bg-white/5 border-white/10 text-slate-300 hover:text-amber-400 hover:bg-white/10 hover:border-amber-500/20"
-                                    }`}
+                                        }`}
                                 >
                                     {selectedReport.isArchived ? (
                                         <>
@@ -1528,9 +1608,9 @@ export default function ReportsManagement() {
                                     {reportToArchive.isArchived ? "Confirm Restore" : "Confirm Archive"}
                                 </h3>
                                 <p className="text-xs text-slate-400 leading-relaxed">
-                                    Are you sure you want to {reportToArchive.isArchived ? "restore" : "archive"} this report? 
-                                    {reportToArchive.isArchived 
-                                        ? " It will be returned to the active reports list." 
+                                    Are you sure you want to {reportToArchive.isArchived ? "restore" : "archive"} this report?
+                                    {reportToArchive.isArchived
+                                        ? " It will be returned to the active reports list."
                                         : " It will be soft-deleted and moved to the archive."}
                                 </p>
                             </div>
@@ -1557,9 +1637,9 @@ export default function ReportsManagement() {
 
             {/* User Details Modal */}
             {showReporterModal && selectedReporter && (
-                <UserDetailsModal 
-                    user={selectedReporter} 
-                    onClose={() => setShowReporterModal(false)} 
+                <UserDetailsModal
+                    user={selectedReporter}
+                    onClose={() => setShowReporterModal(false)}
                 />
             )}
 
@@ -1580,12 +1660,12 @@ export default function ReportsManagement() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
                             </svg>
                         </button>
-                        
+
                         <div className="text-center space-y-5">
                             <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center text-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 animate-bounce">
                                 ✓
                             </div>
-                            
+
                             <div className="space-y-1">
                                 <h3 className="text-base font-bold text-white tracking-tight">Status Changed</h3>
                                 <p className="text-xs text-slate-400">The report status has been successfully updated.</p>

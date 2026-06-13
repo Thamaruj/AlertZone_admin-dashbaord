@@ -700,7 +700,7 @@ export default function MapView() {
     }, [selectedReport, selectedProvince, selectedDistrict]);
 
     return (
-        <div className="w-full flex flex-col md:flex-row md:h-full md:overflow-hidden relative animate-slide-up gap-3 md:gap-0" style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
+        <div className={`w-full flex flex-col md:flex-row md:h-full md:overflow-hidden relative animate-slide-up ${isSidebarCollapsed ? "gap-0" : "gap-3 md:gap-4"} md:p-4 transition-all duration-300`} style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" }}>
             <style jsx global>{`
                 .gm-style, .gm-style-iw-c, .gm-style-iw-d, .custom-google-marker, .custom-google-marker * { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important; }
                 .custom-google-marker:hover { transform: scale(1.15); z-index: 9999 !important; }
@@ -710,7 +710,7 @@ export default function MapView() {
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(20, 184, 166, 0.2); border-radius: 10px; }
             `}</style>
             
-            <div className={`relative flex-shrink-0 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl md:rounded-none overflow-hidden shadow-2xl z-10 transition-all duration-300 ease-in-out ${
+            <div className={`relative flex-shrink-0 flex flex-col bg-[#0f2233]/80 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden shadow-2xl z-10 transition-all duration-300 ease-in-out ${
                 isSidebarCollapsed 
                     ? 'h-0 opacity-0 pointer-events-none md:h-full md:w-0 md:min-w-0 md:opacity-0 md:pointer-events-none md:-translate-x-full' 
                     : 'h-[420px] md:h-full w-full md:w-96 md:opacity-100 md:translate-x-0'
@@ -890,7 +890,7 @@ export default function MapView() {
             </div>
 
             {/* ── Main Map Area ── */}
-            <div className="h-[380px] md:h-auto md:flex-1 md:min-h-0 bg-[#0d1f2d] md:rounded-none rounded-2xl overflow-hidden md:border-none border border-white/10 relative shadow-inner">
+            <div className="h-[380px] md:h-auto md:flex-1 md:min-h-0 bg-[#0d1f2d] rounded-2xl overflow-hidden border border-white/10 relative shadow-inner">
 
                 {/* Expand sidebar button — shown over map when sidebar is collapsed */}
                 {isSidebarCollapsed && (
